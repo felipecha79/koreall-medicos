@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() { return request.auth != null; }
+    function myTenant(tenantId) {
+      return isAuth() && request.auth.token.tenantId == tenantId;
+    }
+    function hasRole(tenantId, role) {
+      return myTenant(tenantId) && request.auth.token.role == role;
+    }
+    function isSuperAdmin() {
+      return isAuth() && request.auth.token.superAdmin == true;
+    }
+    function canWrite(tenantId) {
+      return myTenant(tenantId) &&
+        request.auth.token.role in ['admin','doctor','recepcion'];
+    }
+    function isPaciente(tenantId) {
+      return myTenant(tenantId) && request.auth.token.role == 'paciente';
+    }
+
+    match /_admin/{doc=**} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /tenants/{tenantId} {
+      allow read:  if myTenant(tenantId) || isSuperAdmin();
+      allow write: if isSuperAdmin();
+
+      match /pacientes/{pacienteId} {
+        // Staff lee todos; paciente solo lee el suyo
+        allow read: if canWrite(tenantId) || isSuperAdmin() ||
+          (isPaciente(tenantId) && request.auth.uid != null);
+        allow write: if canWrite(tenantId);
+
+        match /documentos/{docId} {
+          allow read:  if myTenant(tenantId);
+          allow write: if canWrite(tenantId);
+        }
+        match /vitales/{vitalId} {
+          allow read:  if myTenant(tenantId);
+          allow write: if canWrite(tenantId);
+        }
+        match /medicamentos/{medId} {
+          allow read:  if myTenant(tenantId);
+          allow write: if canWrite(tenantId);
+        }
+      }
+
+      match /citas/{citaId} {
+        // Paciente puede leer sus citas y crear nuevas
+        allow read:   if myTenant(tenantId);
+        allow create: if myTenant(tenantId);
+        allow update: if canWrite(tenantId);
+        allow delete: if canWrite(tenantId);
+      }
+      match /cobros/{cobroId} {
+        allow read:  if myTenant(tenantId);
+        allow write: if hasRole(tenantId,'admin') || hasRole(tenantId,'recepcion');
+      }
+      match /consultas/{consultaId} {
+        allow read:  if myTenant(tenantId);
+        allow write: if hasRole(tenantId,'admin') || hasRole(tenantId,'doctor');
+      }
+      match /recetas/{recetaId} {
+        allow read:  if myTenant(tenantId);
+        allow write: if canWrite(tenantId);
+      }
+      match /facturas/{facturaId} {
+        allow read:  if myTenant(tenantId);
+        allow write: if canWrite(tenantId);
+      }
+      match /usuarios/{userId} {
+        allow read:  if myTenant(tenantId);
+        allow write: if hasRole(tenantId,'admin') || isSuperAdmin();
+      }
+    }
+  }
+}
