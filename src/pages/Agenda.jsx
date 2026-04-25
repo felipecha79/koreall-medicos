@@ -14,15 +14,21 @@ const HORAS = Array.from({ length: 15 }, (_, i) => i + 8) // 8am-10pm
 const ESTATUS_COLOR = {
   programada:  'bg-blue-100 text-blue-800 border-blue-200',
   confirmada:  'bg-green-100 text-green-800 border-green-200',
-  completada:  'bg-gray-100 text-gray-500 border-gray-200',
+  en_camino:   'bg-yellow-100 text-yellow-800 border-yellow-200',
+  en_sala:     'bg-orange-100 text-orange-800 border-orange-200',
+  por_pasar:   'bg-purple-100 text-purple-700 border-purple-200',
+  completada:  'bg-teal-100 text-teal-700 border-teal-200',
+  finalizada:  'bg-green-100 text-green-700 border-green-200',
   cancelada:   'bg-red-100 text-red-700 border-red-200',
   no_show:     'bg-amber-100 text-amber-800 border-amber-200',
-  reagendada:  'bg-purple-100 text-purple-700 border-purple-200',
+  reagendada:  'bg-gray-100 text-gray-500 border-gray-200',
 }
 const ESTATUS_LABEL = {
-  programada: 'Programada', confirmada: 'Confirmada',
-  completada: 'Completada', cancelada: 'Cancelada',
-  no_show: 'No llegó', reagendada: 'Reagendada',
+  programada: 'Programada',  confirmada: 'Confirmada',
+  en_camino:  'En camino',   en_sala: 'En sala',
+  por_pasar:  'Por pasar',   completada: 'En consulta',
+  finalizada: 'Finalizada',  cancelada: 'Cancelada',
+  no_show: 'No llegó',       reagendada: 'Reagendada',
 }
 
 const FORM_INICIAL = {
@@ -458,15 +464,27 @@ export default function Agenda() {
             {/* Modo VER */}
             {modoDetalle === 'ver' && (
               <>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  {['confirmada','completada'].map(s => (
-                    <button key={s} onClick={() => cambiarEstatus(modal.id, s)}
-                      className={`text-xs py-2 rounded-lg border hover:opacity-80 ${ESTATUS_COLOR[s]}`}>
-                      {ESTATUS_LABEL[s]}
-                    </button>
-                  ))}
+                {/* Estatus de turno — avance del paciente */}
+                <div className="mt-4">
+                  <p className="text-xs text-gray-400 mb-2">Estado del turno:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      ['en_sala',   '🪑', 'Llegó a sala'],
+                      ['por_pasar', '🔔', 'Por pasar'],
+                      ['completada','🩺', 'En consulta'],
+                      ['finalizada','✅', 'Finalizada'],
+                    ].map(([s, icon, label]) => (
+                      <button key={s}
+                        onClick={() => cambiarEstatus(modal.id, s)}
+                        className={`text-xs py-2 rounded-lg border hover:opacity-80
+                          ${modal.estatus === s ? 'ring-2 ring-teal-400' : ''}
+                          ${ESTATUS_COLOR[s] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                        {icon} {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-2 gap-2 mt-3">
                   <button onClick={() => setModoDetalle('reagendar')}
                     className="text-xs py-2 rounded-lg border bg-purple-50 text-purple-700
                                border-purple-200 hover:opacity-80">

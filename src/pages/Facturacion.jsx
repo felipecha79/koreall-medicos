@@ -320,7 +320,7 @@ export default function Facturacion() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {facturas.map(f => (
+                  {facturas.map(f => { try { return (
                     <tr key={f.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono text-xs text-gray-600">
                         {f.serie}{f.folio}
@@ -330,7 +330,14 @@ export default function Facturacion() {
                         <div className="text-xs text-gray-400">{f.pacienteIdLegible}</div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        {f.fecha?.toDate ? format(f.fecha.toDate(), "d MMM yyyy", {locale:es}) : f.fecha ? format(new Date(f.fecha), "d MMM yyyy", {locale:es}) : "—"}
+                        {(() => {
+                          try {
+                            if (f.fecha?.toDate) return format(f.fecha.toDate(), "d MMM yyyy", {locale:es})
+                            if (f.fecha?.seconds) return format(new Date(f.fecha.seconds*1000), "d MMM yyyy", {locale:es})
+                            if (f.fecha) return format(new Date(f.fecha), "d MMM yyyy", {locale:es})
+                            return '—'
+                          } catch { return '—' }
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-xs">{f.concepto}</td>
                       <td className="px-4 py-3 font-semibold text-gray-800">
@@ -375,7 +382,7 @@ export default function Facturacion() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )} catch(e) { return <tr key={f.id}><td colSpan={7} className="px-4 py-2 text-xs text-red-400">Error al renderizar factura</td></tr> } })}
                 </tbody>
               </table>
             </div>
