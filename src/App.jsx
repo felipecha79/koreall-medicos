@@ -12,7 +12,8 @@ import Facturacion   from './pages/Facturacion'
 import Recetas       from './pages/Recetas'
 import PagoEnLinea   from './pages/PagoEnLinea'
 import Reportes      from './pages/Reportes'
-import Admin         from './pages/Admin'
+import Admin            from './pages/Admin'
+import GestionUsuarios  from './pages/GestionUsuarios'
 import PortalPaciente from './pages/PortalPaciente'
 
 function Spinner() {
@@ -40,23 +41,34 @@ const NAV_MAIN = [
   { to: '/facturacion', label: 'Facturación', icon: '🧾' },
   { to: '/recetas',     label: 'Recetas',     icon: '📋' },
   { to: '/reportes',    label: 'Reportes',    icon: '📊' },
+  { to: '/usuarios',    label: 'Usuarios',    icon: '👥' },
 ]
 
 const NAV_BOTTOM = NAV_MAIN.slice(0, 4) // Solo primeros 4 en bottom nav móvil
 
-function Sidebar({ tenant, isSuperAdmin, onClose }) {
+function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
   const navigate = useNavigate()
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold">MediDesk</h1>
-          <p className="text-xs text-slate-400 truncate max-w-[160px]">
-            {tenant?.nombre ?? 'Cargando...'}
-          </p>
+          {isSuperAdmin && allTenants.length > 1 ? (
+            <select
+              value={tenant?.id ?? ''}
+              onChange={e => switchTenant(e.target.value)}
+              className="w-full mt-1 text-xs bg-slate-700 text-slate-200 border border-slate-600
+                         rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-400">
+              {allTenants.map(t => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-xs text-slate-400 truncate">{tenant?.nombre ?? 'Cargando...'}</p>
+          )}
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl ml-4">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl ml-2">✕</button>
         )}
       </div>
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -111,7 +123,7 @@ function BottomNav() {
 }
 
 function AppLayout({ children }) {
-  const { tenant, isSuperAdmin } = useTenant()
+  const { tenant, isSuperAdmin, allTenants, switchTenant } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'MediDesk'
@@ -119,12 +131,12 @@ function AppLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <div className="hidden md:flex md:flex-col md:w-56 flex-shrink-0">
-        <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} />
+        <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} allTenants={allTenants} switchTenant={switchTenant} />
       </div>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="w-64 flex flex-col h-full shadow-xl">
-            <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerOpen(false)} />
+            <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} allTenants={allTenants} switchTenant={switchTenant} onClose={() => setDrawerOpen(false)} />
           </div>
           <div className="flex-1 bg-black/50" onClick={() => setDrawerOpen(false)} />
         </div>
@@ -153,6 +165,7 @@ export default function App() {
     ['/recetas',        <Recetas />],
     ['/reportes',       <Reportes />],
     ['/admin',          <Admin />],
+    ['/usuarios',       <GestionUsuarios />],
   ]
   return (
     <Routes>
