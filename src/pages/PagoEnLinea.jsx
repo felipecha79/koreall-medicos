@@ -32,9 +32,32 @@ function FormTarjeta({ onToken, loading }) {
 
   const formatCard = val => val.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim().slice(0, 19)
 
+  const cargarConekta = () => new Promise((resolve, reject) => {
+    if (window.Conekta) { resolve(); return }
+    const script = document.createElement('script')
+    // URL oficial actualizada de Conekta
+    script.src = 'https://cdn.conekta.com/js/latest/conekta.js'
+    script.onload  = () => resolve()
+    script.onerror = () => {
+      // Fallback URL alternativa
+      const s2 = document.createElement('script')
+      s2.src = 'https://conekta.com/assets/conekta.js'
+      s2.onload  = () => resolve()
+      s2.onerror = () => reject(new Error('No se pudo cargar Conekta.js'))
+      document.head.appendChild(s2)
+    }
+    document.head.appendChild(script)
+  })
+
   const tokenizar = async () => {
-    if (!window.Conekta) {
-      toast.error('Carga de Conekta.js fallida — revisa la consola')
+    try {
+      await cargarConekta()
+    } catch {
+      toast.error('No se pudo conectar con Conekta. Verifica tu conexión a internet.')
+      return
+    }
+    if (!CONEKTA_KEY) {
+      toast.error('Agrega VITE_CONEKTA_PUBLIC_KEY en tu .env.local')
       return
     }
     window.Conekta.setPublicKey(CONEKTA_KEY)
