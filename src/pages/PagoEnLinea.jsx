@@ -34,26 +34,32 @@ function FormTarjeta({ onToken, loading }) {
 
   const cargarConekta = () => new Promise((resolve, reject) => {
     if (window.Conekta) { resolve(); return }
-    const script = document.createElement('script')
-    // URL oficial actualizada de Conekta
-    script.src = 'https://cdn.conekta.com/js/latest/conekta.js'
-    script.onload  = () => resolve()
-    script.onerror = () => {
-      // Fallback URL alternativa
-      const s2 = document.createElement('script')
-      s2.src = 'https://conekta.com/assets/conekta.js'
-      s2.onload  = () => resolve()
-      s2.onerror = () => reject(new Error('No se pudo cargar Conekta.js'))
-      document.head.appendChild(s2)
+    // URLs actualizadas de Conekta 2024-2026
+    const urls = [
+      'https://cdn.conekta.io/js/latest/conekta.js',
+      'https://cdn.conekta.com/js/latest/conekta.js',
+      'https://conekta.io/assets/conekta.js',
+    ]
+    const tryLoad = (i) => {
+      if (i >= urls.length) { reject(new Error('Conekta no disponible')); return }
+      const s = document.createElement('script')
+      s.src = urls[i]
+      s.onload  = () => resolve()
+      s.onerror = () => tryLoad(i + 1)
+      document.head.appendChild(s)
     }
-    document.head.appendChild(script)
+    tryLoad(0)
   })
 
   const tokenizar = async () => {
     try {
       await cargarConekta()
     } catch {
-      toast.error('No se pudo conectar con Conekta. Verifica tu conexión a internet.')
+      toast.error(
+        'Conekta no está disponible. Para el piloto usa Efectivo o Transferencia. ' +
+        'El pago con tarjeta requiere activar la cuenta de producción de Conekta.',
+        { duration: 6000 }
+      )
       return
     }
     if (!CONEKTA_KEY) {

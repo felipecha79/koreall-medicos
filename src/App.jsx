@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import { useTenant } from './hooks/useTenant'
 import Login         from './pages/Login'
+import Landing       from './pages/Landing'
 import Agenda        from './pages/Agenda'
 import Pacientes     from './pages/Pacientes'
 import Expediente    from './pages/Expediente'
@@ -171,7 +172,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/portal-paciente" element={<PortalPaciente />} />
-      <Route path="/" element={<PrivateRoute><Navigate to="/agenda" replace /></PrivateRoute>} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/app" element={<PrivateRoute><Navigate to="/agenda" replace /></PrivateRoute>} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
           <PrivateRoute><AppLayout>{element}</AppLayout></PrivateRoute>
