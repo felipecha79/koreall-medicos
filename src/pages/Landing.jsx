@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase'
 
 // ── Estilos globales inyectados una sola vez ──────────────
 const CSS = `
@@ -172,6 +174,13 @@ export default function Landing() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  const closeModal = () => {
+    setModalOpen(false)
+    setLoginError?.('')
+    setEmail('')
+    setPassword('')
+  }
+
   // Inyectar estilos una vez
   useEffect(() => {
     if (!document.getElementById('ld-css')) {
@@ -194,10 +203,39 @@ export default function Landing() {
     return () => observer.disconnect()
   }, [])
 
-  const handleLogin = (e) => {
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  const handleLogin = async (e) => {
     e.preventDefault()
-    if (!email || !password) return
-    navigate(role === 'paciente' ? '/portal-paciente' : '/login')
+    if (!email || !password) { setLoginError('Ingresa tu email y contraseña'); return }
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password)
+      // Obtener claims del token para saber el rol real
+      const token = await cred.user.getIdTokenResult(true)
+      const userRole = token.claims.role ?? null
+      const isPaciente = userRole === 'paciente'
+
+      // Redirigir según el rol real del token (ignora el selector visual)
+      if (isPaciente) {
+        navigate('/portal-paciente')
+      } else {
+        navigate('/agenda')
+      }
+    } catch (e) {
+      const msgs = {
+        'auth/user-not-found':  'No existe una cuenta con ese email',
+        'auth/wrong-password':  'Contraseña incorrecta',
+        'auth/invalid-credential': 'Email o contraseña incorrectos',
+        'auth/too-many-requests':  'Demasiados intentos. Espera unos minutos.',
+        'auth/invalid-email':   'El email no es válido',
+      }
+      setLoginError(msgs[e.code] ?? 'Error al iniciar sesión')
+    } finally {
+      setLoginLoading(false)
+    }
   }
 
   return (
@@ -475,9 +513,9 @@ export default function Landing() {
 
       {/* MODAL LOGIN */}
       <div className={`mover ${modalOpen ? 'open' : ''}`}
-        onClick={e => e.target === e.currentTarget && setModalOpen(false)}>
+        onClick={e => e.target === e.currentTarget && closeModal()}>
         <div className="modal">
-          <button className="mclose" onClick={() => setModalOpen(false)}>✕</button>
+          <button className="mclose" onClick={closeModal}>✕</button>
           <h3>Bienvenido</h3>
           <p className="msub">Seleccione su perfil para continuar</p>
           <div className="rtabs">
@@ -492,14 +530,24 @@ export default function Landing() {
             <div className="mfg">
               <label>Correo electrónico</label>
               <input type="email" placeholder="tu@email.com"
-                value={email} onChange={e => setEmail(e.target.value)} />
+                value={email} onChange={e => { setEmail(e.target.value); setLoginError('') }} />
             </div>
             <div className="mfg">
               <label>Contraseña</label>
               <input type="password" placeholder="••••••••"
-                value={password} onChange={e => setPassword(e.target.value)} />
+                value={password} onChange={e => { setPassword(e.target.value); setLoginError('') }} />
             </div>
-            <button type="submit" className="mbtn">Entrar al sistema</button>
+            {loginError && (
+              <p style={{
+                fontSize:13, color:'#dc2626', background:'#fef2f2',
+                border:'1px solid #fecaca', borderRadius:8,
+                padding:'8px 12px', marginBottom:8
+              }}>{loginError}</p>
+            )}
+            <button type="submit" className="mbtn" disabled={loginLoading}
+              style={{opacity: loginLoading ? .7 : 1}}>
+              {loginLoading ? 'Entrando...' : 'Entrar al sistema'}
+            </button>
           </form>
           <p style={{textAlign:'center',fontSize:12,color:'var(--muted)',marginTop:12}}>
             ¿Paciente nuevo?{' '}
