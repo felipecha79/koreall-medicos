@@ -3,19 +3,20 @@ import { Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'reac
 import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import { useTenant } from './hooks/useTenant'
-import Login         from './pages/Login'
-import Landing       from './pages/Landing'
-import Agenda        from './pages/Agenda'
-import Pacientes     from './pages/Pacientes'
-import Expediente    from './pages/Expediente'
-import Cobros        from './pages/Cobros'
-import Facturacion   from './pages/Facturacion'
-import Recetas       from './pages/Recetas'
-import PagoEnLinea   from './pages/PagoEnLinea'
-import Reportes      from './pages/Reportes'
-import Admin            from './pages/Admin'
-import GestionUsuarios  from './pages/GestionUsuarios'
-import PortalPaciente from './pages/PortalPaciente'
+import Login           from './pages/Login'
+import Agenda          from './pages/Agenda'
+import Pacientes       from './pages/Pacientes'
+import Expediente      from './pages/Expediente'
+import Cobros          from './pages/Cobros'
+import Facturacion     from './pages/Facturacion'
+import Recetas         from './pages/Recetas'
+import PagoEnLinea     from './pages/PagoEnLinea'
+import Reportes        from './pages/Reportes'
+import Admin           from './pages/Admin'
+import GestionUsuarios from './pages/GestionUsuarios'
+import SitioWeb        from './pages/SitioWeb'
+import PortalPaciente  from './pages/PortalPaciente'
+import Landing         from './pages/Landing'
 
 function Spinner() {
   return (
@@ -29,7 +30,6 @@ function PrivateRoute({ children }) {
   const { user, loading, role } = useTenant()
   if (loading) return <Spinner />
   if (!user)   return <Navigate to="/login" replace />
-  // Si el usuario tiene rol 'paciente', redirigir al portal
   if (role === 'paciente') return <Navigate to="/portal-paciente" replace />
   return children
 }
@@ -43,20 +43,19 @@ const NAV_MAIN = [
   { to: '/recetas',     label: 'Recetas',     icon: '📋' },
   { to: '/reportes',    label: 'Reportes',    icon: '📊' },
   { to: '/usuarios',    label: 'Usuarios',    icon: '👥' },
+  { to: '/sitio-web',   label: 'Mi sitio',    icon: '🌐' },
 ]
-
-const NAV_BOTTOM = NAV_MAIN.slice(0, 4) // Solo primeros 4 en bottom nav móvil
+const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
 function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
   const navigate = useNavigate()
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
-      <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold">MediDesk</h1>
-          {isSuperAdmin && allTenants.length > 1 ? (
-            <select
-              value={tenant?.id ?? ''}
+          <h1 className="text-base font-bold">MediDesk</h1>
+          {isSuperAdmin && allTenants?.length > 1 ? (
+            <select value={tenant?.id ?? ''}
               onChange={e => switchTenant(e.target.value)}
               className="w-full mt-1 text-xs bg-slate-700 text-slate-200 border border-slate-600
                          rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-400">
@@ -72,7 +71,8 @@ function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
           <button onClick={onClose} className="text-slate-400 hover:text-white text-xl ml-2">✕</button>
         )}
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {NAV_MAIN.map(({ to, label, icon }) => (
           <NavLink key={to} to={to} onClick={onClose}
             className={({ isActive }) =>
@@ -85,13 +85,14 @@ function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
           <NavLink to="/admin" onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-               mt-2 pt-2 border-t border-slate-700
+               mt-1 pt-1 border-t border-slate-700
                ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
             <span style={{ fontSize: 15 }}>⚙️</span>Super Admin
           </NavLink>
         )}
       </nav>
-      <div className="px-3 py-3 border-t border-slate-700">
+
+      <div className="px-2 py-3 border-t border-slate-700">
         <NavLink to="/portal-paciente"
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400
                      hover:bg-slate-800 hover:text-white transition-colors mb-1">
@@ -131,13 +132,16 @@ function AppLayout({ children }) {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <div className="hidden md:flex md:flex-col md:w-56 flex-shrink-0">
-        <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} allTenants={allTenants} switchTenant={switchTenant} />
+      <div className="hidden md:flex md:flex-col md:w-52 flex-shrink-0">
+        <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+          allTenants={allTenants} switchTenant={switchTenant} />
       </div>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="w-64 flex flex-col h-full shadow-xl">
-            <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin} allTenants={allTenants} switchTenant={switchTenant} onClose={() => setDrawerOpen(false)} />
+          <div className="w-60 flex flex-col h-full shadow-xl">
+            <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+              allTenants={allTenants} switchTenant={switchTenant}
+              onClose={() => setDrawerOpen(false)} />
           </div>
           <div className="flex-1 bg-black/50" onClick={() => setDrawerOpen(false)} />
         </div>
@@ -165,21 +169,21 @@ export default function App() {
     ['/facturacion',    <Facturacion />],
     ['/recetas',        <Recetas />],
     ['/reportes',       <Reportes />],
-    ['/admin',          <Admin />],
     ['/usuarios',       <GestionUsuarios />],
+    ['/sitio-web',      <SitioWeb />],
+    ['/admin',          <Admin />],
   ]
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/"               element={<Landing />} />
+      <Route path="/login"          element={<Login />} />
       <Route path="/portal-paciente" element={<PortalPaciente />} />
-      <Route path="/" element={<Landing />} />
-      <Route path="/app" element={<PrivateRoute><Navigate to="/agenda" replace /></PrivateRoute>} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
           <PrivateRoute><AppLayout>{element}</AppLayout></PrivateRoute>
         } />
       ))}
-      <Route path="*" element={<Navigate to="/agenda" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
