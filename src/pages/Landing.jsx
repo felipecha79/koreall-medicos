@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
+import { db } from '../firebase'
+import { collection, getDocs, query, limit } from 'firebase/firestore'
 
 // ── Estilos globales inyectados una sola vez ──────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap');
-  .ld{--navy:#0D1F35;--teal:#0A8076;--teal-lt:#0FA898;--mint:#C8F0EC;--cream:#F7F4EF;--sand:#EDE9E1;--gold:#C4A265;--text:#1A2535;--muted:#6B7A8D;--font-d:'Cormorant Garamond',Georgia,serif;--font-ui:'DM Sans',system-ui,sans-serif;--font-mono:'DM Mono',monospace;font-family:var(--font-ui);color:var(--text);overflow-x:hidden}
+  .ld{--navy:var(--ld-navy,#0D1F35);--teal:var(--ld-teal,#0A8076);--teal-lt:var(--ld-teal,#0FA898);--cream:var(--ld-cream,#F7F4EF);--gold:var(--ld-gold,#C4A265);--mint:#C8F0EC;--cream:#F7F4EF;--sand:#EDE9E1;--gold:#C4A265;--text:#1A2535;--muted:#6B7A8D;--font-d:'Cormorant Garamond',Georgia,serif;--font-ui:'DM Sans',system-ui,sans-serif;--font-mono:'DM Mono',monospace;font-family:var(--font-ui);color:var(--text);overflow-x:hidden}
   .ld *{box-sizing:border-box;margin:0;padding:0}
   .ld a{text-decoration:none;color:inherit}
   .ld .ldc{max-width:1160px;margin:0 auto;padding:0 24px}
@@ -180,6 +182,28 @@ export default function Landing() {
     setEmail('')
     setPassword('')
   }
+//Agregado para los temas
+const [siteConfig, setSiteConfig] = useState(null)
+
+  useEffect(() => {
+   // Cargar configuración del sitio desde el primer tenant
+   getDocs(query(collection(db, 'tenants'), limit(1))).then(snap => {
+     if (!snap.empty) {
+       const t = snap.docs[0].data()
+       if (t.sitioWeb) {
+         setSiteConfig(t.sitioWeb)
+         // Inyectar variables CSS en tiempo real
+         const r = document.documentElement
+         if (t.sitioWeb.colorPrimario)    r.style.setProperty('--ld-teal', t.sitioWeb.colorPrimario)
+         if (t.sitioWeb.colorSecundario)  r.style.setProperty('--ld-navy', t.sitioWeb.colorSecundario)
+         if (t.sitioWeb.colorFondo)       r.style.setProperty('--ld-cream', t.sitioWeb.colorFondo)
+         if (t.sitioWeb.colorAccento)     r.style.setProperty('--ld-gold', t.sitioWeb.colorAccento)
+         if (t.sitioWeb.sloganHero)       document.title = t.sitioWeb.nombreConsultorio ?? 'MediDesk'
+       }
+     }
+   }).catch(() => {})
+ }, [])
+
 
   // Inyectar estilos una vez
   useEffect(() => {
@@ -267,10 +291,12 @@ export default function Landing() {
               <span className="dot" /><span className="tag">Consultorio activo · Tampico, Tamps.</span>
             </div>
             <h1 className="rev" style={{transitionDelay:'.1s'}}>
-              Su salud,<br/>nuestra <em>prioridad</em>
+                {siteConfig?.sloganHero
+    ? <>{siteConfig.sloganHero.split(',')[0]},<br/><em>{siteConfig.sloganHero.split(',')[1] ?? 'nuestra prioridad'}</em></>
+    : <>Su salud,<br/>nuestra <em>prioridad</em></>}
             </h1>
             <p className="spec rev" style={{transitionDelay:'.15s'}}>
-              Medicina General · Medicina Preventiva
+              {siteConfig?.especialidad || 'Medicina General · Medicina Preventiva'}
             </p>
             <p className="hdesc rev" style={{transitionDelay:'.2s'}}>
               Atención médica personalizada con expediente digital, citas en línea
@@ -286,8 +312,8 @@ export default function Landing() {
 
           <div className="hcard rev" style={{transitionDelay:'.3s'}}>
             <div className="hav">JC</div>
-            <h3>Dr. Juan Felipe Chávez</h3>
-            <p className="sub">Médico General · 15 años de experiencia</p>
+            <h3>{siteConfig?.nombreDoctor ?? 'Dr. Juan Felipe Chávez'}</h3>
+            <p className="sub">{siteConfig?.especialidad ?? 'Médico General'}</p>
             <div className="cr"><div className="cr-ico">🎓</div><span>Cédula Prof. 1234567 — SSA</span></div>
             <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con MediDesk</span></div>
             <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>

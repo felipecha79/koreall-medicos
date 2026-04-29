@@ -98,7 +98,7 @@ function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
                      hover:bg-slate-800 hover:text-white transition-colors mb-1">
           <span style={{ fontSize: 15 }}>👤</span>Vista paciente
         </NavLink>
-        <button onClick={async () => { await signOut(auth); window.location.href='/login' }}
+        <button onClick={async () => { await signOut(auth); window.location.href='/' }}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                      text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
           <span style={{ fontSize: 15 }}>🚪</span>Cerrar sesión

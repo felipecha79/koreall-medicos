@@ -1,0 +1,49 @@
+// PATCH para Landing.jsx — agregar al archivo existente
+// 
+// 1. Agregar este import al inicio del archivo (junto con los otros imports):
+//
+// import { db } from '../firebase'
+// import { collection, getDocs, query, limit } from 'firebase/firestore'
+//
+// 2. Agregar este estado y useEffect ANTES del useEffect existente:
+//
+// const [siteConfig, setSiteConfig] = useState(null)
+//
+// useEffect(() => {
+//   // Cargar configuración del sitio desde el primer tenant
+//   getDocs(query(collection(db, 'tenants'), limit(1))).then(snap => {
+//     if (!snap.empty) {
+//       const t = snap.docs[0].data()
+//       if (t.sitioWeb) {
+//         setSiteConfig(t.sitioWeb)
+//         // Inyectar variables CSS en tiempo real
+//         const r = document.documentElement
+//         if (t.sitioWeb.colorPrimario)    r.style.setProperty('--ld-teal', t.sitioWeb.colorPrimario)
+//         if (t.sitioWeb.colorSecundario)  r.style.setProperty('--ld-navy', t.sitioWeb.colorSecundario)
+//         if (t.sitioWeb.colorFondo)       r.style.setProperty('--ld-cream', t.sitioWeb.colorFondo)
+//         if (t.sitioWeb.colorAccento)     r.style.setProperty('--ld-gold', t.sitioWeb.colorAccento)
+//         if (t.sitioWeb.sloganHero)       document.title = t.sitioWeb.nombreConsultorio ?? 'MediDesk'
+//       }
+//     }
+//   }).catch(() => {})
+// }, [])
+//
+// 3. En el CSS (constante CSS al inicio del archivo), cambiar los colores hardcoded
+//    por variables CSS. Busca esta sección y reemplaza:
+//
+// ANTES:
+// .ld{--navy:#0D1F35;--teal:#0A8076;--teal-lt:#0FA898;...
+//
+// DESPUÉS:
+// .ld{--navy:var(--ld-navy,#0D1F35);--teal:var(--ld-teal,#0A8076);--teal-lt:var(--ld-teal,#0FA898);
+//     --cream:var(--ld-cream,#F7F4EF);--gold:var(--ld-gold,#C4A265);...
+//
+// 4. En el JSX del Hero, usar siteConfig para datos dinámicos:
+//
+// <h1 ...>{siteConfig?.sloganHero || 'Su salud, nuestra prioridad'}</h1>
+// <p className="spec ...">{siteConfig?.especialidad || 'Medicina General'}</p>
+// <h3>{siteConfig?.nombreDoctor ?? 'Dr. Juan Felipe Chávez'}</h3>
+//
+// NOTA: Esto conecta el módulo "Mi sitio web" con la landing page.
+// Los cambios que el doctor haga en SitioWeb.jsx aparecerán en la landing
+// automáticamente la próxima vez que se cargue la página.

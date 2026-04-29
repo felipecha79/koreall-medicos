@@ -277,7 +277,10 @@ export default function Agenda() {
   const abrirNueva = (dia, h, m) => {
     const d = new Date(dia)
     d.setHours(h, m, 0, 0)
-    setForm({ ...FORM_INICIAL, fechaHora: d.toISOString().slice(0, 16) })
+    // Usar hora LOCAL (no UTC) para evitar desfase de zona horaria
+    const pad = n => String(n).padStart(2, '0')
+    const local = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    setForm({ ...FORM_INICIAL, fechaHora: local })
     setModal('nueva')
   }
 
