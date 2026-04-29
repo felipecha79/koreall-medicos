@@ -4,15 +4,19 @@ import { onAuthStateChanged, getIdTokenResult } from 'firebase/auth'
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
-// SuperAdmin puede cambiar de consultorio activo
 const STORAGE_KEY = 'medidesk_active_tenant'
 
 export function useTenant() {
   const [state, setState] = useState({
-    user: null, tenantId: null, role: null,
-    tenant: null, isSuperAdmin: false,
-    isPaciente: false, allTenants: [],
-    loading: true,
+    user:         null,
+    tenantId:     null,
+    role:         null,
+    tenant:       null,
+    isSuperAdmin: false,
+    isPaciente:   false,
+    allTenants:   [],
+    suscripcionActiva: true, // default true para no bloquear antes de cargar
+    loading:      true,
   })
 
   useEffect(() => {
@@ -20,19 +24,17 @@ export function useTenant() {
       if (!user) { setState(s => ({ ...s, user: null, loading: false })); return }
 
       try {
-        const token = await getIdTokenResult(user, true)
+        const token      = await getIdTokenResult(user, true)
         const role        = token.claims.role       ?? null
         const isSuperAdmin = token.claims.superAdmin === true
         const isPaciente  = role === 'paciente'
 
-        // SuperAdmin: cargar todos los tenants y permitir selección
-        let tenantId = token.claims.tenantId ?? null
+        let tenantId   = token.claims.tenantId ?? null
         let allTenants = []
 
         if (isSuperAdmin) {
           const snap = await getDocs(collection(db, 'tenants'))
           allTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          // Usar el tenant guardado en localStorage o el primero disponible
           const saved = localStorage.getItem(STORAGE_KEY)
           if (saved && allTenants.find(t => t.id === saved)) {
             tenantId = saved
@@ -42,13 +44,31 @@ export function useTenant() {
         }
 
         let tenant = null
+        let suscripcionActiva = true
+
         if (tenantId) {
           const snap = await getDoc(doc(db, `tenants/${tenantId}`))
-          if (snap.exists()) tenant = { id: snap.id, ...snap.data() }
+          if (snap.exists()) {
+            tenant = { id: snap.id, ...snap.data() }
+
+            // ── Verificar suscripción ──────────────────────
+            // El superAdmin nunca se bloquea
+            // El tenant debe tener activo:true Y suscripcionActiva:true
+            if (!isSuperAdmin) {
+              const estaActivo = tenant.activo !== false
+              // Si el campo suscripcionActiva no existe, asumir true (no bloquear)
+              const suscripcion = tenant.suscripcionActiva !== false
+              suscripcionActiva = estaActivo && suscripcion
+            }
+          }
         }
 
-        setState({ user, tenantId, role, tenant, isSuperAdmin,
-                   isPaciente, allTenants, loading: false })
+        setState({
+          user, tenantId, role, tenant,
+          isSuperAdmin, isPaciente,
+          allTenants, suscripcionActiva,
+          loading: false,
+        })
       } catch(e) {
         console.error('useTenant error:', e)
         setState(s => ({ ...s, user, loading: false }))
@@ -57,12 +77,14 @@ export function useTenant() {
     return unsub
   }, [])
 
-  // SuperAdmin: cambiar de consultorio activo
   const switchTenant = async (newTenantId) => {
     localStorage.setItem(STORAGE_KEY, newTenantId)
     const snap = await getDoc(doc(db, `tenants/${newTenantId}`))
     const tenant = snap.exists() ? { id: snap.id, ...snap.data() } : null
-    setState(s => ({ ...s, tenantId: newTenantId, tenant }))
+    const suscripcionActiva = tenant
+      ? tenant.activo !== false && tenant.suscripcionActiva !== false
+      : true
+    setState(s => ({ ...s, tenantId: newTenantId, tenant, suscripcionActiva }))
   }
 
   return { ...state, switchTenant }

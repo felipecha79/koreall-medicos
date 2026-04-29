@@ -3,20 +3,21 @@ import { Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'reac
 import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import { useTenant } from './hooks/useTenant'
-import Login           from './pages/Login'
-import Agenda          from './pages/Agenda'
-import Pacientes       from './pages/Pacientes'
-import Expediente      from './pages/Expediente'
-import Cobros          from './pages/Cobros'
-import Facturacion     from './pages/Facturacion'
-import Recetas         from './pages/Recetas'
-import PagoEnLinea     from './pages/PagoEnLinea'
-import Reportes        from './pages/Reportes'
-import Admin           from './pages/Admin'
-import GestionUsuarios from './pages/GestionUsuarios'
-import SitioWeb        from './pages/SitioWeb'
-import PortalPaciente  from './pages/PortalPaciente'
-import Landing         from './pages/Landing'
+import Login              from './pages/Login'
+import Agenda             from './pages/Agenda'
+import Pacientes          from './pages/Pacientes'
+import Expediente         from './pages/Expediente'
+import Cobros             from './pages/Cobros'
+import Facturacion        from './pages/Facturacion'
+import Recetas            from './pages/Recetas'
+import PagoEnLinea        from './pages/PagoEnLinea'
+import Reportes           from './pages/Reportes'
+import Admin              from './pages/Admin'
+import GestionUsuarios    from './pages/GestionUsuarios'
+import SitioWeb           from './pages/SitioWeb'
+import PortalPaciente     from './pages/PortalPaciente'
+import Landing            from './pages/Landing'
+import SuscripcionVencida from './pages/SuscripcionVencida'
 
 function Spinner() {
   return (
@@ -27,10 +28,12 @@ function Spinner() {
 }
 
 function PrivateRoute({ children }) {
-  const { user, loading, role } = useTenant()
+  const { user, loading, role, suscripcionActiva, tenant, isSuperAdmin } = useTenant()
   if (loading) return <Spinner />
   if (!user)   return <Navigate to="/login" replace />
   if (role === 'paciente') return <Navigate to="/portal-paciente" replace />
+  // Bloquear si suscripción inactiva (excepto superAdmin)
+  if (!suscripcionActiva && !isSuperAdmin) return <SuscripcionVencida tenant={tenant} />
   return children
 }
 
@@ -47,8 +50,7 @@ const NAV_MAIN = [
 ]
 const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
-function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
-  const navigate = useNavigate()
+function Sidebar({ tenant, isSuperAdmin, suscripcionActiva, allTenants, switchTenant, onClose }) {
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
@@ -64,7 +66,14 @@ function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
               ))}
             </select>
           ) : (
-            <p className="text-xs text-slate-400 truncate">{tenant?.nombre ?? 'Cargando...'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs text-slate-400 truncate">{tenant?.nombre ?? 'Cargando...'}</p>
+              {!suscripcionActiva && !isSuperAdmin && (
+                <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                  Inactivo
+                </span>
+              )}
+            </div>
           )}
         </div>
         {onClose && (
@@ -98,7 +107,7 @@ function Sidebar({ tenant, isSuperAdmin, allTenants, switchTenant, onClose }) {
                      hover:bg-slate-800 hover:text-white transition-colors mb-1">
           <span style={{ fontSize: 15 }}>👤</span>Vista paciente
         </NavLink>
-        <button onClick={async () => { await signOut(auth); window.location.href='/' }}
+        <button onClick={async () => { await signOut(auth); window.location.href = '/' }}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                      text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
           <span style={{ fontSize: 15 }}>🚪</span>Cerrar sesión
@@ -125,7 +134,7 @@ function BottomNav() {
 }
 
 function AppLayout({ children }) {
-  const { tenant, isSuperAdmin, allTenants, switchTenant } = useTenant()
+  const { tenant, isSuperAdmin, suscripcionActiva, allTenants, switchTenant } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'MediDesk'
@@ -134,12 +143,14 @@ function AppLayout({ children }) {
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <div className="hidden md:flex md:flex-col md:w-52 flex-shrink-0">
         <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+          suscripcionActiva={suscripcionActiva}
           allTenants={allTenants} switchTenant={switchTenant} />
       </div>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="w-60 flex flex-col h-full shadow-xl">
             <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+              suscripcionActiva={suscripcionActiva}
               allTenants={allTenants} switchTenant={switchTenant}
               onClose={() => setDrawerOpen(false)} />
           </div>
@@ -175,8 +186,8 @@ export default function App() {
   ]
   return (
     <Routes>
-      <Route path="/"               element={<Landing />} />
-      <Route path="/login"          element={<Login />} />
+      <Route path="/"                element={<Landing />} />
+      <Route path="/login"           element={<Login />} />
       <Route path="/portal-paciente" element={<PortalPaciente />} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
