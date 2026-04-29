@@ -112,6 +112,8 @@ export default function Agenda() {
   const [form, setForm]             = useState(FORM_INICIAL)
   const [saving, setSaving]         = useState(false)
   const [modoDetalle, setModoDetalle] = useState('ver')
+  const [vista, setVista] = useState('semana') // 'semana' | 'dia'
+  const [diaActivo, setDiaActivo] = useState(new Date())
   const [nuevaFecha, setNuevaFecha]   = useState('')
   const [motivoCancelacion, setMotivoCancelacion] = useState('')
 
@@ -290,14 +292,20 @@ export default function Agenda() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <button onClick={() => setSemanaBase(d => addDays(d, -7))}
+          <button onClick={() => vista==='dia'
+            ? setDiaActivo(d => addDays(d, -1))
+            : setSemanaBase(d => addDays(d, -7))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">‹</button>
-          <h2 className="text-sm font-semibold text-gray-800 w-44 text-center">
-            {format(lunes, "d 'de' MMMM yyyy", { locale: es })}
+          <h2 className="text-sm font-semibold text-gray-800 w-52 text-center">
+            {vista==='dia'
+              ? format(diaActivo, "EEEE d 'de' MMMM yyyy", { locale: es })
+              : format(lunes, "d 'de' MMMM yyyy", { locale: es })}
           </h2>
-          <button onClick={() => setSemanaBase(d => addDays(d, 7))}
+          <button onClick={() => vista==='dia'
+            ? setDiaActivo(d => addDays(d, 1))
+            : setSemanaBase(d => addDays(d, 7))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">›</button>
-          <button onClick={() => setSemanaBase(new Date())}
+          <button onClick={() => { setSemanaBase(new Date()); setDiaActivo(new Date()) }}
             className="ml-1 text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
             Hoy
           </button>
@@ -310,6 +318,18 @@ export default function Agenda() {
               </span>
             ))}
           </div>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden mr-1">
+            <button onClick={() => setVista('dia')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors
+                ${vista==='dia' ? 'bg-teal-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+              Día
+            </button>
+            <button onClick={() => setVista('semana')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200
+                ${vista==='semana' ? 'bg-teal-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+              Semana
+            </button>
+          </div>
           <button onClick={() => { setForm(FORM_INICIAL); setModal('nueva') }}
             className="px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700">
             + Nueva cita
@@ -317,8 +337,126 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Grid — con slots de 30 min */}
-      <div className="flex-1 overflow-auto">
+      {/* Vista día */}
+      {vista === 'dia' && (
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-2xl mx-auto p-4">
+            {/* Resumen del día */}
+            {(() => {
+              const citasDelDia = citas.filter(c => isSameDay(c.fecha.toDate(), diaActivo))
+              const activas = citasDelDia.filter(c => !['cancelada','no_show'].includes(c.estatus))
+              return (
+                <div>
+                  <div className="grid grid-cols-4 gap-3 mb-4">
+                    {[
+                      { l:'Total', v: citasDelDia.length, c:'bg-blue-50 text-blue-700' },
+                      { l:'Confirmadas', v: citasDelDia.filter(c=>c.estatus==='confirmada').length, c:'bg-green-50 text-green-700' },
+                      { l:'Pendientes', v: citasDelDia.filter(c=>c.estatus==='programada').length, c:'bg-amber-50 text-amber-700' },
+                      { l:'Finalizadas', v: citasDelDia.filter(c=>c.estatus==='finalizada').length, c:'bg-gray-50 text-gray-600' },
+                    ].map((item,i) => (
+                      <div key={i} className={`rounded-xl p-3 text-center ${item.c}`}>
+                        <p className="text-xl font-bold">{item.v}</p>
+                        <p className="text-xs mt-0.5">{item.l}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    {HORAS.map(({h, m, label}) => {
+                      const slotCitas = citasDelDia.filter(c => {
+                        const d = c.fecha.toDate()
+                        return d.getHours()===h && d.getMinutes()===m
+                      })
+                      if (slotCitas.length === 0) {
+                        return (
+                          <div key={`${h}-${m}`}
+                            className={`flex items-center gap-3 cursor-pointer group
+                              ${m===0 ? '' : 'opacity-40'}`}
+                            onClick={() => abrirNueva(diaActivo, h, m)}>
+                            <span className="text-xs text-gray-300 w-12 text-right flex-shrink-0 font-mono">
+                              {m===0 ? label : ''}
+                            </span>
+                            <div className="flex-1 h-7 border border-dashed border-gray-100
+                                            rounded-lg group-hover:border-teal-300 group-hover:bg-teal-50
+                                            transition-colors flex items-center px-3">
+                              <span className="text-xs text-gray-200 group-hover:text-teal-400">+ Agregar cita</span>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={`${h}-${m}`} className="flex items-start gap-3">
+                          <span className="text-xs text-gray-400 w-12 text-right flex-shrink-0 font-mono pt-2">
+                            {label}
+                          </span>
+                          <div className="flex-1 space-y-1.5">
+                            {slotCitas.map(c => (
+                              <div key={c.id}
+                                onClick={() => { setModal(c); setModoDetalle('ver') }}
+                                className={`rounded-xl border p-3 cursor-pointer hover:shadow-md
+                                  transition-all ${ESTATUS_COLOR[c.estatus]}`}>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm truncate">{c.pacienteNombre}</p>
+                                    <p className="text-xs opacity-70 font-mono">{c.pacienteIdLegible}</p>
+                                    {c.motivo && <p className="text-xs opacity-70 mt-0.5 truncate">{c.motivo}</p>}
+                                  </div>
+                                  <div className="ml-2 flex flex-col items-end gap-1">
+                                    <span className="text-xs font-medium">
+                                      {ESTATUS_LABEL[c.estatus]}
+                                    </span>
+                                    {c.pacienteTel && (
+                                      <a href={`tel:${c.pacienteTel}`}
+                                        onClick={e => e.stopPropagation()}
+                                        className="text-xs opacity-60 hover:opacity-100">
+                                        📱 {c.pacienteTel}
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                                {/* Botones de turno rápidos */}
+                                {!['cancelada','finalizada','no_show'].includes(c.estatus) && (
+                                  <div className="flex gap-1.5 mt-2 pt-2 border-t border-current border-opacity-20">
+                                    {[
+                                      ['en_sala','🪑 En sala'],
+                                      ['por_pasar','🔔 Por pasar'],
+                                      ['completada','🩺 Consulta'],
+                                      ['finalizada','✅ Finalizar'],
+                                    ].filter(([s]) => s !== c.estatus).slice(0,3).map(([s, lbl]) => (
+                                      <button key={s}
+                                        onClick={e => { e.stopPropagation(); cambiarEstatus(c.id, s, c) }}
+                                        className="text-xs px-2 py-1 bg-white bg-opacity-50
+                                                   rounded-lg hover:bg-opacity-80 transition-colors font-medium">
+                                        {lbl}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {citasDelDia.length === 0 && (
+                    <div className="text-center py-16 text-gray-400">
+                      <p className="text-4xl mb-3">📅</p>
+                      <p className="text-sm">Sin citas para este día</p>
+                      <button onClick={() => abrirNueva(diaActivo, 9, 0)}
+                        className="mt-3 text-sm text-teal-600 hover:underline">
+                        + Agregar la primera cita del día
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Vista semana — con slots de 30 min */}
+      {vista === 'semana' && <div className="flex-1 overflow-auto">
         <div className="grid" style={{ gridTemplateColumns: '52px repeat(6,1fr)', minWidth: 700 }}>
           {/* Cabecera de días */}
           <div className="bg-white border-b border-r border-gray-200 sticky top-0 z-10" />
@@ -381,6 +519,8 @@ export default function Agenda() {
           ))}
         </div>
       </div>
+
+      }
 
       {/* Modal nueva cita */}
       {modal === 'nueva' && (
