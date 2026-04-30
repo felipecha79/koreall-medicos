@@ -18,6 +18,7 @@ import SitioWeb           from './pages/SitioWeb'
 import PortalPaciente     from './pages/PortalPaciente'
 import Landing            from './pages/Landing'
 import SuscripcionVencida from './pages/SuscripcionVencida'
+import Encuesta           from './pages/Encuesta'
 
 function Spinner() {
   return (
@@ -47,6 +48,7 @@ const NAV_MAIN = [
   { to: '/reportes',    label: 'Reportes',    icon: '📊' },
   { to: '/usuarios',    label: 'Usuarios',    icon: '👥' },
   { to: '/sitio-web',   label: 'Mi sitio',    icon: '🌐' },
+  { to: '/encuesta',    label: 'Encuestas',   icon: '⭐' },
 ]
 const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
@@ -182,6 +184,7 @@ export default function App() {
     ['/reportes',       <Reportes />],
     ['/usuarios',       <GestionUsuarios />],
     ['/sitio-web',      <SitioWeb />],
+    ['/encuesta',       <Encuesta />],
     ['/admin',          <Admin />],
   ]
   return (
