@@ -2,79 +2,161 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuth() { return request.auth != null; }
-    function myTenant(tenantId) {
-      return isAuth() && request.auth.token.tenantId == tenantId;
-    }
-    function hasRole(tenantId, role) {
-      return myTenant(tenantId) && request.auth.token.role == role;
+    // ── Funciones helper ─────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
     }
     function isSuperAdmin() {
       return isAuth() && request.auth.token.superAdmin == true;
     }
-    function canWrite(tenantId) {
-      return myTenant(tenantId) &&
-        request.auth.token.role in ['admin','doctor','recepcion'];
+    function belongsToTenant(tenantId) {
+      return isAuth() && request.auth.token.tenantId == tenantId;
+    }
+    function hasRole(tenantId, roles) {
+      return belongsToTenant(tenantId) &&
+        request.auth.token.role in roles;
+    }
+    function isAdmin(tenantId) {
+      return hasRole(tenantId, ['admin']) || isSuperAdmin();
+    }
+    function isDoctor(tenantId) {
+      return hasRole(tenantId, ['admin', 'doctor']) || isSuperAdmin();
+    }
+    function isStaff(tenantId) {
+      return hasRole(tenantId, ['admin', 'doctor', 'recepcion']) || isSuperAdmin();
     }
     function isPaciente(tenantId) {
-      return myTenant(tenantId) && request.auth.token.role == 'paciente';
+      return hasRole(tenantId, ['paciente']);
+    }
+    // Validar que no se inyecten campos peligrosos
+    function noMaliciousFields() {
+      return !('__proto__' in request.resource.data) &&
+             !('constructor' in request.resource.data);
+    }
+    // Limitar tamaño de texto (anti DDoS)
+    function textMaxLen(field, maxLen) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field].size() <= maxLen;
     }
 
-    match /_admin/{doc=**} {
-      allow read, write: if isSuperAdmin();
-    }
-
+    // ── Tenants ──────────────────────────────────────────
     match /tenants/{tenantId} {
-      allow read:  if myTenant(tenantId) || isSuperAdmin();
-      allow write: if isSuperAdmin();
+      // Solo superAdmin puede crear/borrar tenants
+      allow create, delete: if isSuperAdmin();
+      // Staff del tenant puede leer su propio tenant
+      allow read: if isStaff(tenantId) || isSuperAdmin()
+                  || isPaciente(tenantId); // pacientes leen nombre/config
+      // Solo admin puede actualizar la config del tenant
+      allow update: if isAdmin(tenantId);
 
+      // ── Pacientes ──────────────────────────────────────
       match /pacientes/{pacienteId} {
-        // Staff lee todos; paciente solo lee el suyo
-        allow read: if canWrite(tenantId) || isSuperAdmin() ||
-          (isPaciente(tenantId) && request.auth.uid != null);
-        allow write: if canWrite(tenantId);
+        allow read:   if isStaff(tenantId) || isSuperAdmin()
+                      || (isPaciente(tenantId) &&
+                          resource.data.email == request.auth.token.email);
+        allow create: if isStaff(tenantId) || isSuperAdmin()
+                      || request.auth != null; // registro online autenticado
+        allow update: if isDoctor(tenantId) || isSuperAdmin()
+                      || (isPaciente(tenantId) &&
+                          resource.data.email == request.auth.token.email &&
+                          // Paciente solo puede actualizar campos no médicos
+                          !('alergias' in request.resource.data) &&
+                          !('enfermedadesCronicas' in request.resource.data));
+        allow delete: if isSuperAdmin();
 
+        // Sub-colecciones del paciente
         match /documentos/{docId} {
-          allow read:  if myTenant(tenantId);
-          allow write: if canWrite(tenantId);
+          allow read:   if isStaff(tenantId) || isSuperAdmin()
+                        || (isPaciente(tenantId) &&
+                            get(/databases/$(database)/documents/tenants/$(tenantId)/pacientes/$(pacienteId)).data.email
+                            == request.auth.token.email);
+          allow create: if isDoctor(tenantId) || isSuperAdmin();
+          allow update, delete: if isDoctor(tenantId) || isSuperAdmin();
         }
         match /vitales/{vitalId} {
-          allow read:  if myTenant(tenantId);
-          allow write: if canWrite(tenantId);
+          allow read, write: if isDoctor(tenantId) || isSuperAdmin();
         }
         match /medicamentos/{medId} {
-          allow read:  if myTenant(tenantId);
-          allow write: if canWrite(tenantId);
+          allow read:   if isStaff(tenantId) || isSuperAdmin()
+                        || isPaciente(tenantId);
+          allow write:  if isDoctor(tenantId) || isSuperAdmin();
         }
       }
 
+      // ── Citas ──────────────────────────────────────────
       match /citas/{citaId} {
-        // Paciente puede leer sus citas y crear nuevas
-        allow read:   if myTenant(tenantId);
-        allow create: if myTenant(tenantId);
-        allow update: if canWrite(tenantId);
-        allow delete: if canWrite(tenantId);
+        allow read:   if isStaff(tenantId) || isSuperAdmin()
+                      || isPaciente(tenantId);
+        allow create: if isStaff(tenantId) || isSuperAdmin()
+                      || isPaciente(tenantId); // paciente puede agendar online
+        // Paciente solo puede actualizar estatus (confirmar/cancelar)
+        allow update: if isStaff(tenantId) || isSuperAdmin()
+                      || (isPaciente(tenantId) &&
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['estatus', 'historial']));
+        allow delete: if isAdmin(tenantId) || isSuperAdmin();
       }
-      match /cobros/{cobroId} {
-        allow read:  if myTenant(tenantId);
-        allow write: if hasRole(tenantId,'admin') || hasRole(tenantId,'recepcion');
-      }
+
+      // ── Consultas ──────────────────────────────────────
       match /consultas/{consultaId} {
-        allow read:  if myTenant(tenantId);
-        allow write: if hasRole(tenantId,'admin') || hasRole(tenantId,'doctor');
+        allow read:   if isStaff(tenantId) || isSuperAdmin();
+        allow create: if isDoctor(tenantId) || isSuperAdmin();
+        allow update: if isDoctor(tenantId) || isSuperAdmin();
+        allow delete: if isSuperAdmin();
       }
+
+      // ── Recetas ────────────────────────────────────────
       match /recetas/{recetaId} {
-        allow read:  if myTenant(tenantId);
-        allow write: if canWrite(tenantId);
+        allow read:   if isStaff(tenantId) || isSuperAdmin()
+                      || isPaciente(tenantId);
+        allow create: if isDoctor(tenantId) || isSuperAdmin();
+        allow update: if isDoctor(tenantId) || isSuperAdmin();
+        allow delete: if isSuperAdmin();
       }
+
+      // ── Cobros ─────────────────────────────────────────
+      match /cobros/{cobroId} {
+        allow read:   if isStaff(tenantId) || isSuperAdmin()
+                      || isPaciente(tenantId);
+        allow create: if isStaff(tenantId) || isSuperAdmin();
+        allow update: if isStaff(tenantId) || isSuperAdmin()
+                      || (isPaciente(tenantId) &&
+                          // Paciente solo puede marcar como pagado online
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['estadoPago','metodoPago','fechaPagoOnline']));
+        allow delete: if isAdmin(tenantId) || isSuperAdmin();
+      }
+
+      // ── Facturas ───────────────────────────────────────
       match /facturas/{facturaId} {
-        allow read:  if myTenant(tenantId);
-        allow write: if canWrite(tenantId);
+        allow read:   if isStaff(tenantId) || isSuperAdmin()
+                      || isPaciente(tenantId);
+        allow create: if isAdmin(tenantId) || isSuperAdmin();
+        allow update: if isAdmin(tenantId) || isSuperAdmin();
+        allow delete: if isSuperAdmin();
       }
-      match /usuarios/{userId} {
-        allow read:  if myTenant(tenantId);
-        allow write: if hasRole(tenantId,'admin') || isSuperAdmin();
+
+      // ── Usuarios del tenant ────────────────────────────
+      match /usuarios/{usuarioId} {
+        allow read:   if isAdmin(tenantId) || isSuperAdmin();
+        allow create: if isAdmin(tenantId) || isSuperAdmin();
+        allow update: if isAdmin(tenantId) || isSuperAdmin();
+        allow delete: if isAdmin(tenantId) || isSuperAdmin();
       }
+
+      // ── Encuestas ──────────────────────────────────────
+      match /encuestas/{encuestaId} {
+        allow read:   if isStaff(tenantId) || isSuperAdmin();
+        // Escritura pública para el quiosco de recepción (sin login)
+        allow create: if noMaliciousFields()
+                      && textMaxLen('comentario', 1000);
+        allow update, delete: if isAdmin(tenantId) || isSuperAdmin();
+      }
+    }
+
+    // ── Bloquear todo lo demás ───────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

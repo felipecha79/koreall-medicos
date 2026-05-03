@@ -19,6 +19,7 @@ import PortalPaciente     from './pages/PortalPaciente'
 import Landing            from './pages/Landing'
 import SuscripcionVencida from './pages/SuscripcionVencida'
 import Encuesta           from './pages/Encuesta'
+import RegistroPaciente   from './pages/RegistroPaciente'
 
 function Spinner() {
   return (
@@ -192,6 +193,7 @@ export default function App() {
       <Route path="/"                element={<Landing />} />
       <Route path="/login"           element={<Login />} />
       <Route path="/portal-paciente" element={<PortalPaciente />} />
+      <Route path="/registro" element={<RegistroPaciente />} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
           <PrivateRoute><AppLayout>{element}</AppLayout></PrivateRoute>

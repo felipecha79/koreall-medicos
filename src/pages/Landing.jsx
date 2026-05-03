@@ -730,9 +730,10 @@ export default function Landing() {
           </form>
           <p style={{textAlign:'center',fontSize:12,color:'#6B7A8D',marginTop:12}}>
             ¿Paciente nuevo?{' '}
-            <a href="#" style={{color:'var(--ld-teal)'}} onClick={e => {
-              e.preventDefault(); closeModal(); navigate('/portal-paciente')
-            }}>Solicite su registro</a>
+            <a href="/registro" style={{color:'var(--ld-teal)'}}
+              onClick={e => { e.preventDefault(); closeModal(); navigate('/registro') }}>
+              Crear cuenta gratis
+            </a>
           </p>
         </div>
       </div>
