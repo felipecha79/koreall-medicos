@@ -20,6 +20,7 @@ import Landing            from './pages/Landing'
 import SuscripcionVencida from './pages/SuscripcionVencida'
 import Encuesta           from './pages/Encuesta'
 import RegistroPaciente   from './pages/RegistroPaciente'
+import ImportarPacientes  from './pages/ImportarPacientes'
 
 function Spinner() {
   return (
@@ -42,6 +43,7 @@ function PrivateRoute({ children }) {
 const NAV_MAIN = [
   { to: '/agenda',      label: 'Agenda',      icon: '📅' },
   { to: '/pacientes',   label: 'Pacientes',   icon: '👤' },
+  { to: '/importar',    label: 'Importar',    icon: '📥' },
   { to: '/cobros',      label: 'Cobros',      icon: '💳' },
   { to: '/pagos',       label: 'Pagos',       icon: '💰' },
   { to: '/facturacion', label: 'Facturación', icon: '🧾' },
@@ -204,6 +206,7 @@ export default function App() {
     ['/agenda',         <Agenda />],
     ['/pacientes',      <Pacientes />],
     ['/pacientes/:id',  <Expediente />],
+    ['/importar',        <ImportarPacientes />],
     ['/cobros',         <Cobros />],
     ['/pagos',          <PagoEnLinea />],
     ['/facturacion',    <Facturacion />],
