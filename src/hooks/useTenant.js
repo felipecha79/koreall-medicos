@@ -38,19 +38,24 @@ export function useTenant() {
         let allTenants = [], allOrgs = []
 
         if (isSuperAdmin) {
+          // Cargar orgs y tenants — tolerante a colección organizaciones vacía
           const [orgsSnap, tenantsSnap] = await Promise.all([
-            getDocs(collection(db, 'organizaciones')),
-            getDocs(collection(db, 'tenants')),
+            getDocs(collection(db, 'organizaciones')).catch(() => ({ docs: [] })),
+            getDocs(collection(db, 'tenants')).catch(() => ({ docs: [] })),
           ])
           allOrgs    = orgsSnap.docs.map(d   => ({ id: d.id, ...d.data() }))
           allTenants = tenantsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
 
           const savedTenant = localStorage.getItem(STORAGE_KEY_TENANT)
           const savedOrg    = localStorage.getItem(STORAGE_KEY_ORG)
+
           if (savedTenant && allTenants.find(t => t.id === savedTenant)) tenantId = savedTenant
           else if (!tenantId && allTenants.length > 0) tenantId = allTenants[0].id
+
           if (savedOrg && allOrgs.find(o => o.id === savedOrg)) orgId = savedOrg
           else if (!orgId && allOrgs.length > 0) orgId = allOrgs[0].id
+          // Si no hay orgs todavía, usar el tenantId como orgId (retrocompatibilidad)
+          else if (!orgId && tenantId) orgId = tenantId
         }
 
         let tenant = null, suscripcionActiva = true
@@ -66,13 +71,20 @@ export function useTenant() {
 
         let org = null, orgTenants = []
         if (orgId) {
-          const orgSnap = await getDoc(doc(db, `organizaciones/${orgId}`))
-          if (orgSnap.exists()) org = { id: orgSnap.id, ...orgSnap.data() }
+          try {
+            const orgSnap = await getDoc(doc(db, `organizaciones/${orgId}`))
+            if (orgSnap.exists()) org = { id: orgSnap.id, ...orgSnap.data() }
+          } catch(e) { /* org collection may not exist yet */ }
+
           if (isSuperAdmin) {
             orgTenants = allTenants.filter(t => t.orgId === orgId || t.id === orgId)
+            // Fallback: si no hay tenants con orgId, mostrar todos
+            if (orgTenants.length === 0) orgTenants = allTenants
           } else {
-            const snap = await getDocs(query(collection(db, 'tenants'), where('orgId', '==', orgId)))
-            orgTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            try {
+              const snap = await getDocs(query(collection(db, 'tenants'), where('orgId', '==', orgId)))
+              orgTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            } catch(e) { orgTenants = [] }
           }
         }
 

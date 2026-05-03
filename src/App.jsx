@@ -115,13 +115,15 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
           </NavLink>
         ))}
         {isSuperAdmin && (
-          <NavLink to="/admin" onClick={onClose}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-               mt-1 pt-1 border-t border-slate-700
-               ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-            <span style={{ fontSize: 15 }}>⚙️</span>Super Admin
-          </NavLink>
+          <>
+            <div className="border-t border-slate-700 mt-1 pt-1" />
+            <NavLink to="/admin" onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                 ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              <span style={{ fontSize: 15 }}>⚙️</span>Super Admin
+            </NavLink>
+          </>
         )}
       </nav>
 
