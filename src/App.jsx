@@ -105,7 +105,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
         )}
       </div>
 
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto min-h-0">
         {NAV_MAIN.map(({ to, label, icon }) => (
           <NavLink key={to} to={to} onClick={onClose}
             className={({ isActive }) =>
@@ -127,10 +127,11 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
         )}
       </nav>
 
-      <div className="px-2 py-3 border-t border-slate-700">
+      <div className="px-2 py-3 border-t border-slate-700 flex-shrink-0">
         <NavLink to="/portal-paciente"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400
-                     hover:bg-slate-800 hover:text-white transition-colors mb-1">
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1
+             ${isActive ? 'bg-teal-700 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
           <span style={{ fontSize: 15 }}>👤</span>Vista paciente
         </NavLink>
         <button onClick={async () => { await signOut(auth); window.location.href = '/' }}
