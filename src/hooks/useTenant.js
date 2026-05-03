@@ -1,74 +1,83 @@
-// src/hooks/useTenant.js
+// src/hooks/useTenant.js  — v2 con jerarquía organizaciones
 import { useState, useEffect } from 'react'
 import { onAuthStateChanged, getIdTokenResult } from 'firebase/auth'
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
-const STORAGE_KEY = 'medidesk_active_tenant'
+const STORAGE_KEY_TENANT = 'medidesk_active_tenant'
+const STORAGE_KEY_ORG    = 'medidesk_active_org'
 
 export function useTenant() {
   const [state, setState] = useState({
-    user:         null,
-    tenantId:     null,
-    role:         null,
-    tenant:       null,
-    isSuperAdmin: false,
-    isPaciente:   false,
-    allTenants:   [],
-    suscripcionActiva: true, // default true para no bloquear antes de cargar
-    loading:      true,
+    user:              null,
+    tenantId:          null,
+    role:              null,
+    tenant:            null,
+    orgId:             null,
+    org:               null,
+    orgTenants:        [],
+    isSuperAdmin:      false,
+    allTenants:        [],
+    allOrgs:           [],
+    isPaciente:        false,
+    suscripcionActiva: true,
+    loading:           true,
   })
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
       if (!user) { setState(s => ({ ...s, user: null, loading: false })); return }
-
       try {
-        const token      = await getIdTokenResult(user, true)
-        const role        = token.claims.role       ?? null
+        const token        = await getIdTokenResult(user, true)
+        const role         = token.claims.role       ?? null
         const isSuperAdmin = token.claims.superAdmin === true
-        const isPaciente  = role === 'paciente'
+        const isPaciente   = role === 'paciente'
 
-        let tenantId   = token.claims.tenantId ?? null
-        let allTenants = []
+        let tenantId = token.claims.tenantId ?? null
+        let orgId    = token.claims.orgId    ?? null
+        let allTenants = [], allOrgs = []
 
         if (isSuperAdmin) {
-          const snap = await getDocs(collection(db, 'tenants'))
-          allTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          const saved = localStorage.getItem(STORAGE_KEY)
-          if (saved && allTenants.find(t => t.id === saved)) {
-            tenantId = saved
-          } else if (!tenantId && allTenants.length > 0) {
-            tenantId = allTenants[0].id
-          }
+          const [orgsSnap, tenantsSnap] = await Promise.all([
+            getDocs(collection(db, 'organizaciones')),
+            getDocs(collection(db, 'tenants')),
+          ])
+          allOrgs    = orgsSnap.docs.map(d   => ({ id: d.id, ...d.data() }))
+          allTenants = tenantsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+          const savedTenant = localStorage.getItem(STORAGE_KEY_TENANT)
+          const savedOrg    = localStorage.getItem(STORAGE_KEY_ORG)
+          if (savedTenant && allTenants.find(t => t.id === savedTenant)) tenantId = savedTenant
+          else if (!tenantId && allTenants.length > 0) tenantId = allTenants[0].id
+          if (savedOrg && allOrgs.find(o => o.id === savedOrg)) orgId = savedOrg
+          else if (!orgId && allOrgs.length > 0) orgId = allOrgs[0].id
         }
 
-        let tenant = null
-        let suscripcionActiva = true
-
+        let tenant = null, suscripcionActiva = true
         if (tenantId) {
           const snap = await getDoc(doc(db, `tenants/${tenantId}`))
           if (snap.exists()) {
             tenant = { id: snap.id, ...snap.data() }
-
-            // ── Verificar suscripción ──────────────────────
-            // El superAdmin nunca se bloquea
-            // El tenant debe tener activo:true Y suscripcionActiva:true
-            if (!isSuperAdmin) {
-              const estaActivo = tenant.activo !== false
-              // Si el campo suscripcionActiva no existe, asumir true (no bloquear)
-              const suscripcion = tenant.suscripcionActiva !== false
-              suscripcionActiva = estaActivo && suscripcion
-            }
+            if (!isSuperAdmin)
+              suscripcionActiva = tenant.activo !== false && tenant.suscripcionActiva !== false
+            if (!orgId) orgId = tenant.orgId ?? tenantId
           }
         }
 
-        setState({
-          user, tenantId, role, tenant,
-          isSuperAdmin, isPaciente,
-          allTenants, suscripcionActiva,
-          loading: false,
-        })
+        let org = null, orgTenants = []
+        if (orgId) {
+          const orgSnap = await getDoc(doc(db, `organizaciones/${orgId}`))
+          if (orgSnap.exists()) org = { id: orgSnap.id, ...orgSnap.data() }
+          if (isSuperAdmin) {
+            orgTenants = allTenants.filter(t => t.orgId === orgId || t.id === orgId)
+          } else {
+            const snap = await getDocs(query(collection(db, 'tenants'), where('orgId', '==', orgId)))
+            orgTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          }
+        }
+
+        setState({ user, tenantId, role, tenant, orgId, org, orgTenants,
+          isSuperAdmin, isPaciente, allTenants, allOrgs, suscripcionActiva, loading: false })
       } catch(e) {
         console.error('useTenant error:', e)
         setState(s => ({ ...s, user, loading: false }))
@@ -78,14 +87,27 @@ export function useTenant() {
   }, [])
 
   const switchTenant = async (newTenantId) => {
-    localStorage.setItem(STORAGE_KEY, newTenantId)
+    localStorage.setItem(STORAGE_KEY_TENANT, newTenantId)
     const snap = await getDoc(doc(db, `tenants/${newTenantId}`))
     const tenant = snap.exists() ? { id: snap.id, ...snap.data() } : null
     const suscripcionActiva = tenant
-      ? tenant.activo !== false && tenant.suscripcionActiva !== false
-      : true
-    setState(s => ({ ...s, tenantId: newTenantId, tenant, suscripcionActiva }))
+      ? tenant.activo !== false && tenant.suscripcionActiva !== false : true
+    const newOrgId = tenant?.orgId ?? newTenantId
+    setState(s => ({ ...s, tenantId: newTenantId, tenant, suscripcionActiva, orgId: newOrgId }))
   }
 
-  return { ...state, switchTenant }
+  const switchOrg = async (newOrgId) => {
+    localStorage.setItem(STORAGE_KEY_ORG, newOrgId)
+    const orgSnap = await getDoc(doc(db, `organizaciones/${newOrgId}`))
+    const org = orgSnap.exists() ? { id: orgSnap.id, ...orgSnap.data() } : null
+    setState(s => {
+      const orgTenants = s.allTenants.filter(t => t.orgId === newOrgId || t.id === newOrgId)
+      const first = orgTenants[0] ?? null
+      if (first) localStorage.setItem(STORAGE_KEY_TENANT, first.id)
+      return { ...s, orgId: newOrgId, org, orgTenants,
+        tenantId: first?.id ?? s.tenantId, tenant: first ?? s.tenant }
+    })
+  }
+
+  return { ...state, switchTenant, switchOrg }
 }

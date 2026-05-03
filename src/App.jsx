@@ -53,13 +53,34 @@ const NAV_MAIN = [
 ]
 const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
-function Sidebar({ tenant, isSuperAdmin, suscripcionActiva, allTenants, switchTenant, onClose }) {
+function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, onClose }) {
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-bold">MediDesk</h1>
-          {isSuperAdmin && allTenants?.length > 1 ? (
+          {isSuperAdmin && allOrgs?.length > 1 ? (
+            <div className="mt-1 space-y-1">
+              <select value={org?.id ?? ''}
+                onChange={e => switchOrg(e.target.value)}
+                className="w-full text-xs bg-slate-700 text-slate-200 border border-slate-600
+                           rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-400">
+                {allOrgs.map(o => (
+                  <option key={o.id} value={o.id}>{o.nombre}</option>
+                ))}
+              </select>
+              {orgTenants?.length > 1 && (
+                <select value={tenant?.id ?? ''}
+                  onChange={e => switchTenant(e.target.value)}
+                  className="w-full text-xs bg-slate-600 text-slate-300 border border-slate-500
+                             rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-400">
+                  {orgTenants.map(t => (
+                    <option key={t.id} value={t.id}>└ {t.nombre}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ) : isSuperAdmin && allTenants?.length > 1 ? (
             <select value={tenant?.id ?? ''}
               onChange={e => switchTenant(e.target.value)}
               className="w-full mt-1 text-xs bg-slate-700 text-slate-200 border border-slate-600
@@ -137,7 +158,7 @@ function BottomNav() {
 }
 
 function AppLayout({ children }) {
-  const { tenant, isSuperAdmin, suscripcionActiva, allTenants, switchTenant } = useTenant()
+  const { tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'MediDesk'
@@ -145,16 +166,18 @@ function AppLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <div className="hidden md:flex md:flex-col md:w-52 flex-shrink-0">
-        <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+        <Sidebar tenant={tenant} org={org} isSuperAdmin={isSuperAdmin}
           suscripcionActiva={suscripcionActiva}
-          allTenants={allTenants} switchTenant={switchTenant} />
+          allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
+          switchTenant={switchTenant} switchOrg={switchOrg} />
       </div>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="w-60 flex flex-col h-full shadow-xl">
-            <Sidebar tenant={tenant} isSuperAdmin={isSuperAdmin}
+            <Sidebar tenant={tenant} org={org} isSuperAdmin={isSuperAdmin}
               suscripcionActiva={suscripcionActiva}
-              allTenants={allTenants} switchTenant={switchTenant}
+              allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
+              switchTenant={switchTenant} switchOrg={switchOrg}
               onClose={() => setDrawerOpen(false)} />
           </div>
           <div className="flex-1 bg-black/50" onClick={() => setDrawerOpen(false)} />
