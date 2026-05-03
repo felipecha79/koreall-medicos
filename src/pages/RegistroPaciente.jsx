@@ -19,9 +19,22 @@ const TEAL = '#0A8076'
 // Solo extrae nombre, apellidos, fecha de nacimiento, sexo y CURP
 // NO almacenamos la imagen de la INE — solo los datos extraídos
 async function extraerDatosINE(imagenBase64, mimeType) {
+  const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
+
+  // Si no hay API key configurada, saltar OCR y llenar manualmente
+  if (!ANTHROPIC_KEY) {
+    console.warn('[OCR] VITE_ANTHROPIC_API_KEY no configurada — llenado manual')
+    throw new Error('OCR_NO_KEY')
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 800,
@@ -158,8 +171,12 @@ export default function RegistroPaciente() {
       setPaso(1)
     } catch(e) {
       console.error('OCR error:', e)
-      toast.error('No se pudo leer la INE. Puedes ingresar tus datos manualmente.')
-      setPaso(1) // Aún avanzamos al siguiente paso
+      if (e.message === 'OCR_NO_KEY') {
+        toast('Sin OCR configurado — ingresa tus datos manualmente', { icon: 'ℹ️' })
+      } else {
+        toast.error('No se pudo leer la INE. Ingresa tus datos manualmente.')
+      }
+      setPaso(1) // Avanzar de todas formas al formulario manual
     } finally { setEsc(false) }
   }
 
