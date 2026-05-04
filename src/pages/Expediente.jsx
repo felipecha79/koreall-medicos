@@ -10,6 +10,7 @@ import {
 import { db, storage } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import { format } from 'date-fns'
+import { PLANTILLAS_SOAP, LISTA_PLANTILLAS } from '../data/plantillasSOAP'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
@@ -53,6 +54,7 @@ export default function Expediente() {
   const [uploadProgress, setUploadProgress] = useState(null)
   const fileInputRef = useRef()
 
+  const [plantillaId, setPlantillaId] = useState('general')
   const [formConsulta, setFormConsulta] = useState({
     motivoConsulta:'', exploracionFisica:'', diagnostico:'',
     cie10:'', tratamiento:'', indicaciones:'', peso:'', talla:'',
@@ -705,6 +707,31 @@ export default function Expediente() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={()=>setModalConsulta(false)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva consulta — {paciente.nombre}</h3>
+
+            {/* Selector de plantilla */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-2">Plantilla clínica</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {LISTA_PLANTILLAS.map(pl => (
+                  <button key={pl.id}
+                    onClick={() => {
+                      setPlantillaId(pl.id)
+                      setFormConsulta(fc => ({
+                        ...fc,
+                        motivoConsulta: '', exploracionFisica: '', diagnostico: '',
+                        cie10: '', tratamiento: '', indicaciones: '',
+                      }))
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-all
+                      ${plantillaId === pl.id
+                        ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                    {pl.icono} {pl.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <p className="text-xs font-medium text-gray-500 uppercase mb-2">Signos vitales</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
               {[['peso','Peso (kg)','number'],['talla','Talla (cm)','number'],['ta','TA (mmHg)','text'],['fc','FC (lpm)','number'],['temperatura','Temp (°C)','number'],['spo2','SpO₂ (%)','number']].map(([f,l,t])=>(
@@ -716,15 +743,18 @@ export default function Expediente() {
               ))}
             </div>
             <div className="space-y-3">
-              {[['motivoConsulta','Motivo de consulta','textarea'],['exploracionFisica','Exploración física','textarea'],['diagnostico','Diagnóstico *','text'],['cie10','CIE-10','text'],['tratamiento','Tratamiento','textarea'],['indicaciones','Indicaciones','textarea']].map(([f,l,t])=>(
+              {[['motivoConsulta','Motivo de consulta','textarea'],['exploracionFisica','Exploración física','textarea'],['diagnostico','Diagnóstico *','text'],['cie10','CIE-10','text'],['tratamiento','Tratamiento','textarea'],['indicaciones','Indicaciones','textarea']].map(([f,l,t])=>{
+                const guia = PLANTILLAS_SOAP[plantillaId]?.guias?.[f]
+                return (
                 <div key={f}>
                   <label className="block text-xs text-gray-500 mb-1">{l}</label>
                   {t==='textarea'
-                    ?<textarea value={formConsulta[f]} rows={2} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"/>
-                    :<input type="text" value={formConsulta[f]} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"/>
+                    ?<textarea value={formConsulta[f]} rows={2} placeholder={guia ?? ''} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"/>
+                    :<input type="text" value={formConsulta[f]} placeholder={guia ?? ''} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"/>
                   }
+                  {guia && <p className="text-xs text-gray-400 mt-0.5 italic">{guia}</p>}
                 </div>
-              ))}
+              )})}
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={guardarConsulta} className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-teal-700">Guardar consulta</button>

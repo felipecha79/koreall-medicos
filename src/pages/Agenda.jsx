@@ -9,6 +9,7 @@ import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { notificarCambioEstatus } from '../services/notificaciones'
 import toast from 'react-hot-toast'
+import IAPreConsulta, { CampoPadecimientoCita } from '../components/IAPreConsulta'
 
 // Slots de 30 minutos de 8am a 10pm
 const HORAS = []
@@ -100,6 +101,7 @@ function BuscadorPaciente({ tenantId, onSelect, valorInicial = '' }) {
 }
 
 const FORM_INICIAL = {
+  padecimientoPaciente: '',
   pacienteId: '', pacienteNombre: '', pacienteTel: '', pacienteIdLegible: '',
   fechaHora: '', motivo: '', duracionMin: 30,
 }

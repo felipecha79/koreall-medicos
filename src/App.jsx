@@ -21,6 +21,7 @@ import SuscripcionVencida from './pages/SuscripcionVencida'
 import Encuesta           from './pages/Encuesta'
 import RegistroPaciente   from './pages/RegistroPaciente'
 import ImportarPacientes  from './pages/ImportarPacientes'
+import Telemedicina       from './pages/Telemedicina'
 
 function Spinner() {
   return (
@@ -52,6 +53,7 @@ const NAV_MAIN = [
   { to: '/usuarios',    label: 'Usuarios',    icon: '👥' },
   { to: '/sitio-web',   label: 'Mi sitio',    icon: '🌐' },
   { to: '/encuesta',    label: 'Encuestas',   icon: '⭐' },
+  { to: '/telemedicina', label: 'Telemedicina', icon: '📹' },
 ]
 const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
@@ -215,6 +217,7 @@ export default function App() {
     ['/usuarios',       <GestionUsuarios />],
     ['/sitio-web',      <SitioWeb />],
     ['/encuesta',       <Encuesta />],
+    ['/telemedicina',   <Telemedicina />],
     ['/admin',          <Admin />],
   ]
   return (

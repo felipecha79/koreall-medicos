@@ -9,6 +9,7 @@ import { useTenant } from '../hooks/useTenant'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import OCRConstanciaSAT from '../components/OCRConstanciaSAT'
 
 // Generar ID legible: PAC-XXXXX
 const generarPacienteId = async (tenantId) => {
@@ -435,6 +436,27 @@ export default function Pacientes() {
               {/* Fiscal */}
               {tabForm === 'fiscal' && (
                 <div className="space-y-4">
+                  {/* OCR Constancia SAT */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <p className="text-xs text-blue-800 font-medium mb-2">
+                      🏛️ Cargar datos automáticamente desde la Constancia de Situación Fiscal
+                    </p>
+                    <OCRConstanciaSAT
+                      onDatosCargados={(datos) => {
+                        setForm(f => ({
+                          ...f,
+                          rfc:           datos.rfc          || f.rfc,
+                          rfcRazonSocial: datos.razonSocial || f.rfcRazonSocial,
+                          regimenFiscal: datos.regimenFiscal || f.regimenFiscal,
+                          calleFiscal:   datos.calle        || f.calleFiscal,
+                          coloniaFiscal: datos.colonia      || f.coloniaFiscal,
+                          ciudadFiscal:  datos.municipio    || f.ciudadFiscal,
+                          estadoFiscal:  datos.estado       || f.estadoFiscal,
+                          cpFiscal:      datos.cp           || f.cpFiscal,
+                        }))
+                      }}
+                    />
+                  </div>
                   <div className="bg-teal-50 border border-teal-200 rounded-xl p-3">
                     <p className="text-xs text-teal-700 font-medium mb-1">
                       💡 Datos para emitir CFDI a este paciente
