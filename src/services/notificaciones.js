@@ -119,6 +119,10 @@ export async function notifPagoRecibido(paciente, cobro, tenant) {
   )
 }
 
+// ── Aliases retrocompatibles con versiones anteriores de Agenda.jsx ─
+export const notificarCambioEstatus = ({ cita, nuevoEstatus, tenant }) =>
+  notifCambioEstatus(cita, nuevoEstatus, tenant)
+
 // ── Mapa de todos los puntos ──────────────────────────────
 export const PUNTOS_NOTIFICACION = [
   { id:'cita_confirmada',  automatico:true,  desc:'Al confirmar una cita desde la Agenda' },
