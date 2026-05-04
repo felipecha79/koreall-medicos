@@ -65,6 +65,11 @@ export default function PacientesSinCita({
     if (tenantId) cargarDatos()
   }, [tenantId, filtroMinDias])
 
+  // Auto-cargar al abrir el tab (si ya tiene tenantId y lista vacía)
+  useEffect(() => {
+    if (tenantId && lista.length === 0) cargarDatos()
+  }, [tenantId])
+
   const cargarDatos = async () => {
     if (!tenantId) return
     setLoading(true)

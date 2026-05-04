@@ -73,6 +73,7 @@ export default function Reportes() {
 
   // ── Estado tab Seguimiento ───────────────────────────
   const [filtroMinDias, setFiltroMinDias] = useState(30)
+  const [totalPacientes, setTotalPacientes] = useState('—')
 
   // ── Rango de fechas ──────────────────────────────────
   const hoy = format(new Date(), 'yyyy-MM-dd')
@@ -92,6 +93,16 @@ export default function Reportes() {
   const [generandoFG,   setGenerandoFG]   = useState(false)
   const [rfcGlobal,     setRfcGlobal]     = useState('XAXX010101000')
   const [conceptoGlobal,setConceptoGlobal]= useState('Servicios médicos — Factura global')
+
+  // Cargar total de pacientes para KPI
+  useEffect(() => {
+    if (!tenantId) return
+    const unsub = onSnapshot(
+      collection(db, `tenants/${tenantId}/pacientes`),
+      snap => setTotalPacientes(snap.size)
+    )
+    return unsub
+  }, [tenantId])
 
   useEffect(() => {
     if (!tenantId) return
@@ -501,7 +512,7 @@ export default function Reportes() {
       {tab === 'Resumen KPIs' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { titulo:'Total pacientes', valor: pacientes.length || '—', icon:'👥', desc:'Total histórico en el tenant' },
+            { titulo:'Total pacientes', valor: totalPacientes, icon:'👥', desc:'Total histórico en el tenant' },
             { titulo:'Consultas este mes', valor: consultasFiltradas.length, icon:'🩺', desc:'Basado en rango seleccionado' },
             { titulo:'Ingresos cobrados', valor:`$${totalCobrado.toLocaleString('es-MX')}`, icon:'💰', desc:'Pagos confirmados' },
             { titulo:'Facturas emitidas', valor: facturas.filter(f=>f.estatus==='valid').length, icon:'🧾', desc:'CFDI vigentes' },
