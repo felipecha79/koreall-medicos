@@ -10,6 +10,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import OCRConstanciaSAT from '../components/OCRConstanciaSAT'
+import OCRIneDoctor     from '../components/OCRIneDoctor'
 
 // Generar ID legible: PAC-XXXXX
 const generarPacienteId = async (tenantId) => {
@@ -331,6 +332,27 @@ export default function Pacientes() {
               {/* Personal */}
               {tabForm === 'personal' && (
                 <div className="grid grid-cols-2 gap-3">
+                  {/* OCR INE — span completo */}
+                  <div className="col-span-2 mb-1">
+                    <OCRIneDoctor
+                      onDatosCargados={(datos) => {
+                        setForm(f => ({
+                          ...f,
+                          nombre:          datos.nombre          || f.nombre,
+                          apellidoPaterno: datos.apellidoPaterno || f.apellidoPaterno,
+                          apellidoMaterno: datos.apellidoMaterno || f.apellidoMaterno,
+                          fechaNacimiento: datos.fechaNacimiento || f.fechaNacimiento,
+                          sexo:            datos.sexo            || f.sexo,
+                          curp:            datos.curp            || f.curp,
+                          calle:           datos.calle           || f.calle,
+                          colonia:         datos.colonia         || f.colonia,
+                          ciudad:          datos.municipio       || f.ciudad,
+                          estado:          datos.estado          || f.estado,
+                          cp:              datos.cp              || f.cp,
+                        }))
+                      }}
+                    />
+                  </div>
                   {[
                     ['nombre','Nombre(s) *','text'],
                     ['apellidos','Apellidos *','text'],

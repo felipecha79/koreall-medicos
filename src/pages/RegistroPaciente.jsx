@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import toast from 'react-hot-toast'
+import OCRConstanciaSAT from '../components/OCRConstanciaSAT'
 
 // ── Paleta del consultorio (carga dinámica) ──────────────
 const TEAL = '#0A8076'
