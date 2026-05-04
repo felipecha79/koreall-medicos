@@ -183,7 +183,7 @@ export default function PacientesSinCita({
     }
 
     setEnviando(false)
-    if (ok > 0)   toast.success(`✓ ${ok} mensajes enviados${res?.modo === 'desarrollo' ? ' (modo dev — ver consola)' : ''}`)
+    if (ok > 0)   toast.success(`✓ ${ok} mensajes enviados`)
     if (fail > 0) toast.error(`${fail} no se pudieron enviar (sin teléfono o error)`)
     setSeleccionados(new Set())
   }

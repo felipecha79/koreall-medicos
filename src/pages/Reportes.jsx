@@ -71,6 +71,9 @@ export default function Reportes() {
   const { tenantId, tenant } = useTenant()
   const [tab, setTab] = useState('Pagos y facturas')
 
+  // ── Estado tab Seguimiento ───────────────────────────
+  const [filtroMinDias, setFiltroMinDias] = useState(30)
+
   // ── Rango de fechas ──────────────────────────────────
   const hoy = format(new Date(), 'yyyy-MM-dd')
   const inicioMes = format(startOfMonth(new Date()), 'yyyy-MM-dd')
@@ -462,7 +465,7 @@ export default function Reportes() {
                   {consultasFiltradas.map(c => (
                     <tr key={c.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{fmtFecha(c.fecha)}</td>
-                      <td className="px-3 py-2.5 text-xs font-mono text-teal-700">{c.pacienteId?.slice(0,12) ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-gray-700">{c.pacienteNombre ?? c.pacienteId?.slice(0,12) ?? '—'}</td>
                       <td className="px-3 py-2.5 text-xs font-medium text-gray-800">{c.diagnostico ?? '—'}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[140px] truncate">{c.motivoConsulta ?? '—'}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[140px] truncate">{c.tratamiento ?? '—'}</td>
@@ -489,16 +492,8 @@ export default function Reportes() {
       {tab === 'Seguimiento pacientes' && (
         <PacientesSinCita
           tenantId={tenantId}
-          pacientesSinCita={pacientesSinCita}
-          setPacSinCita={setPacSinCita}
-          loadingSeg={loadingSeg}
-          setLoadingSeg={setLoadingSeg}
           filtroMinDias={filtroMinDias}
           setFiltroMinDias={setFiltroMinDias}
-          enviandoWA={enviandoWA}
-          setEnviandoWA={setEnviandoWA}
-          citas={citas}
-          pacientes={cobros}
         />
       )}
 
@@ -506,7 +501,7 @@ export default function Reportes() {
       {tab === 'Resumen KPIs' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { titulo:'Total pacientes', valor: '—', icon:'👥', desc:'Cargando desde pacientes...' },
+            { titulo:'Total pacientes', valor: pacientes.length || '—', icon:'👥', desc:'Total histórico en el tenant' },
             { titulo:'Consultas este mes', valor: consultasFiltradas.length, icon:'🩺', desc:'Basado en rango seleccionado' },
             { titulo:'Ingresos cobrados', valor:`$${totalCobrado.toLocaleString('es-MX')}`, icon:'💰', desc:'Pagos confirmados' },
             { titulo:'Facturas emitidas', valor: facturas.filter(f=>f.estatus==='valid').length, icon:'🧾', desc:'CFDI vigentes' },
