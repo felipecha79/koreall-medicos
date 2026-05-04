@@ -5,9 +5,10 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
-import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from 'date-fns'
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import PacientesSinCita from '../components/PacientesSinCita'
 
 // ── Exportar a CSV (compatible con Excel) ─────────────────
 function exportarCSV(datos, nombreArchivo) {
@@ -64,7 +65,7 @@ function SelectorRango({ desde, hasta, onChange }) {
   )
 }
 
-const TABS = ['Pagos y facturas', 'Consultas', 'Resumen KPIs']
+const TABS = ['Pagos y facturas', 'Consultas', 'Seguimiento pacientes', 'Resumen KPIs']
 
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
@@ -482,6 +483,23 @@ export default function Reportes() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ══ Tab: Seguimiento pacientes ══════════════════════ */}
+      {tab === 'Seguimiento pacientes' && (
+        <PacientesSinCita
+          tenantId={tenantId}
+          pacientesSinCita={pacientesSinCita}
+          setPacSinCita={setPacSinCita}
+          loadingSeg={loadingSeg}
+          setLoadingSeg={setLoadingSeg}
+          filtroMinDias={filtroMinDias}
+          setFiltroMinDias={setFiltroMinDias}
+          enviandoWA={enviandoWA}
+          setEnviandoWA={setEnviandoWA}
+          citas={citas}
+          pacientes={cobros}
+        />
       )}
 
       {/* ══ Tab: KPIs ═════════════════════════════════════ */}

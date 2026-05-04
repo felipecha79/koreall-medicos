@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   createUserWithEmailAndPassword,
@@ -114,18 +114,24 @@ export default function RegistroPaciente() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // Cargar lista de tenants (consultorios disponibles)
-  useState(() => {
+  // Fix: useEffect (no useState) para cargar tenants — funciona en iOS Safari
+  useEffect(() => {
     getDocs(query(collection(db, 'tenants'), where('activo', '!=', false))).then(snap => {
       const lista = snap.docs
         .map(d => ({ id: d.id, nombre: d.data().nombre }))
         .filter(t => t.nombre)
       setTenants(lista)
+      // Si hay un solo tenant, seleccionarlo automáticamente
+      if (lista.length === 1 && !tenantParam) {
+        setTenantSel(lista[0].id)
+        setTenantNombre(lista[0].nombre)
+      }
       if (tenantParam) {
         const t = lista.find(x => x.id === tenantParam)
         if (t) setTenantNombre(t.nombre)
       }
     }).catch(() => {})
-  })
+  }, [])
 
   // ── Procesar imagen de INE ────────────────────────────
   const procesarINE = async (archivo) => {
@@ -307,20 +313,32 @@ export default function RegistroPaciente() {
               </p>
 
               {/* Seleccionar consultorio si no viene por URL */}
-              {!tenantParam && tenants.length > 0 && (
+              {tenants.length > 0 && !tenantParam && (
                 <div className="mb-4">
                   <label className="block text-xs text-gray-500 mb-1">
                     ¿En qué consultorio quieres registrarte?
                   </label>
-                  <select value={tenantSeleccionado}
-                    onChange={e => setTenantSel(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-teal-400">
-                    <option value="">Seleccionar consultorio...</option>
+                  <select
+                    value={tenantSeleccionado}
+                    onChange={e => {
+                      setTenantSel(e.target.value)
+                      const t = tenants.find(x => x.id === e.target.value)
+                      if (t) setTenantNombre(t.nombre)
+                    }}
+                    style={{ fontSize: '16px' }}
+                    className="w-full border-2 border-teal-400 rounded-xl px-3 py-3 text-sm
+                               bg-white focus:outline-none focus:ring-2 focus:ring-teal-500
+                               appearance-none cursor-pointer">
+                    <option value="">— Seleccionar consultorio —</option>
                     {tenants.map(t => (
                       <option key={t.id} value={t.id}>{t.nombre}</option>
                     ))}
                   </select>
+                  <p className="text-xs text-teal-600 mt-1">
+                    {tenantSeleccionado
+                      ? `✓ Consultorio seleccionado: ${tenantNombre}`
+                      : 'Toca para seleccionar tu consultorio'}
+                  </p>
                 </div>
               )}
 
