@@ -593,7 +593,7 @@ export default function Agenda() {
       {modal && modal !== 'nueva' && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={() => { setModal(null); setModoDetalle('ver') }}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
 
             <div className={`inline-block text-xs px-2 py-0.5 rounded border mb-3
