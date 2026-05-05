@@ -24,38 +24,15 @@ async function analizarPadecimiento(texto, pacienteInfo = {}) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 800,
-      system: `Eres un asistente clínico de apoyo para médicos en México. 
-Tu función es analizar el padecimiento descrito por el paciente y proporcionar al médico:
-1. Posibles diagnósticos diferenciales (3-5 más probables, del más al menos probable)
-2. Estudios complementarios sugeridos (máximo 5, ordenados por prioridad)
-3. Preguntas clave que el médico debería hacer en la consulta (máximo 5)
-4. Señales de alarma a vigilar
-
-IMPORTANTE: 
-- Este análisis es solo de APOYO al criterio clínico del médico
-- No es un diagnóstico definitivo
-- El médico decide qué usar
-- Responde en español médico claro
-- Devuelve SOLO JSON válido sin explicaciones adicionales`,
+      max_tokens: 1500,
+      system: `Asistente clínico de apoyo para médicos en México. Analiza el padecimiento y responde SOLO con JSON válido y completo. Sin texto adicional, sin backticks. Sé conciso.`,
       messages: [{
         role: 'user',
-        content: `Paciente: ${pacienteInfo.sexo === 'F' ? 'Femenino' : pacienteInfo.sexo === 'M' ? 'Masculino' : 'No especificado'}, ${edad}.
-Alergias conocidas: ${pacienteInfo.alergias || 'ninguna conocida'}
-Padecimiento actual descrito por el paciente: "${texto}"
+        content: `Paciente: ${pacienteInfo.sexo === 'F' ? 'Femenino' : pacienteInfo.sexo === 'M' ? 'Masculino' : 'No especificado'}, ${edad}. Alergias: ${pacienteInfo.alergias || 'ninguna'}.
+Padecimiento: "${texto}"
 
-Devuelve este JSON exacto:
-{
-  "diagnosticosDiferenciales": [
-    {"diagnostico": "nombre", "probabilidad": "alta/media/baja", "justificacion": "breve"}
-  ],
-  "estudiossugeridos": [
-    {"estudio": "nombre", "justificacion": "breve", "urgencia": "inmediata/electiva"}
-  ],
-  "preguntasClave": ["pregunta 1", "pregunta 2"],
-  "senalesAlarma": ["señal 1", "señal 2"],
-  "observacionGeneral": "observación clínica breve de máx 2 líneas"
-}`
+Responde SOLO este JSON completo:
+{"observacionGeneral":"texto breve","diagnosticosDiferenciales":[{"diagnostico":"nombre","probabilidad":"alta","justificacion":"breve"},{"diagnostico":"nombre2","probabilidad":"media","justificacion":"breve"}],"estudiossugeridos":[{"estudio":"nombre","justificacion":"breve","urgencia":"electiva"}],"preguntasClave":["pregunta1","pregunta2","pregunta3"],"senalesAlarma":["señal1","señal2"]}`
       }]
     })
   })
