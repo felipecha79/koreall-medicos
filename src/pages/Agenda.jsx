@@ -197,6 +197,7 @@ export default function Agenda() {
         pacienteTel:         form.pacienteTel,
         fecha,
         motivo:              form.motivo,
+        padecimientoPaciente: form.padecimientoPaciente || '',
         duracionMin:         form.duracionMin,
         tenantId,
         estatus:             'programada',
@@ -609,17 +610,25 @@ export default function Agenda() {
             {modal.motivo && <p className="text-sm text-gray-600 mt-1">{modal.motivo}</p>}
 
             {/* Panel padecimiento del paciente */}
-            {modal.padecimientoPaciente && (
+            {(modal.padecimientoPaciente || modal.motivo) && (
               <div className="mt-3 bg-blue-50 rounded-xl p-3 border border-blue-100">
                 <p className="text-xs text-blue-600 font-medium mb-1">📝 Padecimiento descrito por el paciente:</p>
-                <p className="text-sm text-gray-800 italic">"{modal.padecimientoPaciente}"</p>
+                <p className="text-sm text-gray-800 italic">
+                  "{modal.padecimientoPaciente || modal.motivo}"
+                </p>
               </div>
             )}
 
-            {/* Panel IA pre-consulta */}
-            {modal.padecimientoPaciente && (
+            {/* Panel IA pre-consulta — usa padecimientoPaciente o motivo como fallback */}
+            {(modal.padecimientoPaciente || modal.motivo) && (
               <div className="mt-3">
-                <IAPreConsulta cita={modal} paciente={null} />
+                <IAPreConsulta
+                  cita={{
+                    ...modal,
+                    padecimientoPaciente: modal.padecimientoPaciente || modal.motivo
+                  }}
+                  paciente={null}
+                />
               </div>
             )}
 
