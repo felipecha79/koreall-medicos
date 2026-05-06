@@ -108,6 +108,7 @@ const FORM_INICIAL = {
 
 export default function Agenda() {
   const { tenantId, tenant } = useTenant()
+  const iaActivo = tenant?.iaPreConsultaActivo !== false // default true
   const [semanaBase, setSemanaBase] = useState(new Date())
   const [citas, setCitas]           = useState([])
   const [modal, setModal]           = useState(null)
@@ -625,9 +626,11 @@ export default function Agenda() {
                 <IAPreConsulta
                   cita={{
                     ...modal,
+                    tenantId,
                     padecimientoPaciente: modal.padecimientoPaciente || modal.motivo
                   }}
                   paciente={null}
+                  iaActivo={iaActivo}
                 />
               </div>
             )}

@@ -455,6 +455,47 @@ export default function Admin() {
               <p>node scripts/set-paciente.cjs email@p.com TENANT_ID</p>
             </div>
           </div>
+
+          {/* Configuración IA por consultorio */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-semibold text-gray-700 mb-3">
+              🤖 Funciones de Inteligencia Artificial por consultorio
+            </p>
+            <div className="space-y-3">
+              {tenants.map(t => (
+                <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
+                    <p className="text-xs text-gray-400 font-mono">{t.id}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">IA pre-consulta:</span>
+                    <button
+                      onClick={async () => {
+                        const actual = t.iaPreConsultaActivo !== false
+                        await updateDoc(doc(db, `tenants/${t.id}`), {
+                          iaPreConsultaActivo: !actual
+                        })
+                        toast.success(`IA ${!actual ? 'activada' : 'desactivada'} para ${t.nombre}`)
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${t.iaPreConsultaActivo !== false ? 'bg-teal-600' : 'bg-gray-200'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                        ${t.iaPreConsultaActivo !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                    <span className={`text-xs font-medium ${t.iaPreConsultaActivo !== false ? 'text-teal-600' : 'text-gray-400'}`}>
+                      {t.iaPreConsultaActivo !== false ? 'Activa' : 'Inactiva'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Cuando está activa, el doctor ve sugerencias de diagnóstico IA al abrir una cita.
+              El análisis se guarda en la cita para no repetir consultas.
+              Costo aproximado: $0.01 USD por cita analizada.
+            </p>
+          </div>
         </div>
       )}
 
