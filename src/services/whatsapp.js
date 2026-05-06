@@ -16,10 +16,12 @@ function normalizarTel(tel) {
   if (!tel) return null
   // Quitar todo menos dígitos
   const digitos = tel.replace(/\D/g, '')
-  // México: 10 dígitos → agregar +52
-  if (digitos.length === 10) return `+52${digitos}`
-  // Ya tiene código de país
-  if (digitos.length === 12 && digitos.startsWith('52')) return `+${digitos}`
+  // México móvil: 10 dígitos → +521 (WhatsApp requiere el 1 para móviles MX)
+  if (digitos.length === 10) return `+521${digitos}`
+  // Ya tiene +521 correcto (13 dígitos)
+  if (digitos.length === 13 && digitos.startsWith('521')) return `+${digitos}`
+  // Tiene +52 sin el 1 (12 dígitos) → insertar el 1
+  if (digitos.length === 12 && digitos.startsWith('52')) return `+521${digitos.slice(2)}`
   if (digitos.length >= 11) return `+${digitos}`
   return null
 }
