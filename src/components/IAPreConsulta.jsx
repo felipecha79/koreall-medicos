@@ -1,6 +1,8 @@
 // src/components/IAPreConsulta.jsx
 // Panel de análisis IA pre-consulta visible para el doctor en la Agenda
 import { useState, useEffect } from 'react'
+import { doc, updateDoc, getDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 import toast from 'react-hot-toast'
 
 const ANTHROPIC_KEY = () => import.meta.env.VITE_ANTHROPIC_API_KEY
@@ -44,7 +46,9 @@ Responde SOLO este JSON completo:
 }
 
 // ── Componente panel del doctor ───────────────────────────
-export default function IAPreConsulta({ cita, paciente }) {
+export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
+  // Si el doctor desactivó la IA, no mostrar el panel
+  if (!iaActivo) return null
   const [analisis,   setAnalisis]   = useState(null)
   const [loading,    setLoading]    = useState(false)
   const [revisado,   setRevisado]   = useState(false)
@@ -53,19 +57,35 @@ export default function IAPreConsulta({ cita, paciente }) {
   const padecimiento = cita?.padecimientoPaciente
 
   useEffect(() => {
-    // Auto-analizar si hay padecimiento y no se ha analizado
-    if (padecimiento && !analisis && !loading) {
-      generarAnalisis()
+    // Si ya hay análisis guardado en la cita — usar ese, NO llamar a la API
+    if (cita?.iaPreConsulta) {
+      try {
+        const cached = typeof cita.iaPreConsulta === 'string'
+          ? JSON.parse(cita.iaPreConsulta)
+          : cita.iaPreConsulta
+        setAnalisis(cached)
+      } catch(e) { /* JSON malformado — ignorar */ }
     }
-  }, [padecimiento])
+    // Solo auto-analizar si hay padecimiento, no hay cache, y hay API key
+  }, [cita?.id])
 
   const generarAnalisis = async () => {
     if (!padecimiento) return
-    if (!ANTHROPIC_KEY()) return // sin key, no mostrar
+    if (!ANTHROPIC_KEY()) return
     setLoading(true)
     try {
       const result = await analizarPadecimiento(padecimiento, paciente ?? {})
       setAnalisis(result)
+
+      // Guardar en Firestore para no volver a consultar
+      if (cita?.id && cita?.tenantId) {
+        try {
+          await updateDoc(
+            doc(db, `tenants/${cita.tenantId}/citas/${cita.id}`),
+            { iaPreConsulta: JSON.stringify(result) }
+          )
+        } catch(e) { /* Guardar en BD falla silenciosamente — no crítico */ }
+      }
     } catch(e) {
       console.error('IA pre-consulta error:', e)
     } finally { setLoading(false) }
