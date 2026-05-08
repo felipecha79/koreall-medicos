@@ -199,9 +199,9 @@ export default function SitioWeb() {
           </p>
         </div>
         <div className="flex gap-2">
-          <a href="/" target="_blank" rel="noreferrer"
+          <a href={`/?t=${tenantId}`} target="_blank" rel="noreferrer"
             className="px-3 py-2 bg-gray-100 text-gray-600 text-sm rounded-lg hover:bg-gray-200 transition-colors">
-            Ver sitio →
+            🌐 Ver sitio →
           </a>
           <button onClick={guardar} disabled={saving}
             className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg

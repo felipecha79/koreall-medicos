@@ -33,7 +33,7 @@ const TIPO_COLOR = {
 const TABS = ['Organizaciones', 'Consultorios', 'Usuarios', 'Suscripciones', 'Sistema']
 
 // ── Usuarios por consultorio (SuperAdmin) ──────────────────
-function UsuariosPorConsultorio({ tenants, db }) {
+function UsuariosPorConsultorio({ tenants }) {
   const [usuariosPorTenant, setUsuariosPorTenant] = useState({})
   const [expandido, setExpandido] = useState(null)
 
@@ -171,7 +171,7 @@ function UsuariosPorConsultorio({ tenants, db }) {
 }
 
 // ── Plantillas de receta controladas ───────────────────────
-function PlantillasReceta({ tenants, db, updateDoc, doc, toast }) {
+function PlantillasReceta({ tenants }) {
   const CAMPOS = [
     ['especialidad',       'Especialidad',              'Ej: Medicina General, Pediatría...'],
     ['cedulaProfesional',  'Cédula profesional',        'Número de cédula CONAMED'],
@@ -750,13 +750,13 @@ export default function Admin() {
           </div>
 
           {/* Plantillas de receta por consultorio */}
-          <PlantillasReceta tenants={tenants} db={db} updateDoc={updateDoc} doc={doc} toast={toast} />
+          <PlantillasReceta tenants={tenants} />
         </div>
       )}
 
       {/* Tab: Usuarios — vista por consultorio para SuperAdmin */}
       {tab === 'Usuarios' && (
-        <UsuariosPorConsultorio tenants={tenants} db={db} />
+        <UsuariosPorConsultorio tenants={tenants} />
       )}
 
       {/* Modal: Nueva organización */}

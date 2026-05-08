@@ -5,11 +5,11 @@
 // SETUP:
 // 1. Crea cuenta en facturapi.io
 // 2. En sandbox: usa tu API key de TEST (empieza con sk_test_...)
-// 3. En producción: usa tu API key LIVE (empieza con sk_live_...)
+// 3. En producci\u00f3n: usa tu API key LIVE (empieza con sk_live_...)
 // 4. Agrega al .env.local:
 //    VITE_FACTURAPI_KEY=sk_test_TU_KEY_AQUI
 //
-// IMPORTANTE: En producción esta key debe estar en un backend/Cloud Function
+// IMPORTANTE: En producci\u00f3n esta key debe estar en un backend/Cloud Function
 // para no exponerla en el frontend. Para el MVP del piloto funciona en cliente.
 
 const FACTURAPI_URL = 'https://www.facturapi.io/v2'
@@ -20,30 +20,30 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-// ── Clientes (receptores de CFDI) ─────────────────────────
+// \u2500\u2500 Clientes (receptores de CFDI) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function crearCliente(paciente) {
   const res = await fetch(`${FACTURAPI_URL}/customers`, {
     method: 'POST', headers,
     body: JSON.stringify({
       legal_name: `${paciente.nombre} ${paciente.apellidos}`.toUpperCase(),
       tax_id:     paciente.rfc,
-      tax_system: '616', // Sin obligaciones fiscales (personas físicas sin actividad)
+      tax_system: '616', // Sin obligaciones fiscales (personas f\u00edsicas sin actividad)
       email:      paciente.email ?? undefined,
-      address:    { zip: '89000' }, // Requerido por SAT — usar CP del paciente
+      address:    { zip: '89000' }, // Requerido por SAT \u2014 usar CP del paciente
     }),
   })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) { let m='Error'; try { const e=await res.json(); m=e.message??e.error??m } catch(ex) { try { m=await res.text() } catch {} }; throw new Error(m) }
   return res.json()
 }
 
 export async function buscarCliente(rfc) {
   const res = await fetch(`${FACTURAPI_URL}/customers?q=${rfc}`, { headers })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) { let m='Error'; try { const e=await res.json(); m=e.message??e.error??m } catch(ex) { try { m=await res.text() } catch {} }; throw new Error(m) }
   const data = await res.json()
   return data.data?.[0] ?? null
 }
 
-// ── Emisión de CFDI ───────────────────────────────────────
+// \u2500\u2500 Emisi\u00f3n de CFDI \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function emitirFactura({ cobro, paciente, tenant }) {
   // Buscar o crear cliente en Facturapi
   let clienteId = paciente.facturapiCustomerId
@@ -66,14 +66,14 @@ export async function emitirFactura({ cobro, paciente, tenant }) {
     items: [{
       quantity:    1,
       product: {
-        description:  cobro.concepto ?? 'Honorarios médicos',
-        product_key:  '85121800', // Clave SAT correcta: Servicios de salud
-        unit_key:     'E48',      // Clave unidad SAT corr
-        unit_name:    'Unidad de servicio',
+        description:  cobro.concepto ?? 'Honorarios m\u00e9dicos',
+        product_key:  '85101500', // Clave SAT: Servicios m\u00e9dicos
+        unit_key:     'ACT',      // Clave unidad: Actividad
+        unit_name:    'Actividad',
         price:        cobro.monto,
         tax_included: false,
         taxes: [
-          // Honorarios médicos están exentos de IVA (Art. 15 LIVA)
+          // Honorarios m\u00e9dicos est\u00e1n exentos de IVA (Art. 15 LIVA)
           // Si el doctor cobra IVA, cambiar a: { type: 'IVA', rate: 0.16 }
           { type: 'IVA', rate: 0.00, factor: 'Exento' },
         ],
@@ -81,7 +81,7 @@ export async function emitirFactura({ cobro, paciente, tenant }) {
     }],
     payment_form: FORMA_PAGO[cobro.metodo] ?? '01',
     payment_method: cobro.metodo === 'credito' ? 'PPD' : 'PUE',
-    use: 'G03', // Gastos en general (más común para pacientes)
+    use: 'G03', // Gastos en general (m\u00e1s com\u00fan para pacientes)
     pdf_custom_section: `Consultorio: ${tenant?.nombre ?? ''}`,
   }
 
@@ -90,13 +90,14 @@ export async function emitirFactura({ cobro, paciente, tenant }) {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.message ?? 'Error al timbrar')
+    let msg = 'Error al timbrar'
+    try { const err = await res.json(); msg = err.message ?? err.error ?? msg } catch {}
+    throw new Error(msg)
   }
   return res.json()
 }
 
-// ── Descargar PDF o XML ───────────────────────────────────
+// \u2500\u2500 Descargar PDF o XML \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function descargarFactura(invoiceId, tipo = 'pdf') {
   const res = await fetch(
     `${FACTURAPI_URL}/invoices/${invoiceId}/${tipo}`,
@@ -112,7 +113,7 @@ export async function descargarFactura(invoiceId, tipo = 'pdf') {
   URL.revokeObjectURL(url)
 }
 
-// ── Enviar por email ──────────────────────────────────────
+// \u2500\u2500 Enviar por email \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function enviarFacturaPorEmail(invoiceId, email) {
   const res = await fetch(
     `${FACTURAPI_URL}/invoices/${invoiceId}/email`,
@@ -123,9 +124,9 @@ export async function enviarFacturaPorEmail(invoiceId, email) {
   return res.json()
 }
 
-// ── Cancelar CFDI ─────────────────────────────────────────
+// \u2500\u2500 Cancelar CFDI \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function cancelarFactura(invoiceId, motivo = '02') {
-  // Motivos: 01=Error sin relación, 02=Error con relación, 03=No efectuado, 04=Operación nominativa
+  // Motivos: 01=Error sin relaci\u00f3n, 02=Error con relaci\u00f3n, 03=No efectuado, 04=Operaci\u00f3n nominativa
   const res = await fetch(
     `${FACTURAPI_URL}/invoices/${invoiceId}/cancel?motive=${motivo}`,
     { method: 'DELETE', headers }
@@ -134,7 +135,7 @@ export async function cancelarFactura(invoiceId, motivo = '02') {
   return res.json()
 }
 
-// ── Complemento de pago ───────────────────────────────────
+// \u2500\u2500 Complemento de pago \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export async function emitirComplementoPago({ facturaOriginal, cobro }) {
   const body = {
     type: 'P', // Complemento de pago
@@ -149,7 +150,7 @@ export async function emitirComplementoPago({ facturaOriginal, cobro }) {
       }
     }],
     related: [{
-      relationship: '04', // Sustitución
+      relationship: '04', // Sustituci\u00f3n
       uuid: facturaOriginal.uuid,
     }],
     complements: [{
@@ -172,18 +173,18 @@ export async function emitirComplementoPago({ facturaOriginal, cobro }) {
   const res = await fetch(`${FACTURAPI_URL}/invoices`, {
     method: 'POST', headers, body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) { let m='Error'; try { const e=await res.json(); m=e.message??e.error??m } catch(ex) { try { m=await res.text() } catch {} }; throw new Error(m) }
   return res.json()
 }
 
-// ── Mapeo forma de pago SAT ───────────────────────────────
+// \u2500\u2500 Mapeo forma de pago SAT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const FORMA_PAGO = {
   efectivo:      '01', // Efectivo
   cheque:        '02', // Cheque nominativo
-  transferencia: '03', // Transferencia electrónica
-  tarjeta:       '04', // Tarjeta de crédito
-  debito:        '28', // Tarjeta de débito
+  transferencia: '03', // Transferencia electr\u00f3nica
+  tarjeta:       '04', // Tarjeta de cr\u00e9dito
+  debito:        '28', // Tarjeta de d\u00e9bito
   credito:       '99', // Por definir (PPD)
 }
 
-export { FORMA_PAGO }
+export { FOR

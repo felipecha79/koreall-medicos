@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   collection, query, orderBy, onSnapshot,
-  doc, updateDoc, Timestamp, getDocs
+  doc, updateDoc, addDoc, Timestamp, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
@@ -77,7 +77,7 @@ export default function Facturacion() {
     const paciente = pacientes[cobro.pacienteId]
     if (!paciente) { toast.error('Paciente no encontrado'); return }
     if (!paciente.rfc) {
-      toast.error('El paciente no tiene RFC — agrégalo en su ficha antes de facturar.')
+      toast.error('El paciente no tiene RFC. Agr\u00e9galo en su ficha antes de facturar.')
       return
     }
     if (!import.meta.env.VITE_FACTURAPI_KEY) {
@@ -87,55 +87,56 @@ export default function Facturacion() {
 
     setLoading(true)
     setModal(null)
-    const tid = toast.loading('Timbrando ante el SAT...')
-
     try {
+      toast('Timbrando ante el SAT...', { icon: '\u23f3' })
+
       const factura = await emitirFactura({ cobro, paciente, tenant })
-      console.log('[Facturapi] OK:', factura)
 
-      // Sanitizar — eliminar undefined antes de guardar en Firestore
-      const clean = obj => JSON.parse(JSON.stringify(obj,
-        (_, v) => v === undefined ? null : v))
-
-      const facturaData = clean({
-        facturapiId:       factura.id,
-        uuid:              factura.uuid,
-        folio:             factura.folio_number ?? factura.folio,
-        serie:             factura.series,
-        pdfUrl:            factura.pdf_download_url,
-        xmlUrl:            factura.xml_download_url,
-        total:             factura.total ?? cobro.monto,
-        estatus:           factura.status ?? 'valid',
-        cobroId:           cobro.id,
-        pacienteId:        cobro.pacienteId,
-        pacienteNombre:    cobro.pacienteNombre,
-        pacienteIdLegible: cobro.pacienteIdLegible,
-        concepto:          cobro.concepto,
-        fecha:             Timestamp.now(),
-        tenantId,
-      })
-
+      // Guardar en Firestore
       const facturaRef = await addDoc(
-        collection(db, `tenants/${tenantId}/facturas`), facturaData)
+        collection(db, `tenants/${tenantId}/facturas`), {
+          facturapiId:  factura.id,
+          uuid:         factura.uuid,
+          folio:        factura.folio_number,
+          serie:        factura.series,
+          pdfUrl:       factura.pdf_download_url,
+          xmlUrl:       factura.xml_download_url,
+          total:        factura.total,
+          estatus:      factura.status,
+          cobroId:      cobro.id,
+          pacienteId:   cobro.pacienteId,
+          pacienteNombre: cobro.pacienteNombre,
+          pacienteIdLegible: cobro.pacienteIdLegible,
+          concepto:     cobro.concepto,
+          fecha:        Timestamp.now(),
+          tenantId,
+        }
+      )
 
+      // Marcar cobro como facturado
       await updateDoc(doc(db, `tenants/${tenantId}/cobros/${cobro.id}`), {
-        facturado: true,
-        facturaId: facturaRef.id,
-        cfdiUuid:  factura.uuid ?? null,
-        cfdiUrl:   factura.pdf_download_url ?? null,
+        facturado:  true,
+        facturaId:  facturaRef.id,
+        cfdiUuid:   factura.uuid,
+        cfdiUrl:    factura.pdf_download_url,
       })
 
-      toast.success('CFDI timbrado ✓', { id: tid })
+      toast.success(`CFDI timbrado \u2713 \u2014 UUID: ${factura.uuid.slice(0,8)}...`)
     } catch(e) {
-      console.error('[Facturapi] Error:', e)
-      toast.error(`Error: ${e.message}`, { id: tid })
-    } finally {
-      setLoading(false)
-    }
+      console.error('[Facturacion] Error:', e)
+      // Si el error es de red/CORS pero la factura puede haberse creado,
+      // mostrar mensaje más informativo
+      const msg = e.message ?? 'Error desconocido'
+      if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('CORS')) {
+        toast.error('Error de red al conectar con Facturapi. Verifica tu API key y recarga la página — la factura puede haberse creado.')
+      } else {
+        toast.error(`Error al timbrar: ${msg}`)
+      }
+    } finally { setLoading(false) }
   }
 
   const cancelar = async (factura) => {
-    if (!window.confirm('¿Seguro que deseas cancelar esta factura ante el SAT? Esta acción no se puede deshacer.')) return
+    if (!window.confirm('\u00bfSeguro que deseas cancelar esta factura ante el SAT? Esta acci\u00f3n no se puede deshacer.')) return
     setLoading(true)
     try {
       await cancelarFactura(factura.facturapiId)
@@ -151,16 +152,14 @@ export default function Facturacion() {
       toast.success('Factura cancelada ante el SAT')
     } catch(e) {
       toast.error(`Error al cancelar: ${e.message}`)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const enviarEmail = async () => {
     if (!emailDest) { toast.error('Escribe un email'); return }
     try {
       await enviarFacturaPorEmail(emailModal.facturapiId, emailDest)
-      toast.success('Factura enviada por email ✓')
+      toast.success('Factura enviada por email \u2713')
       setEmailModal(null); setEmailDest('')
     } catch(e) {
       toast.error('Error al enviar')
@@ -173,7 +172,7 @@ export default function Facturacion() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Facturación CFDI 4.0</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Facturaci\u00f3n CFDI 4.0</h2>
           <p className="text-sm text-gray-400">
             {facturas.filter(f=>f.estatus==='valid').length} facturas timbradas
           </p>
@@ -184,18 +183,18 @@ export default function Facturacion() {
       {!import.meta.env.VITE_FACTURAPI_KEY && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
           <p className="text-sm font-medium text-amber-800">
-            ⚠️ Facturapi no está configurado
+            \u26a0\ufe0f Facturapi no est\u00e1 configurado
           </p>
           <p className="text-xs text-amber-700 mt-1">
             Agrega <code className="bg-amber-100 px-1 rounded">VITE_FACTURAPI_KEY=sk_test_...</code> a tu archivo
             <code className="bg-amber-100 px-1 rounded ml-1">.env.local</code> y reinicia el servidor.
-            Obtén tu API key en <a href="https://facturapi.io" target="_blank" rel="noreferrer"
+            Obt\u00e9n tu API key en <a href="https://facturapi.io" target="_blank" rel="noreferrer"
               className="underline">facturapi.io</a> (sandbox gratuito).
           </p>
         </div>
       )}
 
-      {/* Métricas */}
+      {/* M\u00e9tricas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-400 mb-1">Por facturar</p>
@@ -239,15 +238,15 @@ export default function Facturacion() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {pendientes.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-4xl mb-2">✅</p>
-              <p className="text-sm">Todos los cobros están facturados</p>
+              <p className="text-4xl mb-2">\u2705</p>
+              <p className="text-sm">Todos los cobros est\u00e1n facturados</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Fecha','ID Paciente','Paciente','RFC','Concepto','Monto','Acción'].map(h => (
+                    {['Fecha','ID Paciente','Paciente','RFC','Concepto','Monto','Acci\u00f3n'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium
                                              text-gray-500 uppercase">{h}</th>
                     ))}
@@ -261,12 +260,12 @@ export default function Facturacion() {
                         <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                           {c.fechaPago
                             ? format(c.fechaPago.toDate(), "d MMM yyyy", {locale:es})
-                            : '—'}
+                            : '\u2014'}
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs bg-teal-50 text-teal-700
                                            px-2 py-0.5 rounded border border-teal-100">
-                            {c.pacienteIdLegible ?? '—'}
+                            {c.pacienteIdLegible ?? '\u2014'}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-800">
@@ -305,7 +304,7 @@ export default function Facturacion() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {facturas.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-4xl mb-2">🧾</p>
+              <p className="text-4xl mb-2">\ud83e\uddfe</p>
               <p className="text-sm">Sin facturas emitidas</p>
             </div>
           ) : (
@@ -320,7 +319,7 @@ export default function Facturacion() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {facturas.map(f => { try { return (
+                  {facturas.map(f => (
                     <tr key={f.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono text-xs text-gray-600">
                         {f.serie}{f.folio}
@@ -330,14 +329,7 @@ export default function Facturacion() {
                         <div className="text-xs text-gray-400">{f.pacienteIdLegible}</div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        {(() => {
-                          try {
-                            if (f.fecha?.toDate) return format(f.fecha.toDate(), "d MMM yyyy", {locale:es})
-                            if (f.fecha?.seconds) return format(new Date(f.fecha.seconds*1000), "d MMM yyyy", {locale:es})
-                            if (f.fecha) return format(new Date(f.fecha), "d MMM yyyy", {locale:es})
-                            return '—'
-                          } catch { return '—' }
-                        })()}
+                        {format(f.fecha.toDate(), "d MMM yyyy", {locale:es})}
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-xs">{f.concepto}</td>
                       <td className="px-4 py-3 font-semibold text-gray-800">
@@ -382,7 +374,7 @@ export default function Facturacion() {
                         </div>
                       </td>
                     </tr>
-                  )} catch(e) { return <tr key={f.id}><td colSpan={7} className="px-4 py-2 text-xs text-red-400">Error al renderizar factura</td></tr> } })}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -390,14 +382,14 @@ export default function Facturacion() {
         </div>
       )}
 
-      {/* Modal confirmar facturación */}
+      {/* Modal confirmar facturaci\u00f3n */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={() => setModal(null)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
             onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              Confirmar emisión de CFDI
+              Confirmar emisi\u00f3n de CFDI
             </h3>
             <p className="text-sm text-gray-500 mb-5">
               Revisa los datos antes de timbrar. Una vez emitido, solo puedes cancelar ante el SAT.
@@ -411,7 +403,7 @@ export default function Facturacion() {
               <div className="flex justify-between">
                 <span className="text-gray-500">RFC</span>
                 <span className="font-mono text-xs">
-                  {pacientes[modal.pacienteId]?.rfc ?? '—'}
+                  {pacientes[modal.pacienteId]?.rfc ?? '\u2014'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -425,19 +417,19 @@ export default function Facturacion() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Método pago</span>
+                <span className="text-gray-500">M\u00e9todo pago</span>
                 <span>{modal.metodo}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Uso CFDI</span>
-                <span>G03 — Gastos en general</span>
+                <span>G03 \u2014 Gastos en general</span>
               </div>
             </div>
 
             <div className="bg-blue-50 rounded-lg p-3 mb-5">
               <p className="text-xs text-blue-700">
-                💡 Los honorarios médicos están <b>exentos de IVA</b> conforme al Art. 15 de la LIVA.
-                El CFDI se emitirá sin IVA trasladado.
+                \ud83d\udca1 Los honorarios m\u00e9dicos est\u00e1n <b>exentos de IVA</b> conforme al Art. 15 de la LIVA.
+                El CFDI se emitir\u00e1 sin IVA trasladado.
               </p>
             </div>
 
@@ -489,6 +481,4 @@ export default function Facturacion() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
+    </div

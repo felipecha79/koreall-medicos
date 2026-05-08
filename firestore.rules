@@ -158,5 +158,17 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+    // ── Organizaciones (superAdmin only) ────────────────
+    match /organizaciones/{orgId} {
+      allow read:   if isSuperAdmin() || (isAuth() && resource.data.tenantIds.hasAny([request.auth.token.tenantId]));
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Catch-all para superAdmin ─────────────────────────
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
   }
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { signInWithEmailAndPassword, getIdTokenResult } from 'firebase/auth'
 import { auth, db } from '../firebase'
-import { collection, getDocs, query, limit, onSnapshot } from 'firebase/firestore'
+import { collection, getDocs, query, limit, onSnapshot, doc } from 'firebase/firestore'
 
 // ── CSS inyectado dinámicamente ───────────────────────────
 const buildCSS = (c) => `
@@ -335,6 +335,8 @@ const DEFAULT_CONFIG = {
 
 export default function Landing() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const tenantParam = searchParams.get('t')
   const [cfg, setCfg]           = useState(DEFAULT_CONFIG)
   const [cssReady, setCssReady] = useState(false)
   const [modalOpen, setModal]   = useState(false)
@@ -346,36 +348,47 @@ export default function Landing() {
 
   // ── Cargar config del tenant desde Firestore ──────────
   useEffect(() => {
-    // onSnapshot para detectar cambios en tiempo real cuando el doctor publica
-    const unsub = onSnapshot(query(collection(db, 'tenants'), limit(1)), snap => {
-      if (!snap.empty) {
-        const t = snap.docs[0].data()
-        const sw = t.sitioWeb ?? {}
-        setCfg(prev => ({
-          ...prev,
-          ...sw,
-          nombreDoctor:      t.nombreDoctor   ?? sw.nombreDoctor   ?? prev.nombreDoctor,
-          especialidad:      t.especialidad   ?? sw.especialidad   ?? prev.especialidad,
-          telefonoContacto:  t.telefono       ?? sw.telefonoContacto ?? prev.telefonoContacto,
-          emailContacto:     t.email          ?? sw.emailContacto  ?? prev.emailContacto,
-          cedulaProfesional: t.cedula         ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
-          direccion:         t.direccion      ?? sw.direccion      ?? prev.direccion,
-          nombreConsultorio: t.nombre         ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
-          horarios:          sw.horarios      ?? t.horarios        ?? prev.horarios,
-          servicios:         sw.servicios     ?? prev.servicios,
-          certificaciones:   sw.certificaciones ?? prev.certificaciones,
-          // Colores y tipografía del theme
-          colorPrimario:     sw.colorPrimario    ?? prev.colorPrimario,
-          colorSecundario:   sw.colorSecundario  ?? prev.colorSecundario,
-          colorFondo:        sw.colorFondo       ?? prev.colorFondo,
-          colorAccento:      sw.colorAccento     ?? prev.colorAccento,
-          tipografia:        sw.tipografia       ?? prev.tipografia,
-          tipografiaUI:      sw.tipografiaUI     ?? prev.tipografiaUI,
-        }))
-      }
-    }, () => {})
+    // Si hay tenantId en URL (?t=...) cargar ese tenant; sino el primero
+    const applyTenant = (docData) => {
+      const t = docData
+      const sw = t.sitioWeb ?? {}
+      setCfg(prev => ({
+        ...prev,
+        ...sw,
+        nombreDoctor:      t.nombreDoctor   ?? sw.nombreDoctor   ?? prev.nombreDoctor,
+        especialidad:      t.especialidad   ?? sw.especialidad   ?? prev.especialidad,
+        telefonoContacto:  t.telefono       ?? sw.telefonoContacto ?? prev.telefonoContacto,
+        emailContacto:     t.email          ?? sw.emailContacto  ?? prev.emailContacto,
+        cedulaProfesional: t.cedula         ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
+        direccion:         t.direccion      ?? sw.direccion      ?? prev.direccion,
+        nombreConsultorio: t.nombre         ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
+        horarios:          sw.horarios      ?? t.horarios        ?? prev.horarios,
+        servicios:         sw.servicios     ?? prev.servicios,
+        certificaciones:   sw.certificaciones ?? prev.certificaciones,
+        colorPrimario:     sw.colorPrimario    ?? prev.colorPrimario,
+        colorSecundario:   sw.colorSecundario  ?? prev.colorSecundario,
+        colorFondo:        sw.colorFondo       ?? prev.colorFondo,
+        colorAccento:      sw.colorAccento     ?? prev.colorAccento,
+        tipografia:        sw.tipografia       ?? prev.tipografia,
+        tipografiaUI:      sw.tipografiaUI     ?? prev.tipografiaUI,
+      }))
+    }
+
+    let unsub
+    if (tenantParam) {
+      // Escuchar en tiempo real el tenant específico
+      const { doc: fDoc, onSnapshot: fSnap } = { doc, onSnapshot }
+      unsub = onSnapshot(doc(db, 'tenants', tenantParam), snap => {
+        if (snap.exists()) applyTenant(snap.data())
+      }, () => {})
+    } else {
+      // Fallback: primer tenant (página pública sin parámetro)
+      unsub = onSnapshot(query(collection(db, 'tenants'), limit(1)), snap => {
+        if (!snap.empty) applyTenant(snap.docs[0].data())
+      }, () => {})
+    }
     return unsub
-  }, [])
+  }, [tenantParam])
 
   // ── Inyectar CSS cuando config está lista ─────────────
   useEffect(() => {
