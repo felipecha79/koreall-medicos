@@ -65,7 +65,7 @@ function SelectorRango({ desde, hasta, onChange }) {
   )
 }
 
-const TABS = ['Pagos y facturas', 'Consultas', 'Seguimiento pacientes', 'Resumen KPIs']
+const TABS = ['Pagos y facturas', 'Consultas', 'Corte diario', 'Seguimiento pacientes', 'Resumen KPIs']
 
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
@@ -74,6 +74,7 @@ export default function Reportes() {
   // ── Estado tab Seguimiento ───────────────────────────
   const [filtroMinDias, setFiltroMinDias] = useState(30)
   const [totalPacientes, setTotalPacientes] = useState('—')
+  const [kpiTipos, setKpiTipos] = useState({ primeraVez: '—', subsecuente: '—' })
 
   // ── Rango de fechas ──────────────────────────────────
   const hoy = format(new Date(), 'yyyy-MM-dd')
@@ -94,12 +95,19 @@ export default function Reportes() {
   const [rfcGlobal,     setRfcGlobal]     = useState('XAXX010101000')
   const [conceptoGlobal,setConceptoGlobal]= useState('Servicios médicos — Factura global')
 
-  // Cargar total de pacientes para KPI
+  // Cargar total de pacientes para KPI (con breakdown de tipo)
   useEffect(() => {
     if (!tenantId) return
     const unsub = onSnapshot(
       collection(db, `tenants/${tenantId}/pacientes`),
-      snap => setTotalPacientes(snap.size)
+      snap => {
+        const docs = snap.docs.map(d => d.data())
+        setTotalPacientes(docs.length)
+        setKpiTipos({
+          primeraVez:  docs.filter(p => p.tipoPaciente === 'primera_vez').length,
+          subsecuente: docs.filter(p => p.tipoPaciente === 'subsecuente' || !p.tipoPaciente).length,
+        })
+      }
     )
     return unsub
   }, [tenantId])
@@ -465,7 +473,7 @@ export default function Reportes() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Fecha','Paciente','Diagnóstico','Motivo','Tratamiento','CIE-10','TA','Peso'].map(h => (
+                    {['Fecha','Paciente','Estatus','Diagnóstico','Motivo','CIE-10','TA','Acciones'].map(h => (
                       <th key={h} className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         {h}
                       </th>
@@ -473,18 +481,55 @@ export default function Reportes() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {consultasFiltradas.map(c => (
-                    <tr key={c.id} className="hover:bg-gray-50">
+                  {consultasFiltradas.map(c => {
+                    // Buscar datos completos del paciente
+                    const citaPac = citas.find(ci => ci.pacienteId === c.pacienteId)
+                    const nombrePac = c.pacienteNombre || citaPac?.pacienteNombre || c.pacienteId || '—'
+                    const telPac   = citaPac?.pacienteTel
+                    const estatusCita = citaPac?.estatus ?? c.estatus ?? ''
+                    const noAsistio = ['no_show','cancelada'].includes(estatusCita)
+                    return (
+                    <tr key={c.id} className={`hover:bg-gray-50 ${noAsistio ? 'bg-red-50/30' : ''}`}>
                       <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{fmtFecha(c.fecha)}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-700">{c.pacienteNombre ?? c.pacienteId?.slice(0,12) ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs font-medium text-gray-800">{c.diagnostico ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[140px] truncate">{c.motivoConsulta ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[140px] truncate">{c.tratamiento ?? '—'}</td>
+                      <td className="px-3 py-2.5">
+                        <p className="text-xs font-medium text-gray-800">{nombrePac}</p>
+                        <p className="text-xs text-gray-400 font-mono">{c.pacienteId ?? ''}</p>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize
+                          ${estatusCita === 'finalizada' || estatusCita === 'completada'
+                            ? 'bg-green-100 text-green-700'
+                            : estatusCita === 'no_show' ? 'bg-red-100 text-red-700'
+                            : estatusCita === 'cancelada' ? 'bg-orange-100 text-orange-700'
+                            : 'bg-gray-100 text-gray-500'}`}>
+                          {estatusCita || 'registrada'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs font-medium text-gray-800 max-w-[120px] truncate">{c.diagnostico ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[120px] truncate">{c.motivoConsulta ?? '—'}</td>
                       <td className="px-3 py-2.5 text-xs font-mono text-blue-600">{c.cie10 ?? '—'}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-600">{c.ta ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-600">{c.peso ? `${c.peso} kg` : '—'}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex gap-1.5">
+                          {telPac && (
+                            <button
+                              onClick={async () => {
+                                const { enviarWA } = await import('../services/whatsapp')
+                                const msg = `Hola ${nombrePac}, le contactamos del consultorio. Notamos que no pudo asistir a su cita. ¿Le gustaría reprogramarla? Estamos para servirle.`
+                                const res = await enviarWA(telPac, msg)
+                                if (res.ok) toast.success('WA enviado')
+                                else toast.error('No se pudo enviar WA')
+                              }}
+                              className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100"
+                              title="Enviar WhatsApp">
+                              💬
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {consultasFiltradas.length === 0 && (
                     <tr>
                       <td colSpan={8} className="text-center py-12 text-gray-400 text-sm">
@@ -493,6 +538,97 @@ export default function Reportes() {
                     </tr>
                   )}
                 </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Tab: Corte diario ═══════════════════════════════ */}
+      {tab === 'Corte diario' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-gray-800">Corte del día — {format(new Date(),'d/MM/yyyy')}</h3>
+            <SelectorRango desde={rangoPagos.desde} hasta={rangoPagos.hasta} onChange={setRangoPagos} />
+          </div>
+          {/* Cobros del día sin paciente asignado */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="bg-green-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500 mb-1">Cobros registrados</p>
+              <p className="text-2xl font-bold text-green-700">{cobrosFiltrados.length}</p>
+            </div>
+            <div className="bg-teal-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500 mb-1">Total cobrado</p>
+              <p className="text-2xl font-bold text-teal-700">${totalCobrado.toLocaleString('es-MX')}</p>
+            </div>
+            <div className="bg-red-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500 mb-1">Sin paciente asignado</p>
+              <p className="text-2xl font-bold text-red-700">
+                {cobrosFiltrados.filter(c => !c.pacienteId || !c.pacienteNombre).length}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <p className="text-sm font-medium text-gray-700">Detalle de cobros — resalta los sin paciente asignado</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {['Hora','Paciente','Concepto','Monto','Método','Estado','Facturado'].map(h => (
+                      <th key={h} className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {cobrosFiltrados.map(c => {
+                    const sinPaciente = !c.pacienteId || !c.pacienteNombre
+                    return (
+                      <tr key={c.id} className={sinPaciente ? 'bg-red-50' : 'hover:bg-gray-50'}>
+                        <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{fmtFecha(c.fechaPago)}</td>
+                        <td className="px-3 py-2.5">
+                          {sinPaciente
+                            ? <span className="text-xs font-semibold text-red-600">⚠️ Sin asignar</span>
+                            : <div>
+                                <p className="text-xs font-medium text-gray-800">{c.pacienteNombre}</p>
+                                <p className="text-xs text-gray-400 font-mono">{c.pacienteIdLegible}</p>
+                              </div>
+                          }
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-gray-600">{c.concepto ?? 'Consulta'}</td>
+                        <td className="px-3 py-2.5 text-xs font-semibold text-gray-800">${Number(c.monto??0).toLocaleString('es-MX')}</td>
+                        <td className="px-3 py-2.5 text-xs text-gray-500 capitalize">{c.metodoPago ?? '—'}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                            ${c.estadoPago==='paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {c.estadoPago==='paid' ? '✓ Pagado' : 'Pendiente'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {c.factura
+                            ? <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">✓ Sí</span>
+                            : <span className="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full">No</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {cobrosFiltrados.length === 0 && (
+                    <tr><td colSpan={7} className="text-center py-8 text-gray-400 text-sm">Sin cobros en el período</td></tr>
+                  )}
+                </tbody>
+                <tfoot className="bg-gray-50 border-t border-gray-200">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-gray-600">
+                      TOTAL — {cobrosFiltrados.length} cobros
+                    </td>
+                    <td className="px-3 py-2 text-sm font-bold text-teal-700">
+                      ${(totalCobrado + totalPendiente).toLocaleString('es-MX')}
+                    </td>
+                    <td colSpan={3} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -513,6 +649,8 @@ export default function Reportes() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { titulo:'Total pacientes', valor: totalPacientes, icon:'👥', desc:'Total histórico en el tenant' },
+            { titulo:'Primera vez', valor: kpiTipos.primeraVez, icon:'🆕', desc:'Pacientes nuevos' },
+            { titulo:'Subsecuentes', valor: kpiTipos.subsecuente, icon:'🔄', desc:'Pacientes recurrentes' },
             { titulo:'Consultas este mes', valor: consultasFiltradas.length, icon:'🩺', desc:'Basado en rango seleccionado' },
             { titulo:'Ingresos cobrados', valor:`$${totalCobrado.toLocaleString('es-MX')}`, icon:'💰', desc:'Pagos confirmados' },
             { titulo:'Facturas emitidas', valor: facturas.filter(f=>f.estatus==='valid').length, icon:'🧾', desc:'CFDI vigentes' },
