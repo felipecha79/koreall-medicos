@@ -32,6 +32,258 @@ const TIPO_COLOR = {
 // ── Tabs del panel ────────────────────────────────────────
 const TABS = ['Organizaciones', 'Consultorios', 'Usuarios', 'Suscripciones', 'Sistema']
 
+// ── Usuarios por consultorio (SuperAdmin) ──────────────────
+function UsuariosPorConsultorio({ tenants, db }) {
+  const [usuariosPorTenant, setUsuariosPorTenant] = useState({})
+  const [expandido, setExpandido] = useState(null)
+
+  useEffect(() => {
+    if (!tenants.length) return
+    const unsubs = tenants.map(t => {
+      return onSnapshot(
+        collection(db, `tenants/${t.id}/usuarios`),
+        snap => setUsuariosPorTenant(prev => ({
+          ...prev,
+          [t.id]: snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        }))
+      )
+    })
+    return () => unsubs.forEach(u => u())
+  }, [tenants])
+
+  const ROL_COLOR = {
+    admin:      'bg-blue-100 text-blue-700',
+    doctor:     'bg-teal-100 text-teal-700',
+    recepcion:  'bg-green-100 text-green-700',
+    superAdmin: 'bg-purple-100 text-purple-700',
+  }
+
+  const totalUsuarios = Object.values(usuariosPorTenant).reduce((s, u) => s + u.length, 0)
+
+  return (
+    <div>
+      {/* Resumen general */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-400 mb-1">Total usuarios</p>
+          <p className="text-2xl font-bold text-gray-800">{totalUsuarios}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-400 mb-1">Consultorios activos</p>
+          <p className="text-2xl font-bold text-teal-600">{tenants.length}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-400 mb-1">Promedio usuarios/consultorio</p>
+          <p className="text-2xl font-bold text-gray-600">
+            {tenants.length ? (totalUsuarios / tenants.length).toFixed(1) : 0}
+          </p>
+        </div>
+      </div>
+
+      {/* Lista por consultorio */}
+      <div className="space-y-3">
+        {tenants.map(t => {
+          const usuarios = usuariosPorTenant[t.id] ?? []
+          const activos = usuarios.filter(u => u.activo !== false)
+          const isOpen = expandido === t.id
+          return (
+            <div key={t.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              {/* Header del consultorio */}
+              <button
+                onClick={() => setExpandido(isOpen ? null : t.id)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center
+                                  text-teal-700 font-bold text-sm flex-shrink-0">
+                    {(t.nombre ?? 'C')[0].toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
+                    <p className="text-xs text-gray-400 font-mono">{t.id}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    {Object.entries(
+                      usuarios.reduce((acc, u) => {
+                        acc[u.rol] = (acc[u.rol] ?? 0) + 1; return acc
+                      }, {})
+                    ).map(([rol, cnt]) => (
+                      <span key={rol} className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[rol] ?? 'bg-gray-100 text-gray-500'}`}>
+                        {cnt} {rol}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-400">{activos.length}/{usuarios.length} activos</span>
+                  <span className="text-gray-400 text-lg">{isOpen ? '▾' : '▸'}</span>
+                </div>
+              </button>
+
+              {/* Detalle expandido */}
+              {isOpen && (
+                <div className="border-t border-gray-100">
+                  {usuarios.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                      Sin usuarios registrados en este consultorio
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                          {['Nombre','Email','Rol','Estado'].map(h => (
+                            <th key={h} className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {usuarios.map(u => (
+                          <tr key={u.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 font-medium text-gray-800">{u.nombre}</td>
+                            <td className="px-4 py-2 text-gray-500 text-xs">{u.email}</td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[u.rol] ?? 'bg-gray-100 text-gray-500'}`}>
+                                {u.rol}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${u.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                {u.activo !== false ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                    <p className="text-xs text-gray-400">
+                      Para crear usuarios ve a este consultorio → módulo Usuarios del sidebar
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Plantillas de receta controladas ───────────────────────
+function PlantillasReceta({ tenants, db, updateDoc, doc, toast }) {
+  const CAMPOS = [
+    ['especialidad',       'Especialidad',              'Ej: Medicina General, Pediatría...'],
+    ['cedulaProfesional',  'Cédula profesional',        'Número de cédula CONAMED'],
+    ['universidadEgreso',  'Universidad de egreso',     'Ej: UAT, UNAM, UVM...'],
+    ['direccionConsultorio','Dirección del consultorio', 'Calle, número, colonia, ciudad'],
+    ['telefonoConsultorio','Teléfono',                  'Número para la receta'],
+    ['pieReceta',          'Leyenda pie de receta',     'Texto personalizado al pie'],
+  ]
+
+  // Estado local para cada tenant × campo
+  const [vals, setVals] = useState(() => {
+    const init = {}
+    tenants.forEach(t => {
+      init[t.id] = { ...(t.plantillaReceta ?? {}) }
+    })
+    return init
+  })
+
+  // Sync when tenants prop changes
+  useEffect(() => {
+    setVals(prev => {
+      const next = { ...prev }
+      tenants.forEach(t => {
+        if (!next[t.id]) next[t.id] = {}
+        Object.keys(t.plantillaReceta ?? {}).forEach(k => {
+          if (next[t.id][k] === undefined) next[t.id][k] = t.plantillaReceta[k]
+        })
+      })
+      return next
+    })
+  }, [tenants])
+
+  const guardarCampo = async (tenantId, field, value) => {
+    try {
+      await updateDoc(doc(db, 'tenants', tenantId), {
+        [`plantillaReceta.${field}`]: value
+      })
+      toast.success(`✓ Guardado`)
+    } catch(e) {
+      toast.error('Error al guardar: ' + e.message)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <p className="text-sm font-semibold text-gray-700 mb-1">
+        📋 Plantillas de receta por consultorio
+      </p>
+      <p className="text-xs text-gray-400 mb-4">
+        Configura los datos que aparecerán en la receta de cada consultorio.
+        Los cambios se guardan al presionar el botón Guardar.
+      </p>
+      <div className="space-y-5">
+        {tenants.map(t => (
+          <div key={t.id} className="border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
+                <p className="text-xs text-gray-400 font-mono">{t.id}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              {CAMPOS.map(([field, label, placeholder]) => (
+                <div key={field} className={field === 'pieReceta' ? 'sm:col-span-2' : ''}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  {field === 'pieReceta' ? (
+                    <textarea
+                      rows={2}
+                      value={vals[t.id]?.[field] ?? ''}
+                      onChange={e => setVals(v => ({
+                        ...v, [t.id]: { ...v[t.id], [field]: e.target.value }
+                      }))}
+                      placeholder={placeholder}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={vals[t.id]?.[field] ?? ''}
+                      onChange={e => setVals(v => ({
+                        ...v, [t.id]: { ...v[t.id], [field]: e.target.value }
+                      }))}
+                      placeholder={placeholder}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={async () => {
+                const data = vals[t.id] ?? {}
+                for (const [field] of CAMPOS) {
+                  if (data[field] !== undefined) {
+                    await guardarCampo(t.id, field, data[field] ?? '')
+                  }
+                }
+                toast.success(`Plantilla guardada para ${t.nombre} ✓`)
+              }}
+              className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg
+                         hover:bg-teal-700 transition-colors">
+              💾 Guardar plantilla
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const { allOrgs, allTenants, isSuperAdmin } = useTenant()
   const [tab, setTab]         = useState('Organizaciones')
@@ -497,86 +749,14 @@ export default function Admin() {
             </p>
           </div>
 
-          {/* Plantillas de receta por especialidad */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-1">
-              📋 Plantillas de receta por consultorio
-            </p>
-            <p className="text-xs text-gray-400 mb-3">
-              Configura la plantilla que aparecerá al generar recetas.
-              El médico puede personalizar la leyenda de pie de página, especialidad y datos de firma.
-            </p>
-            <div className="space-y-4">
-              {tenants.map(t => {
-                const plantilla = t.plantillaReceta ?? {}
-                return (
-                  <div key={t.id} className="border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
-                        <p className="text-xs text-gray-400 font-mono">{t.id}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        ['especialidad', 'Especialidad', 'Ej: Medicina General, Pediatría...'],
-                        ['cedulaProfesional', 'Cédula profesional', 'Número de cédula'],
-                        ['universidadEgreso', 'Universidad de egreso', 'Ej: UAT, UNAM...'],
-                        ['direccionConsultorio', 'Dirección del consultorio', 'Calle, número, ciudad'],
-                        ['telefonoConsultorio', 'Teléfono', 'Para la receta'],
-                        ['pieReceta', 'Leyenda pie de receta', 'Texto personalizado al pie'],
-                      ].map(([field, label, placeholder]) => (
-                        <div key={field} className={field === 'pieReceta' ? 'sm:col-span-2' : ''}>
-                          <label className="block text-xs text-gray-500 mb-1">{label}</label>
-                          {field === 'pieReceta' ? (
-                            <textarea
-                              rows={2}
-                              defaultValue={plantilla[field] ?? ''}
-                              onBlur={async (e) => {
-                                await updateDoc(doc(db, `tenants/${t.id}`), {
-                                  [`plantillaReceta.${field}`]: e.target.value
-                                })
-                                toast.success(`Plantilla actualizada para ${t.nombre}`)
-                              }}
-                              placeholder={placeholder}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                                         focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              defaultValue={plantilla[field] ?? ''}
-                              onBlur={async (e) => {
-                                await updateDoc(doc(db, `tenants/${t.id}`), {
-                                  [`plantillaReceta.${field}`]: e.target.value
-                                })
-                                toast.success(`✓ Guardado`)
-                              }}
-                              placeholder={placeholder}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                                         focus:outline-none focus:ring-2 focus:ring-teal-400"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      💡 Los cambios se guardan al salir de cada campo (onBlur).
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          {/* Plantillas de receta por consultorio */}
+          <PlantillasReceta tenants={tenants} db={db} updateDoc={updateDoc} doc={doc} toast={toast} />
         </div>
       )}
 
-      {/* Tab: Usuarios — placeholder */}
+      {/* Tab: Usuarios — vista por consultorio para SuperAdmin */}
       {tab === 'Usuarios' && (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-3xl mb-2">👥</p>
-          <p className="text-sm">Gestión de usuarios por consultorio disponible en el módulo "Usuarios" del sidebar</p>
-        </div>
+        <UsuariosPorConsultorio tenants={tenants} db={db} />
       )}
 
       {/* Modal: Nueva organización */}

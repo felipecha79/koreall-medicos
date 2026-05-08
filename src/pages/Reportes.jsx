@@ -220,6 +220,36 @@ export default function Reportes() {
     } finally { setGenerandoFG(false) }
   }
 
+  const exportarCortePDF = () => {
+    const hoy = format(new Date(), 'dd/MM/yyyy')
+    const cobrosCorte = cobrosFiltrados
+    const totalTPV = cobrosCorte.filter(c => c.metodoPago === 'tarjeta').reduce((s,c)=>s+Number(c.monto??0),0)
+    const totalTransf = cobrosCorte.filter(c => c.metodoPago === 'transferencia').reduce((s,c)=>s+Number(c.monto??0),0)
+    const totalEfectivo = cobrosCorte.filter(c => c.metodoPago === 'efectivo').reduce((s,c)=>s+Number(c.monto??0),0)
+    const cols = 'No.,Fecha,Hora,Paciente,Servicio,Monto,Metodo,Factura'
+    const filas = cobrosCorte.map((c, i) => {
+      const d = c.fechaPago?.toDate?.()
+      return [
+        i+1,
+        d ? format(d,'d/MM/yy') : '-',
+        d ? format(d,'HH:mm') : '-',
+        (c.pacienteNombre ?? 'Sin asignar').toUpperCase(),
+        (c.concepto ?? 'Consulta Normal').replace(/,/g,' '),
+        Number(c.monto??0).toFixed(2),
+        c.metodoPago ?? '-',
+        c.facturado ? 'SI' : 'NO',
+      ].join(',')
+    }).join('\n')
+    const totales = `,,,,TOTAL TPV,${totalTPV},,\n,,,,TOTAL TRANSF,${totalTransf},,\n,,,,TOTAL EFECTIVO,${totalEfectivo},,\n,,,,TOTAL GENERAL,${totalTPV+totalTransf+totalEfectivo},,`
+    const csv = '\uFEFF' + `CORTE DEL DIA ${hoy}\n${cols}\n${filas}\n${totales}`
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `Corte_${hoy.replace(/\//g,'-')}.csv`; a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Corte exportado en CSV')
+  }
+
   const exportarPagos = () => {
     const datos = cobrosConFactura.map(c => ({
       Fecha:           fmtFecha(c.fechaPago),

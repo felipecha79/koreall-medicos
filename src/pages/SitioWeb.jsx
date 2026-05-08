@@ -136,16 +136,14 @@ export default function SitioWeb() {
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState(false)
 
-  // Reset config when tenantId changes (multitenant fix)
   useEffect(() => {
-    setConfig(c => ({ ...c,
+    if (!tenantId) return
+    // Reset to defaults first to avoid showing previous tenant's data
+    setConfig(prev => ({
+      ...prev,
       nombreConsultorio: '', nombreDoctor: '', especialidad: '',
       colorPrimario: '#0A8076', themeId: 'teal_navy',
     }))
-  }, [tenantId])
-
-  useEffect(() => {
-    if (!tenantId) return
     getDoc(doc(db, `tenants/${tenantId}`)).then(snap => {
       if (snap.exists() && snap.data().sitioWeb) {
         setConfig(c => ({ ...c, ...snap.data().sitioWeb }))
