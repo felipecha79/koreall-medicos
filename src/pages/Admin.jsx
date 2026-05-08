@@ -496,6 +496,78 @@ export default function Admin() {
               Costo aproximado: $0.01 USD por cita analizada.
             </p>
           </div>
+
+          {/* Plantillas de receta por especialidad */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-semibold text-gray-700 mb-1">
+              📋 Plantillas de receta por consultorio
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              Configura la plantilla que aparecerá al generar recetas.
+              El médico puede personalizar la leyenda de pie de página, especialidad y datos de firma.
+            </p>
+            <div className="space-y-4">
+              {tenants.map(t => {
+                const plantilla = t.plantillaReceta ?? {}
+                return (
+                  <div key={t.id} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
+                        <p className="text-xs text-gray-400 font-mono">{t.id}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        ['especialidad', 'Especialidad', 'Ej: Medicina General, Pediatría...'],
+                        ['cedulaProfesional', 'Cédula profesional', 'Número de cédula'],
+                        ['universidadEgreso', 'Universidad de egreso', 'Ej: UAT, UNAM...'],
+                        ['direccionConsultorio', 'Dirección del consultorio', 'Calle, número, ciudad'],
+                        ['telefonoConsultorio', 'Teléfono', 'Para la receta'],
+                        ['pieReceta', 'Leyenda pie de receta', 'Texto personalizado al pie'],
+                      ].map(([field, label, placeholder]) => (
+                        <div key={field} className={field === 'pieReceta' ? 'sm:col-span-2' : ''}>
+                          <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                          {field === 'pieReceta' ? (
+                            <textarea
+                              rows={2}
+                              defaultValue={plantilla[field] ?? ''}
+                              onBlur={async (e) => {
+                                await updateDoc(doc(db, `tenants/${t.id}`), {
+                                  [`plantillaReceta.${field}`]: e.target.value
+                                })
+                                toast.success(`Plantilla actualizada para ${t.nombre}`)
+                              }}
+                              placeholder={placeholder}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                         focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              defaultValue={plantilla[field] ?? ''}
+                              onBlur={async (e) => {
+                                await updateDoc(doc(db, `tenants/${t.id}`), {
+                                  [`plantillaReceta.${field}`]: e.target.value
+                                })
+                                toast.success(`✓ Guardado`)
+                              }}
+                              placeholder={placeholder}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                         focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      💡 Los cambios se guardan al salir de cada campo (onBlur).
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 

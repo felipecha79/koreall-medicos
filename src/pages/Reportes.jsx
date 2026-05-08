@@ -544,96 +544,181 @@ export default function Reportes() {
         </div>
       )}
 
-      {/* ══ Tab: Corte diario ═══════════════════════════════ */}
-      {tab === 'Corte diario' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-gray-800">Corte del día — {format(new Date(),'d/MM/yyyy')}</h3>
-            <SelectorRango desde={rangoPagos.desde} hasta={rangoPagos.hasta} onChange={setRangoPagos} />
-          </div>
-          {/* Cobros del día sin paciente asignado */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <div className="bg-green-50 rounded-xl p-4">
-              <p className="text-xs text-gray-500 mb-1">Cobros registrados</p>
-              <p className="text-2xl font-bold text-green-700">{cobrosFiltrados.length}</p>
-            </div>
-            <div className="bg-teal-50 rounded-xl p-4">
-              <p className="text-xs text-gray-500 mb-1">Total cobrado</p>
-              <p className="text-2xl font-bold text-teal-700">${totalCobrado.toLocaleString('es-MX')}</p>
-            </div>
-            <div className="bg-red-50 rounded-xl p-4">
-              <p className="text-xs text-gray-500 mb-1">Sin paciente asignado</p>
-              <p className="text-2xl font-bold text-red-700">
-                {cobrosFiltrados.filter(c => !c.pacienteId || !c.pacienteNombre).length}
-              </p>
-            </div>
-          </div>
+      {/* ══ Tab: Corte diario — estilo Dr. Salas ═══════════ */}
+      {tab === 'Corte diario' && (() => {
+        const hoy = format(new Date(), 'dd/MM/yyyy')
+        const cobrosCorte = cobrosFiltrados
+        // Conteos por método
+        const totalTPV     = cobrosCorte.filter(c => c.metodoPago === 'tarjeta').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalTransf  = cobrosCorte.filter(c => c.metodoPago === 'transferencia').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalEfectivo= cobrosCorte.filter(c => c.metodoPago === 'efectivo').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalGeneral = totalTPV + totalTransf + totalEfectivo
+        const sinPaciente  = cobrosCorte.filter(c => !c.pacienteId || !c.pacienteNombre).length
 
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <p className="text-sm font-medium text-gray-700">Detalle de cobros — resalta los sin paciente asignado</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    {['Hora','Paciente','Concepto','Monto','Método','Estado','Facturado'].map(h => (
-                      <th key={h} className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {cobrosFiltrados.map(c => {
-                    const sinPaciente = !c.pacienteId || !c.pacienteNombre
-                    return (
-                      <tr key={c.id} className={sinPaciente ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                        <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{fmtFecha(c.fechaPago)}</td>
-                        <td className="px-3 py-2.5">
-                          {sinPaciente
-                            ? <span className="text-xs font-semibold text-red-600">⚠️ Sin asignar</span>
-                            : <div>
-                                <p className="text-xs font-medium text-gray-800">{c.pacienteNombre}</p>
-                                <p className="text-xs text-gray-400 font-mono">{c.pacienteIdLegible}</p>
-                              </div>
-                          }
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-gray-600">{c.concepto ?? 'Consulta'}</td>
-                        <td className="px-3 py-2.5 text-xs font-semibold text-gray-800">${Number(c.monto??0).toLocaleString('es-MX')}</td>
-                        <td className="px-3 py-2.5 text-xs text-gray-500 capitalize">{c.metodoPago ?? '—'}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                            ${c.estadoPago==='paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {c.estadoPago==='paid' ? '✓ Pagado' : 'Pendiente'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          {c.factura
-                            ? <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">✓ Sí</span>
-                            : <span className="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full">No</span>}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {cobrosFiltrados.length === 0 && (
-                    <tr><td colSpan={7} className="text-center py-8 text-gray-400 text-sm">Sin cobros en el período</td></tr>
-                  )}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t border-gray-200">
-                  <tr>
-                    <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-gray-600">
-                      TOTAL — {cobrosFiltrados.length} cobros
-                    </td>
-                    <td className="px-3 py-2 text-sm font-bold text-teal-700">
-                      ${(totalCobrado + totalPendiente).toLocaleString('es-MX')}
-                    </td>
-                    <td colSpan={3} />
-                  </tr>
-                </tfoot>
-              </table>
+        return (
+          <div>
+            {/* Header estilo corte */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+              <div className="bg-gray-800 text-white px-5 py-3 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sm">{tenant?.nombreDoctor ?? tenant?.nombre ?? 'Consultorio'}</p>
+                  <p className="text-xs text-gray-300">Corte del día {hoy}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <SelectorRango desde={rangoPagos.desde} hasta={rangoPagos.hasta} onChange={setRangoPagos} />
+                  <button onClick={exportarCortePDF}
+                    className="px-3 py-1.5 bg-teal-500 text-white text-xs rounded-lg hover:bg-teal-600">
+                    📄 Exportar
+                  </button>
+                </div>
+              </div>
+
+              {/* KPIs rápidos */}
+              <div className="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-200">
+                {[
+                  { l: 'Total general', v: `$${totalGeneral.toLocaleString('es-MX')}`, c: 'text-gray-800' },
+                  { l: 'TPV / Tarjeta',   v: `$${totalTPV.toLocaleString('es-MX')}`,      c: 'text-purple-700' },
+                  { l: 'Transferencia',  v: `$${totalTransf.toLocaleString('es-MX')}`,    c: 'text-blue-700' },
+                  { l: 'Efectivo',       v: `$${totalEfectivo.toLocaleString('es-MX')}`, c: 'text-green-700' },
+                ].map((k,i) => (
+                  <div key={i} className="px-4 py-3 text-center">
+                    <p className="text-xs text-gray-400 mb-0.5">{k.l}</p>
+                    <p className={`text-lg font-bold ${k.c}`}>{k.v}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tabla estilo corte Dr. Salas */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      {['No.','Fecha','Hora','Paciente','Servicio','Débito','Crédito','Efectivo','Transf.','Total','Factura','Elaboró','Método'].map(h => (
+                        <th key={h} className="text-center px-2 py-2 font-semibold text-gray-600 uppercase whitespace-nowrap border-r border-gray-100 last:border-0">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {cobrosCorte.map((c, idx) => {
+                      const sinPac = !c.pacienteId || !c.pacienteNombre
+                      const metodo = c.metodoPago ?? c.metodo ?? ''
+                      const monto  = Number(c.monto ?? 0)
+                      const debito = metodo === 'tarjeta' ? monto : 0
+                      // credito = tarjeta crédito (no hay distinción por ahora — se muestra en débito)
+                      const efectivo = metodo === 'efectivo' ? monto : 0
+                      const transf   = metodo === 'transferencia' ? monto : 0
+                      const fechaC = (() => {
+                        try { const d=c.fechaPago?.toDate?.();return d?format(d,'d/M/yy'):'—' } catch{return '—'}
+                      })()
+                      const horaC = (() => {
+                        try { const d=c.fechaPago?.toDate?.();return d?format(d,'HH:mm'):'—' } catch{return '—'}
+                      })()
+                      return (
+                        <tr key={c.id} className={`text-center ${sinPac ? 'bg-red-50' : idx%2===0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                          <td className="px-2 py-1.5 border-r border-gray-100 font-mono text-gray-500">{idx+1}</td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 whitespace-nowrap">{fechaC}</td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 whitespace-nowrap">{horaC}</td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-left font-medium max-w-[160px] truncate">
+                            {sinPac
+                              ? <span className="text-red-600 font-semibold">⚠️ Sin asignar</span>
+                              : (c.pacienteNombre ?? '—').toUpperCase()}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-left max-w-[100px] truncate text-gray-600">
+                            {c.concepto ?? 'Consulta Normal'}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-right">
+                            {debito > 0 ? `$${debito.toLocaleString('es-MX')}` : '$—'}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-right text-gray-400">$—</td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-right">
+                            {efectivo > 0 ? `$${efectivo.toLocaleString('es-MX')}` : '$—'}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-right">
+                            {transf > 0 ? `$${transf.toLocaleString('es-MX')}` : '$—'}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-right font-semibold text-gray-800">
+                            {monto > 0 ? `$${monto.toLocaleString('es-MX')}` : '$—'}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100">
+                            {c.facturado
+                              ? <span className="text-green-600 font-semibold">SI</span>
+                              : <span className="text-gray-400">NO</span>}
+                          </td>
+                          <td className="px-2 py-1.5 border-r border-gray-100 text-gray-500">
+                            {c.elaboradoPor ?? 'Recepción'}
+                          </td>
+                          <td className="px-2 py-1.5 capitalize text-gray-600">
+                            {metodo === 'tarjeta' ? 'Tarjeta' : metodo === 'transferencia' ? 'Transferencia' : metodo === 'efectivo' ? 'Efectivo' : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {cobrosCorte.length === 0 && (
+                      <tr><td colSpan={13} className="text-center py-8 text-gray-400">Sin cobros en el período</td></tr>
+                    )}
+                  </tbody>
+                  {/* Totales finales estilo Dr. Salas */}
+                  <tfoot>
+                    <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold text-xs">
+                      <td colSpan={5} className="px-3 py-2 text-right text-gray-600 uppercase tracking-wide">
+                        TOTALES
+                      </td>
+                      <td className="px-2 py-2 text-right text-purple-700">
+                        ${totalTPV.toLocaleString('es-MX')}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-400">$—</td>
+                      <td className="px-2 py-2 text-right text-green-700">
+                        ${totalEfectivo.toLocaleString('es-MX')}
+                      </td>
+                      <td className="px-2 py-2 text-right text-blue-700">
+                        ${totalTransf.toLocaleString('es-MX')}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-800 text-sm">
+                        ${totalGeneral.toLocaleString('es-MX')}
+                      </td>
+                      <td colSpan={3} className="px-2 py-2 text-center text-gray-500 text-xs">
+                        {cobrosCorte.length} registros
+                        {sinPaciente > 0 && <span className="ml-2 text-red-500">⚠️ {sinPaciente} sin paciente</span>}
+                      </td>
+                    </tr>
+                    <tr className="bg-gray-800 text-white text-xs">
+                      <td colSpan={5} className="px-3 py-2 text-right font-semibold uppercase">
+                        INGRESOS COBRADOS
+                      </td>
+                      <td colSpan={2} className="px-3 py-2 text-center">
+                        <span className="text-purple-300">TOTAL TPV:</span>
+                        <span className="ml-1 font-bold">${totalTPV.toLocaleString('es-MX')}</span>
+                      </td>
+                      <td colSpan={2} className="px-3 py-2 text-center">
+                        <span className="text-blue-300">TOTAL TRANSF:</span>
+                        <span className="ml-1 font-bold">${totalTransf.toLocaleString('es-MX')}</span>
+                      </td>
+                      <td colSpan={4} className="px-3 py-2 text-center">
+                        <span className="text-green-300">TOTAL EFECTIVO:</span>
+                        <span className="ml-1 font-bold">${totalEfectivo.toLocaleString('es-MX')}</span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Firmas */}
+              <div className="grid grid-cols-2 border-t border-gray-200 px-6 py-4">
+                <div className="text-center">
+                  <div className="border-b border-gray-400 w-40 mx-auto mb-1 mt-4" />
+                  <p className="text-xs text-gray-500">RECEPCIÓN</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-b border-gray-400 w-40 mx-auto mb-1 mt-4" />
+                  <p className="text-xs text-gray-500">{(tenant?.nombreDoctor ?? tenant?.nombre ?? 'DOCTOR').toUpperCase()}</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ══ Tab: Seguimiento pacientes ══════════════════════ */}
       {tab === 'Seguimiento pacientes' && (

@@ -136,6 +136,14 @@ export default function SitioWeb() {
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState(false)
 
+  // Reset config when tenantId changes (multitenant fix)
+  useEffect(() => {
+    setConfig(c => ({ ...c,
+      nombreConsultorio: '', nombreDoctor: '', especialidad: '',
+      colorPrimario: '#0A8076', themeId: 'teal_navy',
+    }))
+  }, [tenantId])
+
   useEffect(() => {
     if (!tenantId) return
     getDoc(doc(db, `tenants/${tenantId}`)).then(snap => {
@@ -158,12 +166,14 @@ export default function SitioWeb() {
   }, [tenantId])
 
   const guardar = async () => {
+    if (!tenantId) { toast.error('No hay consultorio seleccionado'); return }
     setSaving(true)
     try {
-      await updateDoc(doc(db, `tenants/${tenantId}`), { sitioWeb: config })
-      toast.success('Sitio web actualizado ✓')
+      await updateDoc(doc(db, 'tenants', tenantId), { sitioWeb: config })
+      toast.success('✓ Cambios publicados — recarga el sitio para verlos')
     } catch(e) {
-      toast.error('Error al guardar')
+      console.error('SitioWeb guardar error:', e)
+      toast.error('Error al guardar: ' + e.message)
     } finally { setSaving(false) }
   }
 
