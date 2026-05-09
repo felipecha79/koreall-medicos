@@ -47,8 +47,6 @@ Responde SOLO este JSON completo:
 
 // ── Componente panel del doctor ───────────────────────────
 export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
-  // Si el doctor desactivó la IA, no mostrar el panel
-  if (!iaActivo) return null
   const [analisis,   setAnalisis]   = useState(null)
   const [loading,    setLoading]    = useState(false)
   const [revisado,   setRevisado]   = useState(false)
@@ -91,6 +89,8 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
     } finally { setLoading(false) }
   }
 
+  // Guards after hooks (React rules: no hooks after conditional returns)
+  if (!iaActivo) return null
   if (!padecimiento) return null
   if (!ANTHROPIC_KEY()) return null
 

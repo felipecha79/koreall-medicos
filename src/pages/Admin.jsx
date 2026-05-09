@@ -109,7 +109,7 @@ function UsuariosPorConsultorio({ tenants }) {
                         acc[u.rol] = (acc[u.rol] ?? 0) + 1; return acc
                       }, {})
                     ).map(([rol, cnt]) => (
-                      <span key={rol} className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[rol] ?? 'bg-gray-100 text-gray-500'}`}>
+                      <span key={`${t.id}-rol-${rol}`} className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[rol] ?? 'bg-gray-100 text-gray-500'}`}>
                         {cnt} {rol}
                       </span>
                     ))}
@@ -488,7 +488,7 @@ export default function Admin() {
                   {orgTenants.length > 0 ? (
                     <div className="divide-y divide-gray-100">
                       {orgTenants.map(t => (
-                        <div key={t.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+                        <div key={`${org.id}-${t.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
                           <div className="flex items-center gap-3">
                             <div className="w-1 h-8 bg-teal-200 rounded-full flex-shrink-0" />
                             <div>

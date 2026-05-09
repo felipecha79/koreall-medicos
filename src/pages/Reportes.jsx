@@ -45,7 +45,7 @@ function SelectorRango({ desde, hasta, onChange }) {
     <div className="flex items-center gap-2 flex-wrap">
       {rangos.map(r => (
         <button key={r.label} onClick={() => onChange(r.fn())}
-          className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-teal-50 hover:text-teal-700
+          className="text-gray-800 text-xs px-3 py-1.5 bg-gray-100 hover:bg-teal-50 hover:text-teal-700
                      rounded-lg transition-colors border border-gray-200">
           {r.label}
         </button>
@@ -53,12 +53,12 @@ function SelectorRango({ desde, hasta, onChange }) {
       <div className="flex items-center gap-1.5 ml-2">
         <input type="date" value={desde}
           onChange={e => onChange({ desde: e.target.value, hasta })}
-          className="border border-gray-200 rounded-lg px-2 py-1 text-xs
+          className="border border-gray-300 rounded-lg px-2 py-1 text-xs text-gray-800 bg-white
                      focus:outline-none focus:ring-2 focus:ring-teal-400" />
-        <span className="text-gray-400 text-xs">al</span>
+        <span className="text-gray-500 text-xs">al</span>
         <input type="date" value={hasta}
           onChange={e => onChange({ desde, hasta: e.target.value })}
-          className="border border-gray-200 rounded-lg px-2 py-1 text-xs
+          className="border border-gray-300 rounded-lg px-2 py-1 text-xs text-gray-800 bg-white
                      focus:outline-none focus:ring-2 focus:ring-teal-400" />
       </div>
     </div>

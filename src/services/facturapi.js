@@ -59,10 +59,10 @@ export async function emitirFactura({ cobro, paciente, tenant }) {
     items: [{
       quantity: 1,
       product: {
-        description:  cobro.concepto ?? 'Honorarios médicos',
-        product_key:  '85101500',
-        unit_key:     'ACT',
-        unit_name:    'Actividad',
+        description:  cobro.concepto ?? 'Consulta general',
+        product_key:  '85121800', // SAT: Servicios de consulta médica
+        unit_key:     'E48',
+        unit_name:    'Unidad de servicio',
         price:        cobro.monto,
         tax_included: false,
         taxes: [{ type: 'IVA', rate: 0.00, factor: 'Exento' }],

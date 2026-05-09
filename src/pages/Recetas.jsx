@@ -58,7 +58,7 @@ function BuscadorPaciente({ tenantId, onSelect }) {
   )
 }
 
-// Línea de medicamento
+// L\u00ednea de medicamento
 function LineaMedicamento({ index, data, onChange, onRemove }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
@@ -67,15 +67,15 @@ function LineaMedicamento({ index, data, onChange, onRemove }) {
           Medicamento {index + 1}
         </span>
         <button onClick={onRemove}
-          className="text-xs text-red-400 hover:text-red-600">✕ Eliminar</button>
+          className="text-xs text-red-400 hover:text-red-600">\u2715 Eliminar</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[
           ['medicamento', 'Medicamento *',           'text'],
           ['dosis',       'Dosis (ej: 500 mg)',       'text'],
-          ['via',         'Vía (oral/IM/IV/tópica)',  'text'],
+          ['via',         'V\u00eda (oral/IM/IV/t\u00f3pica)',  'text'],
           ['frecuencia',  'Frecuencia (ej: c/8h)',    'text'],
-          ['duracion',    'Duración (ej: 7 días)',    'text'],
+          ['duracion',    'Duraci\u00f3n (ej: 7 d\u00edas)',    'text'],
           ['cantidad',    'Cantidad a dispensar',     'text'],
         ].map(([field, label]) => (
           <div key={field}>
@@ -122,21 +122,21 @@ function RecetaPreview({ receta, tenant }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0D2240' }}>
-              {tenant?.nombreDoctor ?? 'Dr. '}
+              {tenant?.plantillaReceta?.nombreDoctor ?? tenant?.nombreDoctor ?? 'Dr. '}
             </h2>
             <p style={{ margin: '2px 0', color: '#028090', fontWeight: 500 }}>
-              {tenant?.especialidad ?? 'Médico General'}
+              {tenant?.plantillaReceta?.especialidad ?? tenant?.especialidad ?? 'Médico General'}
             </p>
             <p style={{ margin: '2px 0', color: '#6b7280', fontSize: 11 }}>
-              Cédula Profesional: {tenant?.cedula ?? '________'}
+              Cédula Profesional: {tenant?.plantillaReceta?.cedulaProfesional ?? tenant?.cedula ?? '________'}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p style={{ margin: '2px 0', color: '#6b7280', fontSize: 11 }}>
-              {tenant?.direccion ?? 'Dirección del consultorio'}
+              {tenant?.plantillaReceta?.direccionConsultorio ?? tenant?.direccion ?? 'Dirección del consultorio'}
             </p>
             <p style={{ margin: '2px 0', color: '#6b7280', fontSize: 11 }}>
-              Tel: {tenant?.telefono ?? ''}
+              Tel: {tenant?.plantillaReceta?.telefonoConsultorio ?? tenant?.telefono ?? ''}
             </p>
             <p style={{ margin: '4px 0', fontSize: 11, color: '#9ca3af' }}>
               No. Receta: {receta.numero}
@@ -172,7 +172,7 @@ function RecetaPreview({ receta, tenant }) {
       <div style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af',
                     letterSpacing: '0.08em', marginBottom: 8 }}>
-          PRESCRIPCIÓN
+          PRESCRIPCI\u00d3N
         </p>
         {receta.medicamentos.map((med, i) => (
           <div key={i} style={{
@@ -184,7 +184,7 @@ function RecetaPreview({ receta, tenant }) {
             </p>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 3 }}>
               {med.dosis      && <span style={{ fontSize: 12, color: '#374151' }}>Dosis: <b>{med.dosis}</b></span>}
-              {med.via        && <span style={{ fontSize: 12, color: '#374151' }}>Vía: <b>{med.via}</b></span>}
+              {med.via        && <span style={{ fontSize: 12, color: '#374151' }}>V\u00eda: <b>{med.via}</b></span>}
               {med.frecuencia && <span style={{ fontSize: 12, color: '#374151' }}>Cada: <b>{med.frecuencia}</b></span>}
               {med.duracion   && <span style={{ fontSize: 12, color: '#374151' }}>Por: <b>{med.duracion}</b></span>}
               {med.cantidad   && <span style={{ fontSize: 12, color: '#374151' }}>Cantidad: <b>{med.cantidad}</b></span>}
@@ -213,10 +213,10 @@ function RecetaPreview({ receta, tenant }) {
         </div>
       )}
 
-      {/* Próxima cita */}
+      {/* Pr\u00f3xima cita */}
       {receta.proximaCita && (
         <p style={{ fontSize: 12, color: '#374151', marginBottom: 16 }}>
-          📅 <b>Próxima cita:</b> {receta.proximaCita}
+          \ud83d\udcc5 <b>Pr\u00f3xima cita:</b> {receta.proximaCita}
         </p>
       )}
 
@@ -233,7 +233,7 @@ function RecetaPreview({ receta, tenant }) {
               {tenant?.nombreDoctor}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
-              Cédula: {tenant?.cedula ?? '________'}
+              C\u00e9dula: {tenant?.cedula ?? '________'}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
               {tenant?.especialidad}
@@ -247,13 +247,13 @@ function RecetaPreview({ receta, tenant }) {
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
         textAlign: 'center', fontSize: 10, color: '#9ca3af'
       }}>
-        Receta generada por MediDesk · {tenant?.nombre} · {fecha}
+        Receta generada por MediDesk \u00b7 {tenant?.nombre} \u00b7 {fecha}
       </div>
     </div>
   )
 }
 
-// ── Página principal ──────────────────────────────────────
+// \u2500\u2500 P\u00e1gina principal \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const MED_VACIO = {
   medicamento:'', dosis:'', via:'oral', frecuencia:'',
   duracion:'', cantidad:'', indicaciones:''
@@ -309,7 +309,7 @@ export default function Recetas() {
       const numero = `RX-${Date.now().toString().slice(-6)}`
       const receta = { ...form, numero, tenantId, fecha: Timestamp.now() }
       await addDoc(collection(db, `tenants/${tenantId}/recetas`), receta)
-      toast.success('Receta guardada ✓')
+      toast.success('Receta guardada \u2713')
       setPreview(receta)
       setModal(false)
       setForm({
@@ -330,7 +330,7 @@ export default function Recetas() {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Receta Médica</title>
+        <title>Receta M\u00e9dica</title>
         <style>
           body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
           @media print {
@@ -353,7 +353,7 @@ export default function Recetas() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Recetas médicas</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Recetas m\u00e9dicas</h2>
           <p className="text-sm text-gray-400">{recetas.length} emitidas</p>
         </div>
         <button onClick={() => setModal(true)}
@@ -367,7 +367,7 @@ export default function Recetas() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
         {recetas.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <p className="text-4xl mb-2">📋</p>
+            <p className="text-4xl mb-2">\ud83d\udccb</p>
             <p className="text-sm">Sin recetas emitidas</p>
           </div>
         ) : (
@@ -418,13 +418,13 @@ export default function Recetas() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">
-              Vista previa — {preview.numero}
+              Vista previa \u2014 {preview.numero}
             </h3>
             <div className="flex gap-2">
               <button onClick={imprimir}
                 className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
                            rounded-lg hover:bg-teal-700 transition-colors">
-                🖨 Imprimir / Guardar PDF
+                \ud83d\udda8 Imprimir / Guardar PDF
               </button>
               <button onClick={() => setPreview(null)}
                 className="px-4 py-2 bg-gray-100 text-gray-600 text-sm
@@ -444,7 +444,7 @@ export default function Recetas() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl
                           max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva receta médica</h3>
+            <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva receta m\u00e9dica</h3>
 
             <div className="space-y-4">
               {/* Paciente */}
@@ -463,15 +463,15 @@ export default function Recetas() {
                 )}
                 {form.pacienteId && (
                   <p className="text-xs text-teal-600 mt-1">
-                    ✓ {form.pacienteIdLegible} — {form.pacienteNombre}
+                    \u2713 {form.pacienteIdLegible} \u2014 {form.pacienteNombre}
                   </p>
                 )}
               </div>
 
-              {/* Diagnóstico */}
+              {/* Diagn\u00f3stico */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Diagnóstico (opcional — aparece en la receta)
+                  Diagn\u00f3stico (opcional \u2014 aparece en la receta)
                 </label>
                 <input type="text" value={form.diagnostico}
                   onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))}
@@ -509,14 +509,14 @@ export default function Recetas() {
                              focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
               </div>
 
-              {/* Próxima cita */}
+              {/* Pr\u00f3xima cita */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Próxima cita (opcional)
+                  Pr\u00f3xima cita (opcional)
                 </label>
                 <input type="text" value={form.proximaCita}
                   onChange={e => setForm(f => ({ ...f, proximaCita: e.target.value }))}
-                  placeholder="En 7 días, 15 de mayo 2026..."
+                  placeholder="En 7 d\u00edas, 15 de mayo 2026..."
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400" />
               </div>

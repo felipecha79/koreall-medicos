@@ -77,7 +77,7 @@ export default function Facturacion() {
     const paciente = pacientes[cobro.pacienteId]
     if (!paciente) { toast.error('Paciente no encontrado'); return }
     if (!paciente.rfc) {
-      toast.error('El paciente no tiene RFC. Agr\u00e9galo en su ficha antes de facturar.')
+      toast.error('El paciente no tiene RFC. Agrégalo en su ficha antes de facturar.')
       return
     }
     if (!import.meta.env.VITE_FACTURAPI_KEY) {
@@ -172,7 +172,7 @@ export default function Facturacion() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Facturaci\u00f3n CFDI 4.0</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Facturación CFDI 4.0</h2>
           <p className="text-sm text-gray-400">
             {facturas.filter(f=>f.estatus==='valid').length} facturas timbradas
           </p>
@@ -188,7 +188,7 @@ export default function Facturacion() {
           <p className="text-xs text-amber-700 mt-1">
             Agrega <code className="bg-amber-100 px-1 rounded">VITE_FACTURAPI_KEY=sk_test_...</code> a tu archivo
             <code className="bg-amber-100 px-1 rounded ml-1">.env.local</code> y reinicia el servidor.
-            Obt\u00e9n tu API key en <a href="https://facturapi.io" target="_blank" rel="noreferrer"
+            Obtpen tu API key en <a href="https://facturapi.io" target="_blank" rel="noreferrer"
               className="underline">facturapi.io</a> (sandbox gratuito).
           </p>
         </div>
@@ -389,7 +389,7 @@ export default function Facturacion() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
             onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              Confirmar emisi\u00f3n de CFDI
+              Confirmar emisión de CFDI
             </h3>
             <p className="text-sm text-gray-500 mb-5">
               Revisa los datos antes de timbrar. Una vez emitido, solo puedes cancelar ante el SAT.
@@ -417,19 +417,19 @@ export default function Facturacion() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">M\u00e9todo pago</span>
+                <span className="text-gray-500">Método pago</span>
                 <span>{modal.metodo}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Uso CFDI</span>
-                <span>G03 \u2014 Gastos en general</span>
+                <span>Gastos en general</span>
               </div>
             </div>
 
             <div className="bg-blue-50 rounded-lg p-3 mb-5">
               <p className="text-xs text-blue-700">
-                \ud83d\udca1 Los honorarios m\u00e9dicos est\u00e1n <b>exentos de IVA</b> conforme al Art. 15 de la LIVA.
-                El CFDI se emitir\u00e1 sin IVA trasladado.
+                Caduca Los honorarios médicos estuvieron <b>exentos de IVA</b> conforme al Art. 15 de la LIVA.
+                El CFDI se emitirá sin IVA trasladado.
               </p>
             </div>
 
