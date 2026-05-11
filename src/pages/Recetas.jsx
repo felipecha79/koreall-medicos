@@ -353,7 +353,7 @@ export default function Recetas() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Recetas m\u00e9dicas</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Recetas médicas</h2>
           <p className="text-sm text-gray-400">{recetas.length} emitidas</p>
         </div>
         <button onClick={() => setModal(true)}
@@ -444,7 +444,7 @@ export default function Recetas() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl
                           max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva receta m\u00e9dica</h3>
+            <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva receta médica</h3>
 
             <div className="space-y-4">
               {/* Paciente */}
@@ -468,10 +468,10 @@ export default function Recetas() {
                 )}
               </div>
 
-              {/* Diagn\u00f3stico */}
+              {/* Diagnóstico */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Diagn\u00f3stico (opcional \u2014 aparece en la receta)
+                  Diagnóstico (opcional cómo  aparece en la receta)
                 </label>
                 <input type="text" value={form.diagnostico}
                   onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))}
@@ -509,10 +509,10 @@ export default function Recetas() {
                              focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
               </div>
 
-              {/* Pr\u00f3xima cita */}
+              {/* Próxima cita */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Pr\u00f3xima cita (opcional)
+                  Próxima cita (opcional)
                 </label>
                 <input type="text" value={form.proximaCita}
                   onChange={e => setForm(f => ({ ...f, proximaCita: e.target.value }))}
