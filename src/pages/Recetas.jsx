@@ -67,15 +67,15 @@ function LineaMedicamento({ index, data, onChange, onRemove }) {
           Medicamento {index + 1}
         </span>
         <button onClick={onRemove}
-          className="text-xs text-red-400 hover:text-red-600">\u2715 Eliminar</button>
+          className="text-xs text-red-400 hover:text-red-600">Eliminar</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[
           ['medicamento', 'Medicamento *',           'text'],
           ['dosis',       'Dosis (ej: 500 mg)',       'text'],
-          ['via',         'V\u00eda (oral/IM/IV/t\u00f3pica)',  'text'],
+          ['via',         'Via (oral/IM/IV/tipica)',  'text'],
           ['frecuencia',  'Frecuencia (ej: c/8h)',    'text'],
-          ['duracion',    'Duraci\u00f3n (ej: 7 d\u00edas)',    'text'],
+          ['duracion',    'Duracion (ej: 7 dias)',    'text'],
           ['cantidad',    'Cantidad a dispensar',     'text'],
         ].map(([field, label]) => (
           <div key={field}>
@@ -172,7 +172,7 @@ function RecetaPreview({ receta, tenant }) {
       <div style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af',
                     letterSpacing: '0.08em', marginBottom: 8 }}>
-          PRESCRIPCI\u00d3N
+          PRESCRIPCION
         </p>
         {receta.medicamentos.map((med, i) => (
           <div key={i} style={{
@@ -213,10 +213,10 @@ function RecetaPreview({ receta, tenant }) {
         </div>
       )}
 
-      {/* Pr\u00f3xima cita */}
+      {/* Proxima cita */}
       {receta.proximaCita && (
         <p style={{ fontSize: 12, color: '#374151', marginBottom: 16 }}>
-          \ud83d\udcc5 <b>Pr\u00f3xima cita:</b> {receta.proximaCita}
+           <b>Proxima cita:</b> {receta.proximaCita}
         </p>
       )}
 
@@ -233,7 +233,7 @@ function RecetaPreview({ receta, tenant }) {
               {tenant?.nombreDoctor}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
-              C\u00e9dula: {tenant?.cedula ?? '________'}
+              Cedula: {tenant?.cedula ?? '________'}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>
               {tenant?.especialidad}
@@ -247,13 +247,13 @@ function RecetaPreview({ receta, tenant }) {
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
         textAlign: 'center', fontSize: 10, color: '#9ca3af'
       }}>
-        Receta generada por MediDesk \u00b7 {tenant?.nombre} \u00b7 {fecha}
+        Receta generada por MediDesk  {tenant?.nombre} \u00b7 {fecha}
       </div>
     </div>
   )
 }
 
-// \u2500\u2500 P\u00e1gina principal \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// Valor inicial para un medicamento vacio
 const MED_VACIO = {
   medicamento:'', dosis:'', via:'oral', frecuencia:'',
   duracion:'', cantidad:'', indicaciones:''
@@ -367,7 +367,7 @@ export default function Recetas() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
         {recetas.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <p className="text-4xl mb-2">\ud83d\udccb</p>
+            <p className="text-4xl mb-2"></p>
             <p className="text-sm">Sin recetas emitidas</p>
           </div>
         ) : (
@@ -418,13 +418,13 @@ export default function Recetas() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">
-              Vista previa \u2014 {preview.numero}
+              Vista previa  {preview.numero}
             </h3>
             <div className="flex gap-2">
               <button onClick={imprimir}
                 className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
                            rounded-lg hover:bg-teal-700 transition-colors">
-                \ud83d\udda8 Imprimir / Guardar PDF
+                 Imprimir / Guardar PDF
               </button>
               <button onClick={() => setPreview(null)}
                 className="px-4 py-2 bg-gray-100 text-gray-600 text-sm

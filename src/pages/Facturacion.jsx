@@ -88,7 +88,7 @@ export default function Facturacion() {
     setLoading(true)
     setModal(null)
     try {
-      toast('Timbrando ante el SAT...', { icon: '\u23f3' })
+      toast('Timbrando ante el SAT...', { icon: '' })
 
       const factura = await emitirFactura({ cobro, paciente, tenant })
 
@@ -99,8 +99,8 @@ export default function Facturacion() {
           uuid:         factura.uuid,
           folio:        factura.folio_number,
           serie:        factura.series,
-          pdfUrl:       factura.pdf_download_url,
-          xmlUrl:       factura.xml_download_url,
+          pdfUrl:       factura.pdf_download_url ?? null,
+          xmlUrl:       factura.xml_download_url ?? null,
           total:        factura.total,
           estatus:      factura.status,
           cobroId:      cobro.id,
@@ -116,12 +116,12 @@ export default function Facturacion() {
       // Marcar cobro como facturado
       await updateDoc(doc(db, `tenants/${tenantId}/cobros/${cobro.id}`), {
         facturado:  true,
-        facturaId:  facturaRef.id,
-        cfdiUuid:   factura.uuid,
-        cfdiUrl:    factura.pdf_download_url,
+        facturaId:  facturaRef.id ?? null,
+        cfdiUuid:   factura.uuid ?? null,
+        cfdiUrl:    factura.pdf_download_url ?? null,
       })
 
-      toast.success(`CFDI timbrado \u2713 \u2014 UUID: ${factura.uuid.slice(0,8)}...`)
+      toast.success(`CFDI timbrado con UUID: ${factura.uuid.slice(0,8)}...`)
     } catch(e) {
       console.error('[Facturacion] Error:', e)
       // Si el error es de red/CORS pero la factura puede haberse creado,
@@ -136,7 +136,7 @@ export default function Facturacion() {
   }
 
   const cancelar = async (factura) => {
-    if (!window.confirm('\u00bfSeguro que deseas cancelar esta factura ante el SAT? Esta acci\u00f3n no se puede deshacer.')) return
+    if (!window.confirm('Seguro que deseas cancelar esta factura ante el SAT? Esta accion no se puede deshacer.')) return
     setLoading(true)
     try {
       await cancelarFactura(factura.facturapiId)
@@ -159,7 +159,7 @@ export default function Facturacion() {
     if (!emailDest) { toast.error('Escribe un email'); return }
     try {
       await enviarFacturaPorEmail(emailModal.facturapiId, emailDest)
-      toast.success('Factura enviada por email \u2713')
+      toast.success('Factura enviada por email!')
       setEmailModal(null); setEmailDest('')
     } catch(e) {
       toast.error('Error al enviar')
@@ -183,7 +183,7 @@ export default function Facturacion() {
       {!import.meta.env.VITE_FACTURAPI_KEY && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
           <p className="text-sm font-medium text-amber-800">
-            \u26a0\ufe0f Facturapi no est\u00e1 configurado
+             Facturapi no esta configurado
           </p>
           <p className="text-xs text-amber-700 mt-1">
             Agrega <code className="bg-amber-100 px-1 rounded">VITE_FACTURAPI_KEY=sk_test_...</code> a tu archivo
@@ -194,7 +194,7 @@ export default function Facturacion() {
         </div>
       )}
 
-      {/* M\u00e9tricas */}
+      {/* Metricas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-400 mb-1">Por facturar</p>
@@ -238,15 +238,15 @@ export default function Facturacion() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {pendientes.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-4xl mb-2">\u2705</p>
-              <p className="text-sm">Todos los cobros est\u00e1n facturados</p>
+              <p className="text-4xl mb-2"></p>
+              <p className="text-sm">Todos los cobros estan facturados</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Fecha','ID Paciente','Paciente','RFC','Concepto','Monto','Acci\u00f3n'].map(h => (
+                    {['Fecha','ID Paciente','Paciente','RFC','Concepto','Monto','Accion'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium
                                              text-gray-500 uppercase">{h}</th>
                     ))}
@@ -265,7 +265,7 @@ export default function Facturacion() {
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs bg-teal-50 text-teal-700
                                            px-2 py-0.5 rounded border border-teal-100">
-                            {c.pacienteIdLegible ?? '\u2014'}
+                            {c.pacienteIdLegible ?? ''}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-800">
@@ -304,7 +304,7 @@ export default function Facturacion() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {facturas.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-4xl mb-2">\ud83e\uddfe</p>
+              <p className="text-4xl mb-2"></p>
               <p className="text-sm">Sin facturas emitidas</p>
             </div>
           ) : (
@@ -382,7 +382,7 @@ export default function Facturacion() {
         </div>
       )}
 
-      {/* Modal confirmar facturaci\u00f3n */}
+      {/* Modal confirmar facturacion */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={() => setModal(null)}>
@@ -403,7 +403,7 @@ export default function Facturacion() {
               <div className="flex justify-between">
                 <span className="text-gray-500">RFC</span>
                 <span className="font-mono text-xs">
-                  {pacientes[modal.pacienteId]?.rfc ?? '\u2014'}
+                  {pacientes[modal.pacienteId]?.rfc ?? 'Sin RFC'}
                 </span>
               </div>
               <div className="flex justify-between">
