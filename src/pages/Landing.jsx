@@ -6,7 +6,7 @@ import { collection, getDocs, query, limit, onSnapshot, doc } from 'firebase/fir
 
 // ── CSS inyectado dinámicamente ───────────────────────────
 const buildCSS = (c) => `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');
 
   :root {
     --ld-teal:  ${c.colorPrimario   || '#0A8076'};
@@ -290,12 +290,12 @@ const buildCSS = (c) => `
 
 // ── Defaults ──────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  colorPrimario:    '#0A8076',
-  colorSecundario:  '#0D1F35',
-  colorFondo:       '#F7F4EF',
-  colorAccento:     '#C4A265',
-  tipografia:       'Cormorant Garamond',
-  tipografiaUI:     'DM Sans',
+  colorPrimario:    '#4AAECC',
+  colorSecundario:  '#E8623A',
+  colorFondo:       '#F4F9FB',
+  colorAccento:     '#1A2E42',
+  tipografia:       'Plus Jakarta Sans',
+  tipografiaUI:     'Plus Jakarta Sans',
   nombreConsultorio: 'Consultorio Chávez',
   nombreDoctor:     'Dr. Juan Felipe Chávez',
   especialidad:     'Medicina General · Medicina Preventiva',
@@ -473,9 +473,17 @@ export default function Landing() {
         <div className="orb" />
         <div className="hero-in">
           <div>
-            <div className="rev" style={{display:'flex',alignItems:'center',marginBottom:24}}>
-              <span className="dot" />
-              <span className="tag">Consultorio activo · Tampico, Tamps.</span>
+            <div className="rev" style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,flexWrap:'wrap'}}>
+              {cfg.colorPrimario === '#4AAECC' ? (
+                <span className="pill-badge">
+                  ✦ Ecosistema digital de salud
+                </span>
+              ) : (
+                <>
+                  <span className="dot" />
+                  <span className="tag">Consultorio activo · Tampico, Tamps.</span>
+                </>
+              )}
             </div>
             <h1 className="rev" style={{transitionDelay:'.1s'}}>
               {cfg.sloganHero?.includes(',')
@@ -491,6 +499,11 @@ export default function Landing() {
               <button className="btnp" onClick={() => setModal(true)}>📅 Agendar cita en línea</button>
               <a href="#servicios" className="btng">Ver servicios →</a>
             </div>
+            {cfg.colorPrimario === '#4AAECC' && (
+              <div className="tampico-badge rev" style={{transitionDelay:'.35s'}}>
+                🦀 HECHO EN TAMPICO, TAMPS.
+              </div>
+            )}
           </div>
 
           {/* Tarjeta del doctor */}
@@ -506,7 +519,7 @@ export default function Landing() {
             <h3>{cfg.nombreDoctor}</h3>
             <p className="sub">{cfg.especialidad?.split('·')[0]?.trim()} · Cédula {cfg.cedulaProfesional}</p>
             <div className="cr"><div className="cr-ico">🎓</div><span>Cédula Prof. {cfg.cedulaProfesional} — SSA</span></div>
-            <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con MediDesk</span></div>
+            <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con DocVias</span></div>
             <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>
             <div className="stats">
               <div className="st"><div className="st-n">15+</div><div className="st-l">Años</div></div>
@@ -577,7 +590,7 @@ export default function Landing() {
       <section className="sec-navy" id="tecnologia">
         <div className="ldc" style={{position:'relative',zIndex:1}}>
           <div className="sh rev">
-            <span className="tag" style={{color:'var(--ld-teal)'}}>Powered by MediDesk</span>
+            <span className="tag" style={{color:'var(--ld-teal)'}}>Powered by DocVias</span>
             <h2>Su consultorio en<br/>la <em>era digital</em></h2>
             <p>Sistema médico integral que conecta al doctor con sus pacientes.</p>
           </div>
@@ -711,7 +724,7 @@ export default function Landing() {
           </div>
           <div className="fb-bot">
             <span>© 2026 {cfg.nombreConsultorio} · Todos los derechos reservados</span>
-            <span>Powered by <a href="https://medideskmx.com" target="_blank" rel="noreferrer">MediDesk</a></span>
+            <span>Powered by <a href="https://medideskmx.com" target="_blank" rel="noreferrer">DocVias</a></span>
           </div>
         </div>
       </footer>

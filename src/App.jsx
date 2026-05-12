@@ -62,7 +62,10 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold">MediDesk</h1>
+          <h1 className="text-base font-bold">DocVias</h1>
+          <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+            <span style={{fontSize:9}}>🦀</span>Hecho en Tampico
+          </span>
           {isSuperAdmin && allOrgs?.length > 1 ? (
             <div className="mt-1 space-y-1">
               <select value={org?.id ?? ''}
@@ -168,7 +171,7 @@ function AppLayout({ children }) {
   const { tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
-  const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'MediDesk'
+  const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'DocVias'
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">

@@ -4,8 +4,22 @@ import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import toast from 'react-hot-toast'
 
-// ── Themes prediseñados ───────────────────────────────────
+// ── Themes prediseñados DocVias ──────────────────────────
 const THEMES = [
+  {
+    id: 'docvias_principal',
+    nombre: '✦ DocVias — Principal',
+    desc: 'Azul cielo + Coral — Tecnología humana y cercana',
+    preview: ['#4AAECC', '#E8623A', '#1A2E42'],
+    vars: {
+      colorPrimario: '#4AAECC',
+      colorSecundario: '#E8623A',
+      colorFondo: '#F4F9FB',
+      colorAccento: '#1A2E42',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
   {
     id: 'teal_navy',
     nombre: 'Médico Profesional',
@@ -90,6 +104,34 @@ const THEMES = [
       tipografiaUI: 'Raleway',
     }
   },
+  {
+    id: 'mint_derma',
+    nombre: 'Dermatología / Estética',
+    desc: 'Menta + Azul acero — Limpio y sofisticado',
+    preview: ['#9EDFCC', '#2B5D87', '#F4FFFE'],
+    vars: {
+      colorPrimario: '#9EDFCC',
+      colorSecundario: '#2B5D87',
+      colorFondo: '#F4FFFE',
+      colorAccento: '#6AA9D9',
+      tipografia: 'Josefin Sans',
+      tipografiaUI: 'Josefin Sans',
+    }
+  },
+  {
+    id: 'warm_gine',
+    nombre: 'Ginecología / Maternidad',
+    desc: 'Durazno + Lavanda — Cálido y seguro',
+    preview: ['#E8844A', '#7C6FA0', '#FFF8F4'],
+    vars: {
+      colorPrimario: '#E8844A',
+      colorSecundario: '#7C6FA0',
+      colorFondo: '#FFF8F4',
+      colorAccento: '#F2C4A0',
+      tipografia: 'Lora',
+      tipografiaUI: 'Nunito',
+    }
+  },
 ]
 
 const TIPOGRAFIAS = [
@@ -100,13 +142,13 @@ const TIPOGRAFIAS = [
 export default function SitioWeb() {
   const { tenantId, tenant } = useTenant()
   const [config, setConfig] = useState({
-    themeId: 'teal_navy',
-    colorPrimario: '#0A8076',
-    colorSecundario: '#0D1F35',
-    colorFondo: '#F7F4EF',
-    colorAccento: '#C4A265',
-    tipografia: 'Cormorant Garamond',
-    tipografiaUI: 'DM Sans',
+    themeId: 'docvias_principal',
+    colorPrimario: '#4AAECC',
+    colorSecundario: '#E8623A',
+    colorFondo: '#F4F9FB',
+    colorAccento: '#1A2E42',
+    tipografia: 'Plus Jakarta Sans',
+    tipografiaUI: 'Plus Jakarta Sans',
     logoUrl: '',
     nombreConsultorio: '',
     sloganHero: 'Su salud, nuestra prioridad',
@@ -142,7 +184,7 @@ export default function SitioWeb() {
     setConfig(prev => ({
       ...prev,
       nombreConsultorio: '', nombreDoctor: '', especialidad: '',
-      colorPrimario: '#0A8076', themeId: 'teal_navy',
+      colorPrimario: '#0A8076', themeId: 'docvias_principal',
     }))
     getDoc(doc(db, `tenants/${tenantId}`)).then(snap => {
       if (snap.exists() && snap.data().sitioWeb) {

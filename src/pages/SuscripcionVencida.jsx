@@ -26,7 +26,7 @@ export default function SuscripcionVencida({ tenant }) {
             ⚠️ Suscripción inactiva
           </p>
           <p className="text-sm text-amber-700">
-            El acceso a MediDesk está temporalmente suspendido.
+            El acceso a DocVias está temporalmente suspendido.
             Para reactivar tu cuenta contacta a soporte.
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function SuscripcionVencida({ tenant }) {
             Contactar soporte
           </p>
           <div className="space-y-2">
-            <a href="https://wa.me/528331234567?text=Hola,%20necesito%20reactivar%20mi%20cuenta%20MediDesk"
+            <a href="https://wa.me/528331234567?text=Hola,%20necesito%20reactivar%20mi%20cuenta%20DocVias"
                target="_blank" rel="noreferrer"
                className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200
                           hover:bg-green-100 transition-colors">
