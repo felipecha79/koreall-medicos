@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { crearOrganizacionFP, obtenerApiKeyOrg, consultarOrganizacionFP } from '../services/facturapi'
 import {
   collection, onSnapshot, addDoc, updateDoc,
   doc, Timestamp, query, where, getDocs
@@ -293,6 +294,10 @@ export default function Admin() {
   const [modalTenant, setModalTenant] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [filtroOrg, setFiltroOrg] = useState('')
+  const [fpModal, setFpModal]     = useState(null)   // tenant seleccionado para config FP
+  const [fpForm, setFpForm]       = useState({ rfc:'', nombreLegal:'', cp:'', regimen:'612', apiKeyManual:'' })
+  const [fpLoading, setFpLoading] = useState(false)
+  const [fpStatus, setFpStatus]   = useState({})     // { tenantId: 'ok'|'error'|'loading' }
 
   const [formOrg, setFormOrg] = useState({
     nombre: '', tipo: 'consultorio', plan: 'pro',
@@ -304,7 +309,8 @@ export default function Admin() {
   const [formTenant, setFormTenant] = useState({
     nombre: '', orgId: '', especialidad: '',
     nombreDoctor: '', cedula: '', telefono: '', email: '',
-    rfc: '', direccion: '', activo: true, suscripcionActiva: true,
+    rfc: '', cp: '', regimen: '612',
+    direccion: '', activo: true, suscripcionActiva: true,
   })
 
   useEffect(() => {
@@ -368,9 +374,74 @@ export default function Admin() {
       toast('Recuerda asignar los claims con el script: node scripts/set-tenant-user.cjs', { duration: 6000 })
       setModalTenant(false)
       setFormTenant({ nombre:'', orgId:'', especialidad:'', nombreDoctor:'',
-        cedula:'', telefono:'', email:'', rfc:'', direccion:'', activo:true, suscripcionActiva:true })
+        cedula:'', telefono:'', email:'', rfc:'', cp:'', regimen:'612', direccion:'', activo:true, suscripcionActiva:true })
     } catch(e) { toast.error('Error al crear consultorio') }
     finally { setSaving(false) }
+  }
+
+  // ── Configurar Facturapi para un tenant ─────────────────
+  // Opción A: crear automáticamente la organización en Facturapi
+  // Opción B: pegar la API key manualmente (org ya existente en Facturapi)
+  const configurarFacturapi = async (tenant) => {
+    setFpLoading(true)
+    setFpStatus(s => ({ ...s, [tenant.id]: 'loading' }))
+    try {
+      let apiKey = fpForm.apiKeyManual?.trim()
+
+      if (!apiKey) {
+        // Crear organización en Facturapi automáticamente
+        if (!fpForm.rfc)         throw new Error('El RFC es obligatorio')
+        if (!fpForm.nombreLegal) throw new Error('El nombre legal es obligatorio')
+
+        toast('Creando organización en Facturapi...', { icon: '🧾' })
+        const org = await crearOrganizacionFP({
+          rfc:         fpForm.rfc.toUpperCase().trim(),
+          nombreLegal: fpForm.nombreLegal.toUpperCase().trim(),
+          cp:          fpForm.cp || tenant.cp || '89000',
+          regimen:     fpForm.regimen,
+        })
+
+        // Obtener la API key de la org recién creada
+        const keys = await obtenerApiKeyOrg(org.id)
+        apiKey = keys.live ?? keys.test ?? null
+
+        if (!apiKey) throw new Error('Facturapi no devolvió una API key. Revisa el dashboard de Facturapi.')
+
+        // Guardar también el ID de la org en Facturapi para referencia
+        await updateDoc(doc(db, `tenants/${tenant.id}`), {
+          facturapiOrgId:  org.id,
+          facturapiApiKey: apiKey,
+          rfc:             fpForm.rfc.toUpperCase().trim(),
+          actualizadoEn:   Timestamp.now(),
+        })
+        toast.success(`✅ Organización creada en Facturapi y API key guardada para ${tenant.nombre}`)
+      } else {
+        // Modo manual: solo guardar la key que pegó el SuperAdmin
+        await updateDoc(doc(db, `tenants/${tenant.id}`), {
+          facturapiApiKey: apiKey,
+          actualizadoEn:   Timestamp.now(),
+        })
+        toast.success(`✅ API key guardada para ${tenant.nombre}`)
+      }
+
+      setFpStatus(s => ({ ...s, [tenant.id]: 'ok' }))
+      setFpModal(null)
+      setFpForm({ rfc:'', nombreLegal:'', cp:'', regimen:'612', apiKeyManual:'' })
+    } catch(e) {
+      console.error('[Facturapi config]', e)
+      toast.error(`Error: ${e.message}`)
+      setFpStatus(s => ({ ...s, [tenant.id]: 'error' }))
+    } finally { setFpLoading(false) }
+  }
+
+  const limpiarFacturapi = async (tenant) => {
+    if (!window.confirm(`¿Quitar la configuración de Facturapi de "${tenant.nombre}"? El consultorio dejará de poder timbrar con su propio RFC.`)) return
+    await updateDoc(doc(db, `tenants/${tenant.id}`), {
+      facturapiApiKey: null,
+      facturapiOrgId:  null,
+      actualizadoEn:   Timestamp.now(),
+    })
+    toast.success('Configuración de Facturapi eliminada')
   }
 
   const toggleSuscripcion = async (tipo, id, actual) => {
@@ -749,6 +820,80 @@ export default function Admin() {
             </p>
           </div>
 
+          {/* ── Facturapi por consultorio ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">🧾 Facturapi — Configuración por consultorio</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Cada consultorio timbra CFDI 4.0 con su propio RFC y CSD.
+                  Crea la organización automáticamente o pega una API key existente.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {tenants.map(t => {
+                const tieneKey = !!t.facturapiApiKey
+                const estado   = fpStatus[t.id]
+                return (
+                  <div key={t.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-400 font-mono">{t.id}</span>
+                        {t.rfc && <span className="text-xs text-gray-500">RFC: {t.rfc}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {tieneKey ? (
+                        <>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                            ✅ Configurado
+                          </span>
+                          {t.facturapiOrgId && (
+                            <span className="text-xs text-gray-400 font-mono hidden md:block">
+                              {t.facturapiOrgId.slice(0,8)}…
+                            </span>
+                          )}
+                          <button
+                            onClick={() => limpiarFacturapi(t)}
+                            className="text-xs text-red-400 hover:text-red-600 hover:underline">
+                            Quitar
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                          Sin configurar
+                        </span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setFpModal(t)
+                          setFpForm({
+                            rfc:          t.rfc ?? '',
+                            nombreLegal:  t.nombreDoctor ?? t.nombre ?? '',
+                            cp:           t.cp ?? '',
+                            regimen:      '612',
+                            apiKeyManual: '',
+                          })
+                        }}
+                        className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+                        {tieneKey ? '✏️ Editar' : '⚙️ Configurar'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-3 bg-blue-50 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                <strong>¿Cómo funciona?</strong> Al configurar, DocVias crea una organización en tu cuenta
+                de Facturapi vinculada al RFC del doctor. Cada CFDI se timbra usando esa organización,
+                por lo que el XML lleva el RFC del consultorio (no el tuyo). El doctor no ve su API key.
+              </p>
+            </div>
+          </div>
+
           {/* Plantillas de receta por consultorio */}
           <PlantillasReceta tenants={tenants} />
         </div>
@@ -838,6 +983,105 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Modal: Configurar Facturapi */}
+      {fpModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setFpModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-1 text-gray-800">
+              Configurar Facturapi
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              <span className="font-medium text-teal-700">{fpModal.nombre}</span>
+              {' '}— el CFDI se timbrará con el RFC de este consultorio.
+            </p>
+
+            {/* Opción A: crear automáticamente */}
+            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4">
+              <p className="text-xs font-semibold text-teal-800 mb-3">
+                Opción A — Crear organización automáticamente en Facturapi
+              </p>
+              <div className="space-y-3">
+                {[
+                  ['rfc',         'RFC del doctor/empresa *', 'XAXX010101000'],
+                  ['nombreLegal', 'Nombre legal (como en el SAT) *', 'JUAN CHAVEZ LOPEZ'],
+                  ['cp',          'Código Postal fiscal *', '89000'],
+                ].map(([field, label, ph]) => (
+                  <div key={field}>
+                    <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                    <input type="text" value={fpForm[field]}
+                      onChange={e => setFpForm(f => ({ ...f, [field]: e.target.value }))}
+                      placeholder={ph}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400 font-mono uppercase" />
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Régimen fiscal</label>
+                  <select value={fpForm.regimen}
+                    onChange={e => setFpForm(f => ({ ...f, regimen: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="612">612 — Personas Físicas Act. Empresariales</option>
+                    <option value="616">616 — Sin obligaciones fiscales (RESICO)</option>
+                    <option value="625">625 — Régimen de las Act. Empresariales (RIF)</option>
+                    <option value="621">621 — Incorporación Fiscal</option>
+                    <option value="601">601 — General de Ley Personas Morales</option>
+                  </select>
+                </div>
+                <button
+                  onClick={() => configurarFacturapi(fpModal)}
+                  disabled={fpLoading || !!fpForm.apiKeyManual}
+                  className="w-full bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                             hover:bg-teal-700 disabled:opacity-50 transition-colors">
+                  {fpLoading ? '⏳ Creando en Facturapi...' : '🧾 Crear organización y guardar key'}
+                </button>
+              </div>
+            </div>
+
+            {/* Divisor */}
+            <div className="flex items-center gap-3 my-3">
+              <div className="flex-1 border-t border-gray-200" />
+              <span className="text-xs text-gray-400">o bien</span>
+              <div className="flex-1 border-t border-gray-200" />
+            </div>
+
+            {/* Opción B: pegar key manualmente */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+              <p className="text-xs font-semibold text-gray-700 mb-3">
+                Opción B — Pegar API key de organización ya existente en Facturapi
+              </p>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  API Key de la organización (sk_live_… o sk_test_…)
+                </label>
+                <input type="password" value={fpForm.apiKeyManual}
+                  onChange={e => setFpForm(f => ({ ...f, apiKeyManual: e.target.value }))}
+                  placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono
+                             focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <p className="text-xs text-gray-400 mt-1">
+                  Encuéntrala en Facturapi Dashboard → Organizaciones → tu org → API Keys
+                </p>
+              </div>
+              <button
+                onClick={() => configurarFacturapi(fpModal)}
+                disabled={fpLoading || !fpForm.apiKeyManual}
+                className="w-full mt-3 bg-gray-700 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-gray-800 disabled:opacity-50 transition-colors">
+                {fpLoading ? '⏳ Guardando...' : '💾 Guardar API key manual'}
+              </button>
+            </div>
+
+            <button onClick={() => setFpModal(null)}
+              className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modal: Nuevo consultorio */}
       {modalTenant && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
@@ -865,7 +1109,8 @@ export default function Admin() {
                 ['cedula','Cédula profesional'],
                 ['telefono','Teléfono'],
                 ['email','Email del doctor'],
-                ['rfc','RFC'],
+                ['rfc','RFC del doctor (para facturación)'],
+                ['cp','Código Postal fiscal'],
                 ['direccion','Dirección completa'],
               ].map(([f, l]) => (
                 <div key={f}>

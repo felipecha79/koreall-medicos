@@ -181,7 +181,7 @@ export default function Facturacion() {
     if (!window.confirm('¿Seguro que deseas cancelar esta factura ante el SAT? Esta acción no se puede deshacer.')) return
     setLoading(true)
     try {
-      await cancelarFactura(factura.facturapiId)
+      await cancelarFactura(factura.facturapiId, '02', tenant?.facturapiApiKey ?? null)
       await updateDoc(doc(db, `tenants/${tenantId}/facturas/${factura.id}`), {
         estatus: 'cancelled'
       })
@@ -200,7 +200,7 @@ export default function Facturacion() {
   const enviarEmail = async () => {
     if (!emailDest) { toast.error('Escribe un email'); return }
     try {
-      await enviarFacturaPorEmail(emailModal.facturapiId, emailDest)
+      await enviarFacturaPorEmail(emailModal.facturapiId, emailDest, tenant?.facturapiApiKey ?? null)
       toast.success('Factura enviada por email')
       setEmailModal(null); setEmailDest('')
     } catch {
@@ -222,13 +222,21 @@ export default function Facturacion() {
         </div>
       </div>
 
-      {/* Aviso si no hay API key */}
-      {!import.meta.env.VITE_FACTURAPI_KEY && (
+      {/* Aviso de configuración Facturapi */}
+      {!tenant?.facturapiApiKey && !import.meta.env.VITE_FACTURAPI_KEY && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
-          <p className="text-sm font-medium text-amber-800">⚠️ Facturapi no está configurado</p>
+          <p className="text-sm font-medium text-amber-800">⚠️ Facturapi no configurado para este consultorio</p>
           <p className="text-xs text-amber-700 mt-1">
-            Agrega <code className="bg-amber-100 px-1 rounded">VITE_FACTURAPI_KEY=sk_test_...</code> a tu{' '}
-            <code className="bg-amber-100 px-1 rounded">.env.local</code> y reinicia.
+            El SuperAdmin debe configurar la API key de Facturapi en{' '}
+            <strong>Super Admin → Sistema → Configuración Facturapi</strong>.
+          </p>
+        </div>
+      )}
+      {tenant?.facturapiApiKey && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5 flex items-center gap-2">
+          <span className="text-green-600 text-sm">✅</span>
+          <p className="text-xs text-green-700 font-medium">
+            Facturapi configurado · Este consultorio timbra con su propio RFC
           </p>
         </div>
       )}
@@ -372,13 +380,13 @@ export default function Facturacion() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
                           {f.pdfUrl && (
-                            <button onClick={() => descargarFactura(f.facturapiId, 'pdf')}
+                            <button onClick={() => descargarFactura(f.facturapiId, 'pdf', tenant?.facturapiApiKey ?? null)}
                               className="text-xs text-teal-600 hover:underline whitespace-nowrap">
                               PDF
                             </button>
                           )}
                           {f.xmlUrl && (
-                            <button onClick={() => descargarFactura(f.facturapiId, 'xml')}
+                            <button onClick={() => descargarFactura(f.facturapiId, 'xml', tenant?.facturapiApiKey ?? null)}
                               className="text-xs text-blue-600 hover:underline whitespace-nowrap">
                               XML
                             </button>
