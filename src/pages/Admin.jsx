@@ -316,11 +316,11 @@ export default function Admin() {
   useEffect(() => {
     const unsubOrgs = onSnapshot(
       collection(db, 'organizaciones'),
-      snap => setOrgs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => setOrgs(snap.docs.map(d => ({ ...d.data(), id: d.id, _docId: d.id })))
     )
     const unsubTenants = onSnapshot(
       collection(db, 'tenants'),
-      snap => setTenants(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => setTenants(snap.docs.map(d => ({ ...d.data(), id: d.id, _docId: d.id })))
     )
     return () => { unsubOrgs(); unsubTenants() }
   }, [])
@@ -384,7 +384,7 @@ export default function Admin() {
   // Opción B: pegar la API key manualmente (org ya existente en Facturapi)
   const configurarFacturapi = async (tenant) => {
     setFpLoading(true)
-    setFpStatus(s => ({ ...s, [tenant.id]: 'loading' }))
+    setFpStatus(s => ({ ...s, [tenant._docId ?? tenant.id]: 'loading' }))
     try {
       let apiKey = fpForm.apiKeyManual?.trim()
 
@@ -408,7 +408,7 @@ export default function Admin() {
         if (!apiKey) throw new Error('Facturapi no devolvió una API key. Revisa el dashboard de Facturapi.')
 
         // Guardar también el ID de la org en Facturapi para referencia
-        await setDoc(doc(db, 'tenants', String(tenant.id)), {
+        await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
           facturapiOrgId:  org.id,
           facturapiApiKey: apiKey,
           rfc:             fpForm.rfc.toUpperCase().trim(),
@@ -417,26 +417,26 @@ export default function Admin() {
         toast.success(`✅ Organización creada en Facturapi y API key guardada para ${tenant.nombre}`)
       } else {
         // Modo manual: solo guardar la key que pegó el SuperAdmin
-        await setDoc(doc(db, 'tenants', String(tenant.id)), {
+        await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
           facturapiApiKey: apiKey,
           actualizadoEn:   Timestamp.now(),
         }, { merge: true })
         toast.success(`✅ API key guardada para ${tenant.nombre}`)
       }
 
-      setFpStatus(s => ({ ...s, [tenant.id]: 'ok' }))
+      setFpStatus(s => ({ ...s, [tenant._docId ?? tenant.id]: 'ok' }))
       setFpModal(null)
       setFpForm({ rfc:'', nombreLegal:'', cp:'', regimen:'612', apiKeyManual:'' })
     } catch(e) {
       console.error('[Facturapi config]', e)
       toast.error(`Error: ${e.message}`)
-      setFpStatus(s => ({ ...s, [tenant.id]: 'error' }))
+      setFpStatus(s => ({ ...s, [tenant._docId ?? tenant.id]: 'error' }))
     } finally { setFpLoading(false) }
   }
 
   const limpiarFacturapi = async (tenant) => {
     if (!window.confirm(`¿Quitar la configuración de Facturapi de "${tenant.nombre}"? El consultorio dejará de poder timbrar con su propio RFC.`)) return
-    await setDoc(doc(db, 'tenants', String(tenant.id)), {
+    await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
       facturapiApiKey: null,
       facturapiOrgId:  null,
       actualizadoEn:   Timestamp.now(),
