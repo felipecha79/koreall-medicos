@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   collection, query, orderBy, onSnapshot,
-  addDoc, Timestamp, where, getDocs
+  addDoc, updateDoc, doc, Timestamp, where, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
@@ -14,7 +14,7 @@ import OCRIneDoctor     from '../components/OCRIneDoctor'
 
 // Generar ID legible: PAC-XXXXX
 const generarPacienteId = async (tenantId) => {
-  const snap = await getDocs(collection(db, `tenants/${tenantId}/pacientes`))
+  const snap = await getDocs(collection(db, 'tenants', String(tenantId), 'pacientes'))
   const num = snap.size + 1
   return `PAC-${String(num).padStart(5, '0')}`
 }
@@ -104,11 +104,12 @@ export default function Pacientes() {
   const [form,      setForm]      = useState(FORM_VACIO)
   const [tabForm,   setTabForm]   = useState('personal') // 'personal'|'contacto'|'fiscal'|'medico'|'crm'
   const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [editando,  setEditando]   = useState(null) // paciente que se está editando (doc completo)
 
   useEffect(() => {
     if (!tenantId) return
     return onSnapshot(
-      query(collection(db, `tenants/${tenantId}/pacientes`), orderBy('creadoEn', 'desc')),
+      query(collection(db, 'tenants', String(tenantId), 'pacientes'), orderBy('creadoEn', 'desc')),
       snap => setPacientes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
   }, [tenantId])
@@ -153,7 +154,8 @@ export default function Pacientes() {
         totalConsultas: 0,
         ultimaConsulta: null,
       }
-      await addDoc(collection(db, `tenants/${tenantId}/pacientes`), datos)
+      if (!tenantId) { toast.error('Error: no hay consultorio activo'); setSaving(false); return }
+      await addDoc(collection(db, 'tenants', String(tenantId), 'pacientes'), datos)
       toast.success(`Paciente registrado ✓ — ${pacienteId}`)
       setModal(false)
       setForm(FORM_VACIO)
@@ -161,6 +163,86 @@ export default function Pacientes() {
     } catch(e) {
       console.error(e); toast.error('Error al guardar')
     } finally { setSaving(false) }
+  }
+
+  const abrirEdicion = (paciente, e) => {
+    e.stopPropagation()
+    setEditando(paciente)
+    setForm({
+      nombre:             paciente.nombre            ?? '',
+      apellidos:          paciente.apellidos         ?? '',
+      fechaNacimiento:    paciente.fechaNacimiento   ?? '',
+      sexo:               paciente.sexo              ?? '',
+      estadoCivil:        paciente.estadoCivil       ?? '',
+      nacionalidad:       paciente.nacionalidad      ?? 'Mexicana',
+      ocupacion:          paciente.ocupacion         ?? '',
+      grupoSanguineo:     paciente.grupoSanguineo    ?? '',
+      telefono:           paciente.telefono          ?? '',
+      telefonoEmergencia: paciente.telefonoEmergencia ?? '',
+      email:              paciente.email             ?? '',
+      calle:              paciente.calle             ?? '',
+      colonia:            paciente.colonia           ?? '',
+      ciudad:             paciente.ciudad            ?? '',
+      estado:             paciente.estado            ?? 'Tamaulipas',
+      cp:                 paciente.cp                ?? '',
+      pais:               paciente.pais              ?? 'México',
+      usarMismaDireccion: paciente.usarMismaDireccion ?? true,
+      rfcRazonSocial:     paciente.rfcRazonSocial    ?? '',
+      rfc:                paciente.rfc               ?? '',
+      calleFiscal:        paciente.calleFiscal       ?? '',
+      coloniaFiscal:      paciente.coloniaFiscal     ?? '',
+      ciudadFiscal:       paciente.ciudadFiscal      ?? '',
+      estadoFiscal:       paciente.estadoFiscal      ?? '',
+      cpFiscal:           paciente.cpFiscal          ?? '',
+      regimenFiscal:      paciente.regimenFiscal     ?? '616',
+      usoCFDI:            paciente.usoCFDI           ?? 'S01',
+      alergias:           paciente.alergias          ?? '',
+      tipoSangre:         paciente.tipoSangre        ?? '',
+      enfermedadesCronicas: paciente.enfermedadesCronicas ?? '',
+      tipoPaciente:       paciente.tipoPaciente      ?? 'primera_vez',
+      canalOrigen:        paciente.canalOrigen       ?? '',
+      idioma:             paciente.idioma            ?? 'es',
+      activo:             paciente.activo            ?? true,
+    })
+    setTabForm('personal')
+    setModal(true)
+  }
+
+  const actualizar = async () => {
+    if (!form.nombre || !form.apellidos) {
+      toast.error('Nombre y apellidos son obligatorios'); return
+    }
+    if (!editando?.id) { toast.error('Error: paciente sin ID'); return }
+    setSaving(true)
+    try {
+      const datos = {
+        ...form,
+        calleFiscal:   form.usarMismaDireccion ? form.calle   : form.calleFiscal,
+        coloniaFiscal: form.usarMismaDireccion ? form.colonia : form.coloniaFiscal,
+        ciudadFiscal:  form.usarMismaDireccion ? form.ciudad  : form.ciudadFiscal,
+        estadoFiscal:  form.usarMismaDireccion ? form.estado  : form.estadoFiscal,
+        cpFiscal:      form.usarMismaDireccion ? form.cp      : form.cpFiscal,
+        actualizadoEn: Timestamp.now(),
+      }
+      await updateDoc(
+        doc(db, 'tenants', String(tenantId), 'pacientes', String(editando.id)),
+        datos
+      )
+      toast.success('Paciente actualizado ✓')
+      setModal(false)
+      setEditando(null)
+      setForm(FORM_VACIO)
+      setTabForm('personal')
+    } catch(e) {
+      console.error(e); toast.error('Error al actualizar: ' + e.message)
+    } finally { setSaving(false) }
+  }
+
+  const cerrarModal = () => {
+    setModal(false)
+    setEditando(null)
+    setForm(FORM_VACIO)
+    setTabForm('personal')
   }
 
   const pacientesFiltrados = pacientes
@@ -283,10 +365,17 @@ export default function Pacientes() {
                     : '—'}
                 </td>
                 <td className="px-4 py-3">
-                  <button onClick={e => { e.stopPropagation(); navigate(`/pacientes/${p.id}`) }}
-                    className="text-xs text-teal-600 hover:underline whitespace-nowrap">
-                    Ver expediente →
-                  </button>
+                  <div className="flex gap-2 items-center">
+                    <button onClick={e => abrirEdicion(p, e)}
+                      className="text-xs px-2 py-1 text-gray-500 border border-gray-200
+                                 rounded hover:bg-gray-50 whitespace-nowrap transition-colors">
+                      ✏️ Editar
+                    </button>
+                    <button onClick={e => { e.stopPropagation(); navigate(`/pacientes/${p.id}`) }}
+                      className="text-xs text-teal-600 hover:underline whitespace-nowrap">
+                      Expediente →
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -307,13 +396,13 @@ export default function Pacientes() {
       {/* Modal nuevo paciente */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setModal(false)}>
+          onClick={cerrarModal}>
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92vh] flex flex-col"
             onClick={e => e.stopPropagation()}>
 
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Nuevo paciente</h3>
-              <button onClick={() => setModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <h3 className="text-lg font-semibold text-gray-800">{editando ? `Editar paciente — ${editando.pacienteId ?? ""}` : "Nuevo paciente"}</h3>
+              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
             {/* Sub-tabs del form */}
@@ -649,12 +738,12 @@ export default function Pacientes() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
-              <button onClick={guardar} disabled={saving}
+              <button onClick={editando ? actualizar : guardar} disabled={saving}
                 className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm
                            font-medium hover:bg-teal-700 disabled:opacity-50 transition-colors">
-                {saving ? 'Guardando...' : 'Registrar paciente'}
+                {saving ? 'Guardando...' : editando ? 'Guardar cambios' : 'Registrar paciente'}
               </button>
-              <button onClick={() => setModal(false)}
+              <button onClick={cerrarModal}
                 className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm hover:bg-gray-200">
                 Cancelar
               </button>
