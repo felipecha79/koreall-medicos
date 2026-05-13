@@ -408,7 +408,7 @@ export default function Admin() {
         if (!apiKey) throw new Error('Facturapi no devolvió una API key. Revisa el dashboard de Facturapi.')
 
         // Guardar también el ID de la org en Facturapi para referencia
-        await setDoc(doc(db, 'tenants', tenant.id), {
+        await setDoc(doc(db, 'tenants', String(tenant.id)), {
           facturapiOrgId:  org.id,
           facturapiApiKey: apiKey,
           rfc:             fpForm.rfc.toUpperCase().trim(),
@@ -417,7 +417,7 @@ export default function Admin() {
         toast.success(`✅ Organización creada en Facturapi y API key guardada para ${tenant.nombre}`)
       } else {
         // Modo manual: solo guardar la key que pegó el SuperAdmin
-        await setDoc(doc(db, 'tenants', tenant.id), {
+        await setDoc(doc(db, 'tenants', String(tenant.id)), {
           facturapiApiKey: apiKey,
           actualizadoEn:   Timestamp.now(),
         }, { merge: true })
@@ -436,7 +436,7 @@ export default function Admin() {
 
   const limpiarFacturapi = async (tenant) => {
     if (!window.confirm(`¿Quitar la configuración de Facturapi de "${tenant.nombre}"? El consultorio dejará de poder timbrar con su propio RFC.`)) return
-    await setDoc(doc(db, 'tenants', tenant.id), {
+    await setDoc(doc(db, 'tenants', String(tenant.id)), {
       facturapiApiKey: null,
       facturapiOrgId:  null,
       actualizadoEn:   Timestamp.now(),
