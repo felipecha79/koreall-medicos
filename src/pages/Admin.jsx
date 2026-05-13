@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { crearOrganizacionFP, obtenerApiKeyOrg, consultarOrganizacionFP } from '../services/facturapi'
 import {
-  collection, onSnapshot, addDoc, updateDoc,
+  collection, onSnapshot, addDoc, updateDoc, setDoc,
   doc, Timestamp, query, where, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -408,19 +408,19 @@ export default function Admin() {
         if (!apiKey) throw new Error('Facturapi no devolvió una API key. Revisa el dashboard de Facturapi.')
 
         // Guardar también el ID de la org en Facturapi para referencia
-        await updateDoc(doc(db, `tenants/${tenant.id}`), {
+        await setDoc(doc(db, 'tenants', tenant.id), {
           facturapiOrgId:  org.id,
           facturapiApiKey: apiKey,
           rfc:             fpForm.rfc.toUpperCase().trim(),
           actualizadoEn:   Timestamp.now(),
-        })
+        }, { merge: true })
         toast.success(`✅ Organización creada en Facturapi y API key guardada para ${tenant.nombre}`)
       } else {
         // Modo manual: solo guardar la key que pegó el SuperAdmin
-        await updateDoc(doc(db, `tenants/${tenant.id}`), {
+        await setDoc(doc(db, 'tenants', tenant.id), {
           facturapiApiKey: apiKey,
           actualizadoEn:   Timestamp.now(),
-        })
+        }, { merge: true })
         toast.success(`✅ API key guardada para ${tenant.nombre}`)
       }
 
@@ -436,11 +436,11 @@ export default function Admin() {
 
   const limpiarFacturapi = async (tenant) => {
     if (!window.confirm(`¿Quitar la configuración de Facturapi de "${tenant.nombre}"? El consultorio dejará de poder timbrar con su propio RFC.`)) return
-    await updateDoc(doc(db, `tenants/${tenant.id}`), {
+    await setDoc(doc(db, 'tenants', tenant.id), {
       facturapiApiKey: null,
       facturapiOrgId:  null,
       actualizadoEn:   Timestamp.now(),
-    })
+    }, { merge: true })
     toast.success('Configuración de Facturapi eliminada')
   }
 
