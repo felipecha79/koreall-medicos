@@ -931,12 +931,13 @@ export default function PortalPaciente() {
           </div>
         </div>
       )}
-    </div>
 
       {/* Modal esperando pago Stripe */}
       {pagoModalCobro && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setPagoModalCobro(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center"
+            onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-4">💳</div>
             <h3 className="text-base font-semibold text-gray-800 mb-2">Página de pago abierta</h3>
             <p className="text-sm text-gray-500 mb-1">
@@ -944,7 +945,7 @@ export default function PortalPaciente() {
             </p>
             <p className="text-xs text-gray-400 mb-5">
               Concepto: <strong>{pagoModalCobro.concepto}</strong> ·{' '}
-              <strong>${Number(pagoModalCobro.monto).toLocaleString('es-MX')} MXN</strong>
+              <strong>${'{'}Number(pagoModalCobro.monto).toLocaleString('es-MX'){'}'} MXN</strong>
             </p>
             <div className="flex gap-3">
               <button
@@ -969,6 +970,7 @@ export default function PortalPaciente() {
           </div>
         </div>
       )}
+
     </div>
   )
 }
