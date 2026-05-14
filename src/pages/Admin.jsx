@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { crearOrganizacionFP, obtenerApiKeyOrg, consultarOrganizacionFP } from '../services/facturapi'
 import {
   collection, onSnapshot, addDoc, updateDoc, setDoc,
-  doc, Timestamp, query, where, getDocs
+  doc, getDoc, Timestamp, query, where, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
