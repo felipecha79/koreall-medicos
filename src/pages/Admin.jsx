@@ -285,6 +285,135 @@ function PlantillasReceta({ tenants }) {
   )
 }
 
+// ── Configuración fiscal y comercial de DocVias ─────────
+function ConfigDocVias() {
+  const FORM_VACIO = {
+    rfc:'', nombreLegal:'', cp:'', regimen:'612', email:'',
+    telefono:'', stripePaymentLinkDocVias:'',
+    stripePriceIdBasico:'', stripePriceIdPro:'',
+    stripePriceIdClinica:'', stripePriceIdEnterprise:'',
+    diasGraciaDefault: 10,
+    precioPlanes: { basico:1200, pro:1800, clinica:2800, enterprise:6000 },
+  }
+  const [form, setForm]       = useState(FORM_VACIO)
+  const [saving, setSaving]   = useState(false)
+  const [cargado, setCargado] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    getDoc(doc(db, 'configuracion', 'docvias')).then(snap => {
+      if (snap.exists()) setForm(f => ({ ...f, ...snap.data() }))
+      setCargado(true)
+    }).catch(() => setCargado(true))
+  }, [])
+
+  const guardar = async () => {
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'configuracion', 'docvias'), {
+        ...form,
+        actualizadoEn: Timestamp.now(),
+      }, { merge: true })
+      toast.success('Configuración DocVias guardada')
+    } catch(e) { toast.error('Error: ' + e.message) }
+    finally { setSaving(false) }
+  }
+
+  const campo = (field, label, placeholder, type='text') => (
+    <div key={field}>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <input type={type} value={form[field] ?? ''}
+        onChange={e => setForm(f => ({ ...f, [field]: type === 'number' ? Number(e.target.value) : e.target.value }))}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-teal-400" />
+    </div>
+  )
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <button onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between text-left">
+        <div>
+          <p className="text-sm font-semibold text-gray-700">
+            🏢 Configuración Fiscal DocVias
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Tu RFC, datos fiscales, precios de planes y claves de Stripe para facturar a los doctores
+          </p>
+        </div>
+        <span className="text-gray-400 text-lg">{expanded ? '▲' : '▼'}</span>
+      </button>
+
+      {expanded && cargado && (
+        <div className="mt-5 space-y-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos fiscales</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {campo('rfc', 'Tu RFC *', 'BEZJ790128XX0')}
+            {campo('nombreLegal', 'Nombre legal (como en SAT) *', 'JUAN FELIPE CHAVEZ BEZARES')}
+            {campo('cp', 'Código Postal fiscal *', '89000')}
+            {campo('email', 'Email para facturas', 'docvias@email.com', 'email')}
+            {campo('telefono', 'WhatsApp soporte', '8331234567')}
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Régimen fiscal</label>
+            <select value={form.regimen}
+              onChange={e => setForm(f => ({ ...f, regimen: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                         focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <option value="612">612 — Personas Físicas Act. Empresariales</option>
+              <option value="616">616 — Sin obligaciones fiscales (RESICO)</option>
+              <option value="621">621 — Incorporación Fiscal</option>
+              <option value="601">601 — General de Ley Personas Morales</option>
+            </select>
+          </div>
+
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">
+            Stripe — cobro de suscripciones
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {campo('stripePaymentLinkDocVias', 'Payment Link para pago manual (buy.stripe.com/...)',
+              'https://buy.stripe.com/...')}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {campo('stripePriceIdBasico',     'Price ID Plan Básico',     'price_xxx')}
+            {campo('stripePriceIdPro',        'Price ID Plan Pro',        'price_xxx')}
+            {campo('stripePriceIdClinica',    'Price ID Plan Clínica',    'price_xxx')}
+            {campo('stripePriceIdEnterprise', 'Price ID Plan Enterprise', 'price_xxx')}
+          </div>
+
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">
+            Parámetros globales
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {campo('diasGraciaDefault', 'Días de gracia (default)', '10', 'number')}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">MRR actual (informativo)</label>
+              <p className="text-sm font-bold text-gray-700 py-2">
+                Se calcula desde Admin → Org
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="text-xs text-blue-700">
+              <strong>Price IDs de Stripe:</strong> Ve a Stripe Dashboard → Products → Crea un producto
+              "DocVias Plan Pro" con precio $1,800 MXN/mes recurrente → copia el Price ID (empieza con price_).
+              Uno por cada plan que uses.
+            </p>
+          </div>
+
+          <button onClick={guardar} disabled={saving}
+            className="w-full bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                       hover:bg-teal-700 disabled:opacity-50 transition-colors">
+            {saving ? 'Guardando...' : '💾 Guardar configuración DocVias'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Componente fila Stripe por tenant ────────────────────
 function StripeRow({ tenant }) {
   const [editando, setEditando] = useState(false)
@@ -887,6 +1016,9 @@ export default function Admin() {
               Costo aproximado: $0.01 USD por cita analizada.
             </p>
           </div>
+
+          {/* ── Configuración Fiscal DocVias ── */}
+          <ConfigDocVias />
 
           {/* ── Facturapi por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">

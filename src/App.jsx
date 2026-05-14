@@ -17,6 +17,7 @@ import SitioWeb           from './pages/SitioWeb'
 import PortalPaciente     from './pages/PortalPaciente'
 import Landing            from './pages/Landing'
 import SuscripcionVencida from './pages/SuscripcionVencida'
+import Suscripciones      from './pages/Suscripciones'
 import Encuesta           from './pages/Encuesta'
 import RegistroPaciente   from './pages/RegistroPaciente'
 import ImportarPacientes  from './pages/ImportarPacientes'
@@ -45,6 +46,7 @@ const NAV_MAIN = [
   { to: '/pacientes',   label: 'Pacientes',   icon: '👤' },
   { to: '/importar',    label: 'Importar',    icon: '📥' },
   { to: '/cobros',      label: 'Cobros y Pagos', icon: '💳' },
+  { to: '/suscripcion',  label: 'Mi suscripción',  icon: '📋' },
   { to: '/facturacion', label: 'Facturación', icon: '🧾' },
   { to: '/recetas',     label: 'Recetas',     icon: '📋' },
   { to: '/reportes',    label: 'Reportes',    icon: '📊' },

@@ -21,6 +21,8 @@ export function useTenant() {
     allOrgs:           [],
     isPaciente:        false,
     suscripcionActiva: true,
+    enGracia:          false,
+    diasRestantes:     0,
     loading:           true,
   })
 
@@ -58,13 +60,21 @@ export function useTenant() {
           else if (!orgId && tenantId) orgId = tenantId
         }
 
-        let tenant = null, suscripcionActiva = true
+        let tenant = null, suscripcionActiva = true, enGracia = false, diasRestantes = 0
         if (tenantId) {
           const snap = await getDoc(doc(db, `tenants/${tenantId}`))
           if (snap.exists()) {
             tenant = { id: snap.id, ...snap.data() }
-            if (!isSuperAdmin)
+            if (!isSuperAdmin) {
               suscripcionActiva = tenant.activo !== false && tenant.suscripcionActiva !== false
+              // Calcular si está en periodo de gracia
+              const fechaVenc   = tenant.fechaVencimiento?.toDate?.() ?? null
+              const diasGracia  = tenant.diasGracia ?? 10
+              const hoyMed      = new Date(); hoyMed.setHours(0,0,0,0)
+              const diasVenc    = fechaVenc ? Math.floor((hoyMed - fechaVenc)/(1000*60*60*24)) : 0
+              enGracia          = !suscripcionActiva && diasVenc > 0 && diasVenc <= diasGracia
+              diasRestantes     = Math.max(0, diasGracia - diasVenc)
+            }
             if (!orgId) orgId = tenant.orgId ?? tenantId
           }
         }
@@ -89,7 +99,8 @@ export function useTenant() {
         }
 
         setState({ user, tenantId, role, tenant, orgId, org, orgTenants,
-          isSuperAdmin, isPaciente, allTenants, allOrgs, suscripcionActiva, loading: false })
+          isSuperAdmin, isPaciente, allTenants, allOrgs,
+          suscripcionActiva, enGracia, diasRestantes, loading: false })
       } catch(e) {
         console.error('useTenant error:', e)
         setState(s => ({ ...s, user, loading: false }))

@@ -148,7 +148,13 @@ export default function Reportes() {
     })
   }
 
-  const cobrosFiltrados   = filtrarPorRango(cobros, 'fechaPago', rangoPagos)
+  // Para cobros usar fechaPagoConfirmado cuando existe (fecha real del pago)
+  // fechaPago es la fecha de creación del cobro — puede ser diferente
+  const cobrosConFechaReal = cobros.map(c => ({
+    ...c,
+    _fechaFiltro: c.fechaPagoConfirmado ?? c.fechaPago,
+  }))
+  const cobrosFiltrados = filtrarPorRango(cobrosConFechaReal, '_fechaFiltro', rangoPagos)
   const consultasFiltradas = filtrarPorRango(consultas, 'fecha', rangoConsultas)
 
   // ── Cruzar cobros con facturas ────────────────────────
@@ -224,6 +230,7 @@ export default function Reportes() {
     const hoy = format(new Date(), 'dd/MM/yyyy')
     const cobrosCorte = cobrosFiltrados
     const totalTPV = cobrosCorte.filter(c => c.metodoPago === 'tarjeta').reduce((s,c)=>s+Number(c.monto??0),0)
+    const totalStripe = cobrosCorte.filter(c => c.metodoPago === 'stripe').reduce((s,c)=>s+Number(c.monto??0),0)
     const totalTransf = cobrosCorte.filter(c => c.metodoPago === 'transferencia').reduce((s,c)=>s+Number(c.monto??0),0)
     const totalEfectivo = cobrosCorte.filter(c => c.metodoPago === 'efectivo').reduce((s,c)=>s+Number(c.monto??0),0)
     const cols = 'No.,Fecha,Hora,Paciente,Servicio,Monto,Metodo,Factura'
@@ -240,7 +247,7 @@ export default function Reportes() {
         c.facturado ? 'SI' : 'NO',
       ].join(',')
     }).join('\n')
-    const totales = `,,,,TOTAL TPV,${totalTPV},,\n,,,,TOTAL TRANSF,${totalTransf},,\n,,,,TOTAL EFECTIVO,${totalEfectivo},,\n,,,,TOTAL GENERAL,${totalTPV+totalTransf+totalEfectivo},,`
+    const totales = `,,,,TOTAL TPV,${totalTPV},,\n,,,,TOTAL STRIPE,${totalStripe},,\n,,,,TOTAL TRANSF,${totalTransf},,\n,,,,TOTAL EFECTIVO,${totalEfectivo},,\n,,,,TOTAL GENERAL,${totalTPV+totalStripe+totalTransf+totalEfectivo},,`
     const csv = '\uFEFF' + `CORTE DEL DIA ${hoy}\n${cols}\n${filas}\n${totales}`
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -579,10 +586,11 @@ export default function Reportes() {
         const hoy = format(new Date(), 'dd/MM/yyyy')
         const cobrosCorte = cobrosFiltrados
         // Conteos por método
-        const totalTPV     = cobrosCorte.filter(c => c.metodoPago === 'tarjeta').reduce((s,c) => s+Number(c.monto??0), 0)
-        const totalTransf  = cobrosCorte.filter(c => c.metodoPago === 'transferencia').reduce((s,c) => s+Number(c.monto??0), 0)
-        const totalEfectivo= cobrosCorte.filter(c => c.metodoPago === 'efectivo').reduce((s,c) => s+Number(c.monto??0), 0)
-        const totalGeneral = totalTPV + totalTransf + totalEfectivo
+        const totalTPV      = cobrosCorte.filter(c => c.metodoPago === 'tarjeta').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalStripe   = cobrosCorte.filter(c => c.metodoPago === 'stripe').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalTransf   = cobrosCorte.filter(c => c.metodoPago === 'transferencia').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalEfectivo = cobrosCorte.filter(c => c.metodoPago === 'efectivo').reduce((s,c) => s+Number(c.monto??0), 0)
+        const totalGeneral  = totalTPV + totalStripe + totalTransf + totalEfectivo
         const sinPaciente  = cobrosCorte.filter(c => !c.pacienteId || !c.pacienteNombre).length
 
         return (
