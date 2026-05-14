@@ -285,6 +285,74 @@ function PlantillasReceta({ tenants }) {
   )
 }
 
+// ── Componente fila Stripe por tenant ────────────────────
+function StripeRow({ tenant }) {
+  const [editando, setEditando] = useState(false)
+  const [link,     setLink]     = useState(tenant.stripePaymentLink ?? '')
+  const [saving,   setSaving]   = useState(false)
+
+  const guardar = async () => {
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
+        stripePaymentLink: link.trim() || null,
+        actualizadoEn: Timestamp.now(),
+      }, { merge: true })
+      toast.success('Payment Link guardado')
+      setEditando(false)
+    } catch(e) {
+      toast.error('Error: ' + e.message)
+    } finally { setSaving(false) }
+  }
+
+  const tieneLink = !!tenant.stripePaymentLink
+
+  return (
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center justify-between mb-1.5">
+        <div>
+          <p className="text-sm font-medium text-gray-800">{tenant.nombre}</p>
+          <p className="text-xs text-gray-400 font-mono">{tenant._docId ?? tenant.id}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {tieneLink ? (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+              ✅ Configurado
+            </span>
+          ) : (
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+              Sin configurar
+            </span>
+          )}
+          <button onClick={() => setEditando(!editando)}
+            className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            {editando ? 'Cancelar' : tieneLink ? '✏️ Editar' : '⚙️ Configurar'}
+          </button>
+        </div>
+      </div>
+      {editando && (
+        <div className="flex gap-2 mt-2">
+          <input type="url" value={link}
+            onChange={e => setLink(e.target.value)}
+            placeholder="https://buy.stripe.com/..."
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400 font-mono" />
+          <button onClick={guardar} disabled={saving}
+            className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg
+                       hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+            {saving ? '...' : '💾 Guardar'}
+          </button>
+        </div>
+      )}
+      {tieneLink && !editando && (
+        <p className="text-xs text-gray-400 font-mono truncate mt-1">
+          {tenant.stripePaymentLink}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function Admin() {
   const { allOrgs, allTenants, isSuperAdmin } = useTenant()
   const [tab, setTab]         = useState('Organizaciones')
@@ -890,6 +958,30 @@ export default function Admin() {
                 <strong>¿Cómo funciona?</strong> Al configurar, DocVias crea una organización en tu cuenta
                 de Facturapi vinculada al RFC del doctor. Cada CFDI se timbra usando esa organización,
                 por lo que el XML lleva el RFC del consultorio (no el tuyo). El doctor no ve su API key.
+              </p>
+            </div>
+          </div>
+
+          {/* ── Stripe Connect por consultorio ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-gray-700">💳 Stripe Connect — Pagos en línea</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Los pagos llegan directo a la cuenta del doctor. Configura el Payment Link
+                de Stripe de cada consultorio.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {tenants.map(t => (
+                <StripeRow key={t._docId ?? t.id} tenant={t} />
+              ))}
+            </div>
+            <div className="mt-3 bg-indigo-50 rounded-lg p-3">
+              <p className="text-xs text-indigo-700">
+                <strong>¿Cómo obtener el Payment Link?</strong> El doctor entra a
+                stripe.com → Payment Links → Crea un link con precio variable →
+                Copia la URL (empieza con buy.stripe.com/...) y la pegas aquí.
+                Los cobros aparecerán directo en su cuenta de Stripe.
               </p>
             </div>
           </div>

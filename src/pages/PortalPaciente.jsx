@@ -393,7 +393,8 @@ export default function PortalPaciente() {
   const [citas, setCitas]       = useState([])
   const [docs,  setDocs]        = useState([])
   const [meds,  setMeds]        = useState([])
-  const [cobros, setCobros]     = useState([])
+  const [cobros, setCobros]       = useState([])
+  const [tenantConfig, setTenantConfig] = useState(null)
   const [facturas, setFacturas] = useState([])
   const [docViewer, setDocViewer] = useState(null)
 
@@ -444,6 +445,12 @@ export default function PortalPaciente() {
       snap => setMeds(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
     const unsubCobros = onSnapshot(
+      // Cargar config del tenant para saber si tiene Stripe
+      const tenantDoc = await import('firebase/firestore').then(({ getDoc, doc: fsDoc }) =>
+        getDoc(fsDoc(db, 'tenants', String(tenantId)))
+      )
+      if (tenantDoc.exists()) setTenantConfig(tenantDoc.data())
+
       query(collection(db, `tenants/${tenantId}/cobros`),
             where('pacienteId', '==', paciente.id),
             orderBy('fechaPago','desc')),
@@ -759,13 +766,42 @@ export default function PortalPaciente() {
                 {c.estadoPago !== 'paid' && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <p className="text-xs text-gray-500 mb-2">Pagar con:</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[['efectivo','💵','Efectivo'],['tarjeta','💳','Tarjeta'],['transferencia','🏦','Transfer']].map(([m,ico,lbl]) => (
-                        <button key={m} onClick={() => pagarCobro(c, m)}
-                          className="py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-colors text-center">
-                          <div>{ico}</div><div className="text-gray-600 mt-0.5">{lbl}</div>
+                    <div className="flex flex-col gap-2">
+                      {/* Stripe — pago en línea directo */}
+                      {tenantConfig?.stripePaymentLink && (
+                        <button
+                          onClick={() => {
+                            try {
+                              abrirPaymentLink({
+                                paymentLink: tenantConfig.stripePaymentLink,
+                                monto:       c.monto,
+                                email:       paciente?.email ?? '',
+                                cobroId:     c.id,
+                              })
+                              toast('💳 Página de pago abierta. Regresa cuando completes el pago.', { duration: 6000 })
+                            } catch(e) { toast.error(e.message) }
+                          }}
+                          className="w-full py-3 bg-indigo-600 text-white text-sm font-semibold
+                                     rounded-xl hover:bg-indigo-700 active:scale-95 transition-all flex
+                                     items-center justify-center gap-2">
+                          💳 Pagar ${ Number(c.monto ?? 0).toLocaleString('es-MX') } MXN con tarjeta
                         </button>
-                      ))}
+                      )}
+                      {/* Opciones presenciales */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {[['efectivo','💵','Efectivo'],['tarjeta','💳','TPV'],['transferencia','🏦','Transfer']].map(([m,ico,lbl]) => (
+                          <button key={m} onClick={() => pagarCobro(c, m)}
+                            className="py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl
+                                       hover:border-teal-400 hover:bg-teal-50 transition-colors text-center">
+                            <div>{ico}</div><div className="text-gray-600 mt-0.5">{lbl}</div>
+                          </button>
+                        ))}
+                      </div>
+                      {!tenantConfig?.stripePaymentLink && (
+                        <p className="text-xs text-gray-400 text-center">
+                          Pago en línea no disponible. Paga en el consultorio.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
