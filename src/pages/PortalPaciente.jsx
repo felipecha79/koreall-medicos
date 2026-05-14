@@ -444,13 +444,12 @@ export default function PortalPaciente() {
       collection(db, `tenants/${tenantId}/pacientes/${paciente.id}/medicamentos`),
       snap => setMeds(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-    const unsubCobros = onSnapshot(
-      // Cargar config del tenant para saber si tiene Stripe
-      const tenantDoc = await import('firebase/firestore').then(({ getDoc, doc: fsDoc }) =>
-        getDoc(fsDoc(db, 'tenants', String(tenantId)))
-      )
-      if (tenantDoc.exists()) setTenantConfig(tenantDoc.data())
+    // Cargar config del tenant para saber si tiene Stripe (fuera del onSnapshot)
+    getDoc(doc(db, 'tenants', String(tenantId))).then(snap => {
+      if (snap.exists()) setTenantConfig(snap.data())
+    }).catch(() => {})
 
+    const unsubCobros = onSnapshot(
       query(collection(db, `tenants/${tenantId}/cobros`),
             where('pacienteId', '==', paciente.id),
             orderBy('fechaPago','desc')),
