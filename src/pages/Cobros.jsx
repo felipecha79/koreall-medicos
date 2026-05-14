@@ -87,19 +87,28 @@ function BotonStripe({ cobro, tenant, onPagado }) {
     <span className="text-xs text-gray-300 italic">Sin Stripe</span>
   )
 
+  // Detectar qué pasarela está activa para el label del botón
+  const pasarelaNombre = tenant?.stripePaymentLink ? 'Stripe'
+    : tenant?.conektaKey ? 'Conekta'
+    : tenant?.mercadoPagoKey ? 'Mercado Pago'
+    : null
+
   const abrirStripe = async () => {
     setCargando(true)
     try {
       if (tenant?.stripePaymentLink) {
-        abrirPaymentLink({
-          paymentLink: tenant.stripePaymentLink,
-          monto:       cobro.monto,
-          email:       cobro.pacienteEmail ?? '',
-          cobroId:     cobro.id,
-        })
-        toast('💳 Stripe abierto — confirma el pago manualmente cuando se complete', { duration: 5000 })
+        const url = new URL(tenant.stripePaymentLink)
+        if (cobro.pacienteEmail) url.searchParams.set('prefilled_email', cobro.pacienteEmail)
+        url.searchParams.set('client_reference_id', cobro.id)
+        const win = window.open(url.toString(), 'stripe_pay',
+          'width=520,height=700,left=200,top=80,resizable=yes,scrollbars=yes')
+        if (!win) {
+          toast.error('El navegador bloqueó la ventana. Permite popups para este sitio.')
+        } else {
+          toast('Completa el pago en Stripe y marca el cobro como pagado', { duration: 7000, icon: '💳' })
+        }
       } else {
-        toast.error('Configura un Stripe Payment Link en Admin → Sistema → Pagos')
+        toast.error('Configura un Payment Link en Admin → Sistema → Pagos')
       }
     } catch (e) {
       toast.error(e.message)
@@ -110,7 +119,7 @@ function BotonStripe({ cobro, tenant, onPagado }) {
     <button onClick={abrirStripe} disabled={cargando}
       className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg
                  hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap transition-colors">
-      {cargando ? '⏳' : '💳 Pagar con Stripe'}
+      {cargando ? '⏳' : `💳 Pagar con ${pasarelaNombre ?? 'pasarela'}`}
     </button>
   )
 }
@@ -200,7 +209,7 @@ export default function Cobros() {
     <div className="p-4 md:p-6">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Cobros</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Cobros y Pagos</h2>
           <p className="text-sm text-gray-400">{format(ahora, "MMMM yyyy", { locale: es })}</p>
         </div>
         <div className="flex gap-2">

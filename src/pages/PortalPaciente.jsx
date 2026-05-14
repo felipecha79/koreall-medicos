@@ -394,7 +394,6 @@ export default function PortalPaciente() {
   const [docs,  setDocs]        = useState([])
   const [meds,  setMeds]        = useState([])
   const [cobros, setCobros]       = useState([])
-  const [tenantConfig, setTenantConfig] = useState(null)
   const [facturas, setFacturas] = useState([])
   const [docViewer, setDocViewer] = useState(null)
 
@@ -402,6 +401,7 @@ export default function PortalPaciente() {
   const [fechaSeleccionada, setFecha] = useState('')
   const [motivo, setMotivo]           = useState('')
   const [savingCita, setSavingCita]   = useState(false)
+  const [pagoModalCobro, setPagoModalCobro] = useState(null)
 
   useEffect(() => {
     if (!tenantId || !paciente) return
@@ -444,11 +444,6 @@ export default function PortalPaciente() {
       collection(db, `tenants/${tenantId}/pacientes/${paciente.id}/medicamentos`),
       snap => setMeds(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-    // Cargar config del tenant para saber si tiene Stripe (fuera del onSnapshot)
-    getDoc(doc(db, 'tenants', String(tenantId))).then(snap => {
-      if (snap.exists()) setTenantConfig(snap.data())
-    }).catch(() => {})
-
     const unsubCobros = onSnapshot(
       query(collection(db, `tenants/${tenantId}/cobros`),
             where('pacienteId', '==', paciente.id),
@@ -767,17 +762,20 @@ export default function PortalPaciente() {
                     <p className="text-xs text-gray-500 mb-2">Pagar con:</p>
                     <div className="flex flex-col gap-2">
                       {/* Stripe — pago en línea directo */}
-                      {tenantConfig?.stripePaymentLink && (
+                      {tenant?.stripePaymentLink && (
                         <button
                           onClick={() => {
                             try {
-                              abrirPaymentLink({
-                                paymentLink: tenantConfig.stripePaymentLink,
-                                monto:       c.monto,
-                                email:       paciente?.email ?? '',
-                                cobroId:     c.id,
-                              })
-                              toast('💳 Página de pago abierta. Regresa cuando completes el pago.', { duration: 6000 })
+                              const url = new URL(tenant.stripePaymentLink)
+                              if (paciente?.email) url.searchParams.set('prefilled_email', paciente.email)
+                              url.searchParams.set('client_reference_id', c.id)
+                              const win = window.open(url.toString(), '_blank',
+                                'width=520,height=700,left=200,top=80,resizable=yes,scrollbars=yes')
+                              if (!win) {
+                                toast.error('El navegador bloqueó la ventana. Permite popups para este sitio.')
+                              } else {
+                                setPagoModalCobro(c)
+                              }
                             } catch(e) { toast.error(e.message) }
                           }}
                           className="w-full py-3 bg-indigo-600 text-white text-sm font-semibold
@@ -796,7 +794,7 @@ export default function PortalPaciente() {
                           </button>
                         ))}
                       </div>
-                      {!tenantConfig?.stripePaymentLink && (
+                      {!tenant?.stripePaymentLink && (
                         <p className="text-xs text-gray-400 text-center">
                           Pago en línea no disponible. Paga en el consultorio.
                         </p>
@@ -930,6 +928,44 @@ export default function PortalPaciente() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+      {/* Modal esperando pago Stripe */}
+      {pagoModalCobro && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+            <div className="text-5xl mb-4">💳</div>
+            <h3 className="text-base font-semibold text-gray-800 mb-2">Página de pago abierta</h3>
+            <p className="text-sm text-gray-500 mb-1">
+              Completa el pago en la ventana de Stripe.
+            </p>
+            <p className="text-xs text-gray-400 mb-5">
+              Concepto: <strong>{pagoModalCobro.concepto}</strong> ·{' '}
+              <strong>${Number(pagoModalCobro.monto).toLocaleString('es-MX')} MXN</strong>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  pagarCobro(pagoModalCobro, 'stripe')
+                  setPagoModalCobro(null)
+                  toast.success('Pago confirmado ✓')
+                }}
+                className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-indigo-700 transition-colors">
+                ✓ Ya pagué
+              </button>
+              <button onClick={() => setPagoModalCobro(null)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                           hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Si el pago fue exitoso, el consultorio lo verá reflejado automáticamente.
+            </p>
           </div>
         </div>
       )}

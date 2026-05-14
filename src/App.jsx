@@ -10,7 +10,6 @@ import Expediente         from './pages/Expediente'
 import Cobros             from './pages/Cobros'
 import Facturacion        from './pages/Facturacion'
 import Recetas            from './pages/Recetas'
-import PagoEnLinea        from './pages/PagoEnLinea'
 import Reportes           from './pages/Reportes'
 import Admin              from './pages/Admin'
 import GestionUsuarios    from './pages/GestionUsuarios'
@@ -45,8 +44,7 @@ const NAV_MAIN = [
   { to: '/agenda',      label: 'Agenda',      icon: '📅' },
   { to: '/pacientes',   label: 'Pacientes',   icon: '👤' },
   { to: '/importar',    label: 'Importar',    icon: '📥' },
-  { to: '/cobros',      label: 'Cobros',      icon: '💳' },
-  { to: '/pagos',       label: 'Pagos',       icon: '💰' },
+  { to: '/cobros',      label: 'Cobros y Pagos', icon: '💳' },
   { to: '/facturacion', label: 'Facturación', icon: '🧾' },
   { to: '/recetas',     label: 'Recetas',     icon: '📋' },
   { to: '/reportes',    label: 'Reportes',    icon: '📊' },
@@ -213,7 +211,6 @@ export default function App() {
     ['/pacientes/:id',  <Expediente />],
     ['/importar',        <ImportarPacientes />],
     ['/cobros',         <Cobros />],
-    ['/pagos',          <PagoEnLinea />],
     ['/facturacion',    <Facturacion />],
     ['/recetas',        <Recetas />],
     ['/reportes',       <Reportes />],
