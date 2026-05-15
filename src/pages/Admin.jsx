@@ -1274,16 +1274,22 @@ export default function Admin() {
 
           {/* ── Importar pacientes CSV (parte del onboarding) ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-700">📥 Importar pacientes CSV</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Sube el padrón de pacientes durante la configuración inicial del consultorio.
-                  Incluido en el cobro de alta. También disponible para actualizaciones periódicas.
-                </p>
-              </div>
+            <p className="text-sm font-semibold text-gray-700 mb-1">📥 Importar pacientes CSV</p>
+            <p className="text-xs text-gray-400 mb-3">
+              Sube el padrón de pacientes durante la configuración inicial del consultorio.
+              Asegúrate de tener seleccionado el consultorio correcto en el menú superior.
+            </p>
+            <a href="/importar"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white
+                         text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors">
+              📥 Ir al módulo de importación
+            </a>
+            <div className="mt-3 bg-gray-50 rounded-lg p-3">
+              <p className="text-xs font-medium text-gray-600 mb-1">Formato CSV requerido:</p>
+              <p className="text-xs text-gray-400 font-mono">
+                nombre, apellidos, telefono, email, fechaNacimiento, sexo, rfc, cp
+              </p>
             </div>
-            <ImportarPacientes />
           </div>
 
           {/* ── Mapa del sistema — ABAJO ── */}
