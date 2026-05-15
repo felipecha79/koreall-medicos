@@ -42,9 +42,11 @@ const PERMISOS = {
  */
 export function puedeVer(rol, modulo) {
   if (!rol) return false
+  // 'admin' es alias legacy de superadmin
+  const rolNorm = rol === 'admin' ? 'superadmin' : rol
   const idx = MODULOS.indexOf(modulo)
   if (idx === -1) return true // módulo desconocido — permitir por defecto
-  return PERMISOS[rol]?.[idx] ?? false
+  return PERMISOS[rolNorm]?.[idx] ?? false
 }
 
 /**
@@ -53,7 +55,8 @@ export function puedeVer(rol, modulo) {
  * @returns {string[]}
  */
 export function modulosDeRol(rol) {
-  return MODULOS.filter(m => puedeVer(rol, m))
+  const rolNorm = rol === 'admin' ? 'superadmin' : rol
+  return MODULOS.filter(m => puedeVer(rolNorm, m))
 }
 
 /**

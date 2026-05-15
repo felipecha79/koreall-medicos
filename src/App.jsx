@@ -46,7 +46,6 @@ function PrivateRoute({ children }) {
 const NAV_TODOS = [
   { to: '/agenda',       label: 'Agenda',          icon: '📅', modulo: 'agenda'       },
   { to: '/pacientes',    label: 'Pacientes',        icon: '👤', modulo: 'pacientes'    },
-  { to: '/pacientes',    label: 'Expedientes',      icon: '📋', modulo: 'expediente'   },
   { to: '/cobros',       label: 'Cobros y Pagos',   icon: '💳', modulo: 'cobros'       },
   { to: '/recetas',      label: 'Recetas',          icon: '💊', modulo: 'recetas'      },
   { to: '/facturacion',  label: 'Facturación',      icon: '🧾', modulo: 'facturacion'  },
@@ -60,7 +59,7 @@ const NAV_TODOS = [
 ]
 
 function navDeRol(rol, isSuperAdmin) {
-  if (isSuperAdmin) return NAV_TODOS
+  if (isSuperAdmin || rol === 'admin' || rol === 'superadmin') return NAV_TODOS
   return NAV_TODOS.filter(n => puedeVer(rol ?? 'recepcion', n.modulo))
 }
 
@@ -229,7 +228,6 @@ export default function App() {
     ['/sitio-web',      <SitioWeb />],
     ['/encuesta',       <Encuesta />],
     ['/telemedicina',   <Telemedicina />],
-    ['/usuarios',       <GestionUsuarios />],
     ['/admin',          <Admin />],
   ]
   return (

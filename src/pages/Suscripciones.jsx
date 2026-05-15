@@ -10,10 +10,11 @@ import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
 const PLANES = {
-  basico:     { label: 'Básico',     precio: 1200, color: 'bg-gray-100 text-gray-700' },
-  pro:        { label: 'Pro',        precio: 1800, color: 'bg-teal-100 text-teal-700' },
-  clinica:    { label: 'Clínica',    precio: 2800, color: 'bg-blue-100 text-blue-700' },
-  enterprise: { label: 'Enterprise', precio: 6000, color: 'bg-purple-100 text-purple-700' },
+  starter:    { label: 'Starter',    precio:  649, color: 'bg-gray-100 text-gray-600',   icon: '🌱' },
+  basico:     { label: 'Básico',     precio:  999, color: 'bg-teal-100 text-teal-700',   icon: '⚡' },
+  pro:        { label: 'Pro',        precio: 1899, color: 'bg-blue-100 text-blue-700',   icon: '🚀' },
+  clinica:    { label: 'Clínica',    precio: 2800, color: 'bg-purple-100 text-purple-700', icon: '🏥' },
+  enterprise: { label: 'Enterprise', precio: 6500, color: 'bg-amber-100 text-amber-700', icon: '🏢' },
 }
 
 function fmtFecha(val) {
@@ -168,40 +169,43 @@ export default function Suscripciones() {
       {/* Tarjeta plan actual */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
         <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-xs font-bold px-2 py-0.5 rounded ${planInfo.color}`}>
-                {planInfo.label}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">{planInfo.icon}</span>
+              <span className={`text-sm font-bold px-3 py-1 rounded-full ${planInfo.color}`}>
+                Plan {planInfo.label}
               </span>
               <EstadoBadge activa={tenant?.suscripcionActiva !== false} enGracia={enGracia} />
             </div>
-            <p className="text-3xl font-bold text-gray-800 mt-2">
+            <p className="text-4xl font-bold text-gray-800 mt-1">
               ${montoBase.toLocaleString('es-MX')}
-              <span className="text-base font-normal text-gray-400"> MXN/mes</span>
+              <span className="text-lg font-normal text-gray-400"> MXN/mes</span>
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              ${montoTotal.toLocaleString('es-MX')} MXN con IVA incluido
+            <p className="text-sm text-gray-400 mt-0.5">
+              ${montoTotal.toLocaleString('es-MX')} MXN con IVA 16% incluido
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Consultorio: <strong className="text-gray-600">{tenant?.nombre ?? '—'}</strong>
+              {tenant?.rfc && <span className="ml-2 font-mono">RFC: {tenant.rfc}</span>}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Próximo cobro</p>
-            <p className="text-sm font-medium text-gray-700">{proximoPago}</p>
+          <div className="text-right ml-4">
+            <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+              <p className="text-xs text-gray-400">Próximo cobro</p>
+              <p className="text-sm font-semibold text-gray-700 mt-0.5">{proximoPago}</p>
+              <p className="text-xs text-gray-400 mt-2">Modo de pago</p>
+              <p className="text-xs font-medium text-gray-600 mt-0.5">
+                {modoPago === 'automatico' ? '💳 Automático' : '📋 Manual'}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-100 mt-4 pt-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400">Modo de cobro</p>
-            <p className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mt-0.5">
-              {modoPago === 'automatico'
-                ? <><span className="text-green-500">●</span> Automático (Stripe)</>
-                : <><span className="text-amber-500">●</span> Manual</>}
-            </p>
-          </div>
+        <div className="border-t border-gray-100 mt-4 pt-3 flex justify-end">
           <button onClick={() => setModalModo(true)}
-            className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg
+            className="text-xs px-4 py-1.5 border border-gray-200 rounded-lg
                        hover:bg-gray-50 text-gray-600 transition-colors">
-            Cambiar modo
+            ⚙️ Cambiar modo de pago
           </button>
         </div>
       </div>

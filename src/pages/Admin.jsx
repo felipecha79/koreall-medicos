@@ -17,10 +17,11 @@ const TIPOS_ORG = [
 ]
 
 const PLANES = [
-  { value: 'basico',     label: 'Básico',     precio: 1200 },
-  { value: 'pro',        label: 'Pro',        precio: 1800 },
+  { value: 'starter',    label: 'Starter',    precio:  649 },
+  { value: 'basico',     label: 'Básico',     precio:  999 },
+  { value: 'pro',        label: 'Pro',        precio: 1899 },
   { value: 'clinica',    label: 'Clínica',    precio: 2800 },
-  { value: 'enterprise', label: 'Enterprise', precio: 6000 },
+  { value: 'enterprise', label: 'Enterprise', precio: 6500 },
 ]
 
 const TIPO_COLOR = {
