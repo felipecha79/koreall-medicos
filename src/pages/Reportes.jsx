@@ -67,6 +67,53 @@ function SelectorRango({ desde, hasta, onChange }) {
 
 const TABS = ['Pagos y facturas', 'Consultas', 'Corte diario', 'Seguimiento pacientes', 'Resumen KPIs']
 
+// CSS de impresión inyectado dinámicamente solo cuando se imprime
+const PRINT_STYLE = `
+  @media print {
+    body > * { display: none !important; }
+    #corte-diario-print { display: block !important; }
+    #corte-diario-print { position: fixed; top: 0; left: 0; width: 100%; }
+    .no-print { display: none !important; }
+    @page { margin: 15mm; size: A4; }
+  }
+`
+
+function imprimirCorte() {
+  const el = document.getElementById('corte-diario-print')
+  if (!el) return
+  const win = window.open('', '_blank', 'width=800,height=600')
+  win.document.write(\`
+    <html><head>
+    <title>Corte Diario — DocVias</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; color: #1a2e42; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+      th { background: #1a2e42; color: white; padding: 6px 10px; text-align: left; font-size: 11px; }
+      td { padding: 5px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+      tr:nth-child(even) { background: #f9fafb; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+      .title { font-size: 20px; font-weight: 700; }
+      .subtitle { font-size: 13px; color: #6b7280; }
+      .totales { margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; }
+      .total-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 16px; min-width: 120px; }
+      .total-label { font-size: 10px; color: #6b7280; text-transform: uppercase; }
+      .total-valor { font-size: 18px; font-weight: 700; margin-top: 2px; }
+      .footer { margin-top: 24px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+      .badge-efectivo { background: #d1fae5; color: #065f46; }
+      .badge-tarjeta { background: #ede9fe; color: #5b21b6; }
+      .badge-stripe { background: #e0e7ff; color: #3730a3; }
+      .badge-transferencia { background: #dbeafe; color: #1e40af; }
+    </style>
+    </head><body>
+    \${el.innerHTML}
+    </body></html>
+  \`)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print(); win.close() }, 300)
+}
+
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
   const [tab, setTab] = useState('Pagos y facturas')
@@ -582,7 +629,7 @@ export default function Reportes() {
       )}
 
       {/* ══ Tab: Corte diario — estilo Dr. Salas ═══════════ */}
-      {tab === 'Corte diario' && (() => {
+      {tab === 'Corte diario' && (() => { /* id se aplica al div interno */
         const hoy = format(new Date(), 'dd/MM/yyyy')
         const cobrosCorte = cobrosFiltrados
         // Conteos por método
@@ -604,7 +651,11 @@ export default function Reportes() {
                 </div>
                 <div className="flex items-center gap-3">
                   <SelectorRango desde={rangoPagos.desde} hasta={rangoPagos.hasta} onChange={setRangoPagos} />
-                  <button onClick={exportarCortePDF}
+                  <button onClick={imprimirCorte}
+              className="px-3 py-1.5 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors no-print">
+              🖨️ Imprimir
+            </button>
+            <button onClick={exportarCortePDF}
                     className="px-3 py-1.5 bg-teal-500 text-white text-xs rounded-lg hover:bg-teal-600">
                     📄 Exportar
                   </button>

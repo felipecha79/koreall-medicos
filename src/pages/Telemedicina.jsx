@@ -50,9 +50,17 @@ async function crearSalaDaily(citaId) {
   }
 }
 
+// ── Whereby — gratis, embebido, sin límite para 2 personas ───────────────
+// Plan gratuito: salas permanentes para hasta 2 personas, sin instalar nada
+// Crear sala en whereby.com → copiar URL → guardar en tenant.wherebyRoomUrl
+// Si el tenant tiene wherebyRoomUrl, se usa embebido. Si no, cae a Jitsi.
+function urlWhereby(tenant) {
+  return tenant?.wherebyRoomUrl ?? null
+}
+
 // ── Generar URL Jitsi (fallback sin cuenta) ───────────────
 function urlJitsi(citaId, nombreDoctor) {
-  const room = `MediDesk-${citaId.slice(0, 12)}`
+  const room = `DocVia-${citaId.slice(0, 12)}`
   const nombre = encodeURIComponent(nombreDoctor ?? 'Doctor')
   return `https://meet.jit.si/${room}#userInfo.displayName="${nombre}"`
 }
@@ -104,8 +112,9 @@ export default function Telemedicina() {
         }
 
         if (!urlSala) {
-          // Fallback: Jitsi
-          urlSala = urlJitsi(cita.id, tenant?.nombreDoctor)
+          // Fallback: Whereby (si está configurado) → Jitsi
+          const wherebyUrl = urlWhereby(tenant)
+          urlSala = wherebyUrl ?? urlJitsi(cita.id, tenant?.nombreDoctor)
         }
 
         // Guardar URL en la cita para que el paciente también la tenga
@@ -153,39 +162,95 @@ export default function Telemedicina() {
     } catch { return '—' }
   }
 
-  // ── Vista de videollamada ──────────────────────────────
-  if (mostrarVideo && sala) return (
-    <div className="fixed inset-0 bg-gray-900 flex flex-col z-50">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-800">
-        <div className="flex items-center gap-3">
-          <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-white text-sm font-medium">
-            Consulta en curso — {citaActiva?.pacienteNombre}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={copiarEnlace}
-            className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700">
-            📋 Copiar enlace
-          </button>
-          <button onClick={terminarLlamada}
-            className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700">
-            ⏹ Terminar llamada
-          </button>
-        </div>
-      </div>
+  // Detectar si la sala es Whereby (embebible) o Jitsi (nueva pestaña)
+  const esWhereby = sala?.includes('whereby.com')
+  const esJitsi   = sala?.includes('meet.jit.si')
+  const esDaily   = sala?.includes('daily.co')
 
-      {/* Iframe de videollamada */}
-      <iframe
-        ref={iframeRef}
-        src={sala}
-        allow="camera; microphone; fullscreen; display-capture; autoplay"
-        style={{ flex: 1, border: 'none', width: '100%' }}
-        title="Videollamada médica"
-      />
-    </div>
-  )
+  // ── Vista de videollamada ──────────────────────────────
+  if (mostrarVideo && sala) {
+    // Jitsi → abrir en nueva pestaña (sin límite de tiempo, sin embed fee)
+    if (esJitsi && !window._jitsiAbierto) {
+      window._jitsiAbierto = true
+      window.open(sala, '_blank', 'width=1200,height=700')
+    }
+
+    return (
+      <div className="fixed inset-0 bg-gray-900 flex flex-col z-50">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-800">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-white text-sm font-medium">
+              Consulta en curso — {citaActiva?.pacienteNombre}
+            </span>
+            <span className="text-xs text-gray-400">
+              {esWhereby ? '📹 Whereby' : esDaily ? '📹 Daily.co' : '📹 Jitsi Meet'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={copiarEnlace}
+              className="px-3 py-1.5 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700">
+              📋 Copiar enlace para paciente
+            </button>
+            {esJitsi && (
+              <button onClick={() => window.open(sala, '_blank')}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700">
+                🔗 Reabrir Jitsi
+              </button>
+            )}
+            <button onClick={() => { terminarLlamada(); window._jitsiAbierto = false }}
+              className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700">
+              ⏹ Terminar llamada
+            </button>
+          </div>
+        </div>
+
+        {/* Whereby o Daily → embebido | Jitsi → panel de espera */}
+        {(esWhereby || esDaily) ? (
+          <iframe
+            ref={iframeRef}
+            src={sala}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            style={{ flex: 1, border: 'none', width: '100%' }}
+            title="Videollamada médica"
+          />
+        ) : (
+          /* Jitsi abrió en nueva pestaña — mostrar panel de espera */
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-gray-900">
+            <div className="text-6xl">📹</div>
+            <div className="text-center">
+              <p className="text-white text-xl font-semibold mb-2">
+                Jitsi Meet abierto en nueva pestaña
+              </p>
+              <p className="text-gray-400 text-sm mb-1">
+                La videollamada está corriendo en otra ventana del navegador.
+              </p>
+              <p className="text-gray-500 text-xs">
+                Sala: {citaActiva?.pacienteNombre} · Gratis · Sin límite de tiempo
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => window.open(sala, '_blank')}
+                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium
+                           rounded-xl hover:bg-blue-700 transition-colors">
+                🔗 Reabrir videollamada
+              </button>
+              <button onClick={copiarEnlace}
+                className="px-5 py-2.5 bg-teal-600 text-white text-sm font-medium
+                           rounded-xl hover:bg-teal-700 transition-colors">
+                📋 Copiar enlace para paciente
+              </button>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-4 max-w-sm text-center">
+              <p className="text-xs text-gray-400 mb-1">Enlace de la videollamada</p>
+              <p className="text-xs text-teal-400 font-mono break-all">{sala}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // ── Vista principal ────────────────────────────────────
   return (
@@ -195,7 +260,7 @@ export default function Telemedicina() {
         <p className="text-sm text-gray-400">
           {DAILY_KEY
             ? 'Salas privadas Daily.co — hasta 4 participantes, expiran en 2h'
-            : 'Jitsi Meet — sin límites, sin cuenta requerida'}
+            : 'Telemedicina gratuita — Whereby (sala fija) o Jitsi Meet (sala por cita)'}
         </p>
       </div>
 
@@ -211,7 +276,7 @@ export default function Telemedicina() {
             &nbsp;→&nbsp; 3. Agrega en Vercel: <code className="bg-amber-100 px-1 rounded">VITE_DAILY_API_KEY=...</code>
           </p>
           <p className="text-xs text-amber-600 mt-1">
-            Sin configurar, se usa Jitsi Meet automáticamente (también funciona bien).
+            Sin Daily.co: usa Whereby (configura tu sala en Admin → Sistema → Videollamada) o Jitsi Meet automáticamente. Ambos gratis y sin límite de tiempo para 2 personas.
           </p>
         </div>
       )}

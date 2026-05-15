@@ -1,4 +1,4 @@
-// api/cron-suscripciones.js — DocVias v22
+// api/cron-suscripciones.js — DocVia v22
 // Vercel Serverless Function — corre el día 1 de cada mes via Vercel Cron
 // También puede llamarse manualmente desde Admin con ?secret=CRON_SECRET
 //
@@ -26,7 +26,7 @@ function getAdmin() {
   return getFirestore()
 }
 
-// ── Facturapi: emitir CFDI de suscripción DocVias ──────────────────────────
+// ── Facturapi: emitir CFDI de suscripción DocVia ──────────────────────────
 async function emitirCFDISuscripcion({ tenant, config, monto }) {
   const key = process.env.VITE_FACTURAPI_KEY
   if (!key) throw new Error('VITE_FACTURAPI_KEY no configurado')
@@ -71,7 +71,7 @@ async function emitirCFDISuscripcion({ tenant, config, monto }) {
       items: [{
         quantity: 1,
         product: {
-          description: `Servicio DocVias Plan ${tenant.plan?.toUpperCase() ?? 'PRO'} — ${mes}`,
+          description: `Servicio DocVia Plan ${tenant.plan?.toUpperCase() ?? 'PRO'} — ${mes}`,
           product_key: '81112101',  // Servicios de software en la nube (SaaS)
           unit_key:    'E48',
           unit_name:   'Unidad de servicio',
@@ -98,8 +98,8 @@ async function notificarWA({ telefono, nombre, monto, pdfUrl, vencimiento, esBlo
   const to  = tel.length === 10 ? `whatsapp:+521${tel}` : `whatsapp:+${tel}`
 
   const msg = esBloqueo
-    ? `🔒 *DocVias — Acceso suspendido*\n\nHola Dr. ${nombre}, tu acceso a DocVias ha sido suspendido por falta de pago.\n\nPara reactivar ingresa a tu portal y realiza el pago de *$${monto.toLocaleString('es-MX')} MXN*.\n\n¿Dudas? Escríbenos a este número.`
-    : `🧾 *DocVias — Factura mensual disponible*\n\nHola Dr. ${nombre}, tu factura de *$${monto.toLocaleString('es-MX')} MXN* (IVA incluido) está disponible.\n\nFecha límite de pago: *${vencimiento}*\n\nPDF: ${pdfUrl ?? 'Disponible en tu portal'}\n\nIngresa a tu portal para pagar en línea.`
+    ? `🔒 *DocVia — Acceso suspendido*\n\nHola Dr. ${nombre}, tu acceso a DocVia ha sido suspendido por falta de pago.\n\nPara reactivar ingresa a tu portal y realiza el pago de *$${monto.toLocaleString('es-MX')} MXN*.\n\n¿Dudas? Escríbenos a este número.`
+    : `🧾 *DocVia — Factura mensual disponible*\n\nHola Dr. ${nombre}, tu factura de *$${monto.toLocaleString('es-MX')} MXN* (IVA incluido) está disponible.\n\nFecha límite de pago: *${vencimiento}*\n\nPDF: ${pdfUrl ?? 'Disponible en tu portal'}\n\nIngresa a tu portal para pagar en línea.`
 
   await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
   const log = []
 
   try {
-    // Leer configuración fiscal de DocVias
+    // Leer configuración fiscal de DocVia
     const configSnap = await db.doc('configuracion/docvias').get()
     const config = configSnap.exists ? configSnap.data() : {}
 

@@ -1,4 +1,4 @@
-// src/pages/GestionUsuarios.jsx — DocVias v23
+// src/pages/GestionUsuarios.jsx — DocVia v23
 // Administración de usuarios del consultorio
 // Doctor y Dueño pueden gestionar usuarios de su tenant
 // SuperAdmin puede gestionar usuarios de cualquier tenant

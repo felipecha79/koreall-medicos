@@ -1,4 +1,4 @@
-// api/crear-usuario.js — DocVias v23
+// api/crear-usuario.js — DocVia v23
 // Crea un usuario en Firebase Auth + guarda en Firestore + envía email de bienvenida
 // Llamado desde GestionUsuarios.jsx
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
@@ -93,14 +93,14 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${sgKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           personalizations: [{ to: [{ email, name: nombre }] }],
-          from: { email: 'juan.felipe.bezares@outlook.es', name: 'DocVias' },
-          subject: `Bienvenido a DocVias — ${tenantNombre}`,
+          from: { email: 'juan.felipe.bezares@outlook.es', name: 'DocVia' },
+          subject: `Bienvenido a DocVia — ${tenantNombre}`,
           content: [{
             type: 'text/html',
             value: `
               <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
                 <div style="background:#1A2E42;padding:24px;border-radius:12px 12px 0 0">
-                  <h1 style="color:#fff;font-size:20px;margin:0">DocVias 🦀</h1>
+                  <h1 style="color:#fff;font-size:20px;margin:0">DocVia 🦀</h1>
                   <p style="color:#4AAECC;font-size:13px;margin:4px 0 0">Ecosistema digital de salud</p>
                 </div>
                 <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
                   </p>
                   <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">
                   <p style="color:#9ca3af;font-size:11px">
-                    DocVias · Tampico, Tamaulipas 🦀
+                    DocVia · Tampico, Tamaulipas 🦀
                   </p>
                 </div>
               </div>

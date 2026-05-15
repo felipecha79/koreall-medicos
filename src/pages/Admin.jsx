@@ -17,12 +17,64 @@ const TIPOS_ORG = [
 ]
 
 const PLANES = [
-  { value: 'starter',    label: 'Starter',    precio:  649 },
-  { value: 'basico',     label: 'Básico',     precio:  999 },
-  { value: 'pro',        label: 'Pro',        precio: 1899 },
-  { value: 'clinica',    label: 'Clínica',    precio: 2800 },
-  { value: 'enterprise', label: 'Enterprise', precio: 6500 },
+  { value: 'starter',    label: 'Starter',    precio:  649,  limite:   50 },
+  { value: 'basico',     label: 'Básico',     precio:  999,  limite:  150 },
+  { value: 'pro',        label: 'Pro',        precio: 1899,  limite:  350 },
+  { value: 'clinica',    label: 'Clínica',    precio: 2800,  limite:  800 },
+  { value: 'enterprise', label: 'Enterprise', precio: 6500,  limite: 9999 },
 ]
+
+// Componente medidor de pacientes con semáforo
+function MedidorPacientes({ tenantId, plan }) {
+  const [conteo, setConteo] = useState(null)
+  const limite = PLANES.find(p => p.value === plan)?.limite ?? 350
+
+  useEffect(() => {
+    if (!tenantId) return
+    // Contar pacientes con cita en el mes actual
+    const inicio = new Date()
+    inicio.setDate(1); inicio.setHours(0,0,0,0)
+    getDocs(query(
+      collection(db, 'tenants', String(tenantId), 'citas'),
+      where('fecha', '>=', Timestamp.fromDate(inicio))
+    )).then(snap => {
+      // Contar pacientes únicos (no citas)
+      const ids = new Set(snap.docs.map(d => d.data().pacienteId).filter(Boolean))
+      setConteo(ids.size)
+    }).catch(() => setConteo(0))
+  }, [tenantId, plan])
+
+  if (conteo === null) return <span className="text-xs text-gray-300">...</span>
+
+  const pct = Math.min(100, Math.round((conteo / limite) * 100))
+  const color = pct >= 100 ? 'bg-red-500'
+    : pct >= 80  ? 'bg-amber-400'
+    : 'bg-green-400'
+  const textColor = pct >= 100 ? 'text-red-600'
+    : pct >= 80  ? 'text-amber-600'
+    : 'text-green-600'
+  const emoji = pct >= 100 ? '🔴' : pct >= 80 ? '🟡' : '🟢'
+
+  return (
+    <div className="min-w-[120px]">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className={`text-xs font-semibold ${textColor}`}>
+          {emoji} {conteo}/{limite === 9999 ? '∞' : limite}
+        </span>
+        <span className="text-xs text-gray-400">{pct}%</span>
+      </div>
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${pct}%` }} />
+      </div>
+      {pct >= 80 && (
+        <p className={`text-xs mt-0.5 ${pct >= 100 ? 'text-red-500 font-semibold' : 'text-amber-500'}`}>
+          {pct >= 100 ? '⚠️ Excedido — upgrade requerido' : '↑ Cerca del límite'}
+        </p>
+      )}
+    </div>
+  )
+}
 
 const TIPO_COLOR = {
   consultorio: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -404,7 +456,7 @@ function ConfigPlanes() {
   )
 }
 
-// ── Configuración fiscal y comercial de DocVias ─────────
+// ── Configuración fiscal y comercial de DocVia ─────────
 function ConfigDocVias() {
   const FORM_VACIO = {
     rfc:'', nombreLegal:'', cp:'', regimen:'612', email:'',
@@ -433,7 +485,7 @@ function ConfigDocVias() {
         ...form,
         actualizadoEn: Timestamp.now(),
       }, { merge: true })
-      toast.success('Configuración DocVias guardada')
+      toast.success('Configuración DocVia guardada')
     } catch(e) { toast.error('Error: ' + e.message) }
     finally { setSaving(false) }
   }
@@ -455,7 +507,7 @@ function ConfigDocVias() {
         className="w-full flex items-center justify-between text-left">
         <div>
           <p className="text-sm font-semibold text-gray-700">
-            🏢 Configuración Fiscal DocVias
+            🏢 Configuración Fiscal DocVia
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
             Tu RFC, datos fiscales, precios de planes y claves de Stripe para facturar a los doctores
@@ -517,7 +569,7 @@ function ConfigDocVias() {
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-xs text-blue-700">
               <strong>Price IDs de Stripe:</strong> Ve a Stripe Dashboard → Products → Crea un producto
-              "DocVias Plan Pro" con precio $1,800 MXN/mes recurrente → copia el Price ID (empieza con price_).
+              "DocVia Plan Pro" con precio $1,800 MXN/mes recurrente → copia el Price ID (empieza con price_).
               Uno por cada plan que uses.
             </p>
           </div>
@@ -525,7 +577,7 @@ function ConfigDocVias() {
           <button onClick={guardar} disabled={saving}
             className="w-full bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
                        hover:bg-teal-700 disabled:opacity-50 transition-colors">
-            {saving ? 'Guardando...' : '💾 Guardar configuración DocVias'}
+            {saving ? 'Guardando...' : '💾 Guardar configuración DocVia'}
           </button>
         </div>
       )}
@@ -687,7 +739,6 @@ export default function Admin() {
         actualizadoEn: Timestamp.now(),
       })
       toast.success(`Consultorio creado: ${tenantId}`)
-      toast('Recuerda asignar los claims con el script: node scripts/set-tenant-user.cjs', { duration: 6000 })
       setModalTenant(false)
       setFormTenant({ nombre:'', orgId:'', especialidad:'', nombreDoctor:'',
         cedula:'', telefono:'', email:'', rfc:'', cp:'', regimen:'612', direccion:'', activo:true, suscripcionActiva:true })
@@ -961,7 +1012,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['ID','Nombre','Organización','Especialidad','Doctor','Estado','Acciones'].map(h => (
+                    {['ID','Nombre','Organización','Especialidad','Doctor','Pac./mes','Estado','Acciones'].map(h => (
                       <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         {h}
                       </th>
@@ -984,6 +1035,9 @@ export default function Admin() {
                         </td>
                         <td className="px-4 py-2.5 text-xs text-gray-600">{t.especialidad || '—'}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-600">{t.nombreDoctor || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <MedidorPacientes tenantId={t.id} plan={t.plan ?? 'pro'} />
+                        </td>
                         <td className="px-4 py-2.5">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium
                             ${t.suscripcionActiva!==false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
@@ -1071,31 +1125,12 @@ export default function Admin() {
       {/* ══ Tab: Sistema ════════════════════════════════ */}
       {tab === 'Sistema' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-4">Estructura de datos (Firestore)</p>
-            <div className="font-mono text-xs bg-gray-50 rounded-xl p-4 leading-6 text-gray-700">
-              <p><span className="text-purple-600">organizaciones/</span><span className="text-gray-400">{'{orgId}'}</span></p>
-              <p className="pl-4 text-gray-500">tipo: consultorio | clinica | hospital</p>
-              <p className="pl-4 text-gray-500">plan: basico | pro | clinica | enterprise</p>
-              <p className="pl-4 text-gray-500">mrr: número (MXN/mes)</p>
-              <br/>
-              <p><span className="text-teal-600">tenants/</span><span className="text-gray-400">{'{tenantId}'}</span></p>
-              <p className="pl-4 text-gray-500">orgId: → referencia a organizaciones/</p>
-              <p className="pl-4 text-gray-500">especialidad, nombreDoctor, cedula...</p>
-              <p className="pl-4 text-teal-600">  pacientes/, citas/, consultas/</p>
-              <p className="pl-4 text-teal-600">  cobros/, facturas/, recetas/</p>
-            </div>
-          </div>
-          <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-            <p className="text-sm font-semibold text-amber-800 mb-1">Scripts para asignar claims</p>
-            <div className="space-y-1 font-mono text-xs text-amber-700">
-              <p>node scripts/set-tenant-user.cjs email@dr.com TENANT_ID admin</p>
-              <p>node scripts/set-tenant-user.cjs email@rec.com TENANT_ID recepcion</p>
-              <p>node scripts/set-paciente.cjs email@p.com TENANT_ID</p>
-            </div>
-          </div>
 
-          {/* Configuración IA por consultorio */}
+          {/* ── 1. Parámetros globales — ARRIBA ── */}
+          <ConfigPlanes />
+          <ConfigDocVias />
+
+          {/* ── 2. Configuración IA por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-sm font-semibold text-gray-700 mb-3">
               🤖 Funciones de Inteligencia Artificial por consultorio
@@ -1135,11 +1170,6 @@ export default function Admin() {
               Costo aproximado: $0.01 USD por cita analizada.
             </p>
           </div>
-
-          {/* ── Configuración Fiscal DocVias ── */}
-          <ConfigPlanes />
-
-          <ConfigDocVias />
 
           {/* ── Facturapi por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -1208,7 +1238,7 @@ export default function Admin() {
             </div>
             <div className="mt-3 bg-blue-50 rounded-lg p-3">
               <p className="text-xs text-blue-700">
-                <strong>¿Cómo funciona?</strong> Al configurar, DocVias crea una organización en tu cuenta
+                <strong>¿Cómo funciona?</strong> Al configurar, DocVia crea una organización en tu cuenta
                 de Facturapi vinculada al RFC del doctor. Cada CFDI se timbra usando esa organización,
                 por lo que el XML lleva el RFC del consultorio (no el tuyo). El doctor no ve su API key.
               </p>
@@ -1241,6 +1271,108 @@ export default function Admin() {
 
           {/* Plantillas de receta por consultorio */}
           <PlantillasReceta tenants={tenants} />
+
+          {/* ── Mapa del sistema — ABAJO ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <button onClick={() => setMapaExpanded && setMapaExpanded(v => !v)}
+              className="w-full flex items-center justify-between text-left">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">🗺️ Arquitectura del sistema</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Mapa completo: BD, hosting, servicios satélite y flujo de datos
+                </p>
+              </div>
+            </button>
+            <div className="mt-4 space-y-4">
+              {/* Stack principal */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { icon:'🔥', label:'Firebase (Google Cloud)', sub:'Firestore · Auth · Storage', color:'bg-orange-50 border-orange-200', txt:'text-orange-800' },
+                  { icon:'▲', label:'Vercel (Hosting + API)', sub:'React SPA · Serverless Functions · Cron Jobs', color:'bg-gray-50 border-gray-200', txt:'text-gray-800' },
+                  { icon:'🐙', label:'GitHub (CI/CD)', sub:'felipecha79/koreall-medicos · branch main → auto-deploy', color:'bg-slate-50 border-slate-200', txt:'text-slate-800' },
+                ].map(s => (
+                  <div key={s.label} className={`rounded-xl border p-3 ${s.color}`}>
+                    <p className={`text-sm font-semibold ${s.txt}`}>{s.icon} {s.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{s.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Servicios satélite */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Servicios satélite</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  { icon:'🧾', label:'Facturapi', sub:'CFDI 4.0 · Multi-org', color:'bg-teal-50' },
+                  { icon:'💳', label:'Stripe Connect', sub:'Pagos paciente → doctor', color:'bg-indigo-50' },
+                  { icon:'💬', label:'Twilio', sub:'WhatsApp · 10 notif.', color:'bg-red-50' },
+                  { icon:'📧', label:'SendGrid', sub:'Emails automáticos', color:'bg-blue-50' },
+                  { icon:'🤖', label:'Anthropic', sub:'Claude Haiku · IA pre-consulta', color:'bg-purple-50' },
+                  { icon:'📹', label:'Whereby / Jitsi', sub:'Telemedicina gratuita', color:'bg-green-50' },
+                  { icon:'📹', label:'Daily.co', sub:'Telemedicina premium', color:'bg-cyan-50' },
+                  { icon:'🌐', label:'SAT México', sub:'Timbrado vía Facturapi', color:'bg-amber-50' },
+                ].map(s => (
+                  <div key={s.label} className={`rounded-lg p-2.5 ${s.color}`}>
+                    <p className="text-xs font-semibold text-gray-700">{s.icon} {s.label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Estructura Firestore */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Estructura de datos (Firestore)</p>
+              <div className="font-mono text-xs bg-gray-50 rounded-xl p-4 leading-6 text-gray-700 overflow-x-auto">
+                <p><span className="text-purple-600 font-bold">organizaciones/</span><span className="text-gray-400">{'{'+'orgId'+'}'}</span></p>
+                <p className="pl-4 text-gray-500">tipo: consultorio | clinica | hospital | franquicia</p>
+                <p className="pl-4 text-gray-500">plan: starter | basico | pro | clinica | enterprise</p>
+                <p className="pl-4 text-gray-500">mrr, tenantIds[], activo, suscripcionActiva</p>
+                <br/>
+                <p><span className="text-teal-600 font-bold">tenants/</span><span className="text-gray-400">{'{'+'tenantId'+'}'}</span></p>
+                <p className="pl-4 text-gray-500">orgId → org padre · nombreDoctor · rfc · plan</p>
+                <p className="pl-4 text-gray-500">facturapiApiKey · stripePaymentLink · wherebyRoomUrl</p>
+                <p className="pl-4 text-gray-500">suscripcionActiva · fechaProximoPago · diasGracia</p>
+                <p className="pl-4 text-teal-500 font-bold">  ├── pacientes/ · citas/ · consultas/</p>
+                <p className="pl-4 text-teal-500 font-bold">  ├── cobros/ · facturas/ · recetas/</p>
+                <p className="pl-4 text-teal-500 font-bold">  ├── usuarios/ · facturas_docvias/</p>
+                <p className="pl-4 text-teal-500 font-bold">  └── encuestas/ · documentos/</p>
+                <br/>
+                <p><span className="text-blue-600 font-bold">configuracion/</span></p>
+                <p className="pl-4 text-gray-500">docvias → RFC, datos fiscales, Stripe, precios</p>
+                <p className="pl-4 text-gray-500">planes → precios editables por plan</p>
+                <br/>
+                <p><span className="text-amber-600 font-bold">claims_pendientes/</span><span className="text-gray-400">{'{'+'uid'+'}'}</span></p>
+                <p className="pl-4 text-gray-500">rol · tenantId · procesado · ts</p>
+              </div>
+
+              {/* Flujo de datos */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flujo principal de datos</p>
+              <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+                <p>1. <strong>Paciente agenda cita</strong> → Portal paciente → Firestore citas/</p>
+                <p>2. <strong>WhatsApp automático</strong> → Twilio → Paciente confirma</p>
+                <p>3. <strong>Doctor atiende</strong> → Expediente SOAP NOM-004 → Firestore consultas/</p>
+                <p>4. <strong>Cobro generado</strong> → Doctor marca pagado o Paciente paga con Stripe</p>
+                <p>5. <strong>Factura CFDI</strong> → Facturapi → SAT → PDF/XML en portal paciente</p>
+                <p>6. <strong>Día 1 c/mes</strong> → Cron Vercel → CFDI suscripción DocVia → WA al doctor</p>
+                <p>7. <strong>Pago suscripción</strong> → Stripe → Webhook → suscripcionActiva = true</p>
+              </div>
+
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 text-xs text-teal-700">
+                <strong>Regla de aislamiento multi-tenant:</strong> Las Firestore Security Rules garantizan que
+                cada consultorio solo accede a sus propios datos. El SuperAdmin tiene acceso global.
+                Un consultorio independiente tiene orgId === tenantId.
+              </div>
+            </div>
+          </div>
+
+          {/* ── Usuarios — sin scripts requeridos ── */}
+          <div className="bg-green-50 rounded-xl border border-green-200 p-4">
+            <p className="text-sm font-semibold text-green-800">✅ Usuarios — Gestión desde la app</p>
+            <p className="text-xs text-green-700 mt-1">
+              Los usuarios se crean desde <strong>Admin → Usuarios</strong> o desde el módulo
+              <strong> Usuarios</strong> en el sidebar del consultorio. El sistema asigna los claims
+              automáticamente y envía el email de bienvenida. No se requieren scripts.
+            </p>
+          </div>
+
         </div>
       )}
 

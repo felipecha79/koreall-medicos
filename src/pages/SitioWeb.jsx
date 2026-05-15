@@ -4,11 +4,11 @@ import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import toast from 'react-hot-toast'
 
-// ── Themes prediseñados DocVias ──────────────────────────
+// ── Themes prediseñados DocVia ──────────────────────────
 const THEMES = [
   {
     id: 'docvias_principal',
-    nombre: '✦ DocVias — Principal',
+    nombre: '✦ DocVia — Principal',
     desc: 'Azul cielo + Coral — Tecnología humana y cercana',
     preview: ['#4AAECC', '#E8623A', '#1A2E42'],
     vars: {
@@ -132,6 +132,178 @@ const THEMES = [
       tipografiaUI: 'Nunito',
     }
   },
+
+  // ── Especialidades médicas ────────────────────────────
+  {
+    id: 'dental',
+    nombre: '🦷 Dental / Estomatología',
+    desc: 'Azul bebé + Blanco — Limpio y brillante',
+    preview: ['#5BB5F7', '#FFFFFF', '#EBF7FF'],
+    vars: {
+      colorPrimario: '#5BB5F7',
+      colorSecundario: '#1A6FA8',
+      colorFondo: '#EBF7FF',
+      colorAccento: '#FF8A65',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'pediatria_alegre',
+    nombre: '🧒 Pediatría Alegre',
+    desc: 'Amarillo + Naranja — Divertido para niños',
+    preview: ['#FFB347', '#FF7043', '#FFFBF0'],
+    vars: {
+      colorPrimario: '#FFB347',
+      colorSecundario: '#FF7043',
+      colorFondo: '#FFFBF0',
+      colorAccento: '#4CAF50',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'veterinaria',
+    nombre: '🐾 Veterinaria',
+    desc: 'Verde pasto + Café — Amor por las mascotas',
+    preview: ['#66BB6A', '#795548', '#F1F8E9'],
+    vars: {
+      colorPrimario: '#66BB6A',
+      colorSecundario: '#795548',
+      colorFondo: '#F1F8E9',
+      colorAccento: '#FFA726',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'nutricion',
+    nombre: '🥑 Nutrición y Bienestar',
+    desc: 'Verde olivo + Crema — Fresco y saludable',
+    preview: ['#8BC34A', '#558B2F', '#F9FBF2'],
+    vars: {
+      colorPrimario: '#8BC34A',
+      colorSecundario: '#558B2F',
+      colorFondo: '#F9FBF2',
+      colorAccento: '#FF8F00',
+      tipografia: 'Lora',
+      tipografiaUI: 'Source Sans Pro',
+    }
+  },
+  {
+    id: 'psicologia',
+    nombre: '🧠 Psicología / Salud mental',
+    desc: 'Lavanda + Azul sereno — Tranquilo y empático',
+    preview: ['#9575CD', '#5C6BC0', '#F5F0FF'],
+    vars: {
+      colorPrimario: '#9575CD',
+      colorSecundario: '#5C6BC0',
+      colorFondo: '#F5F0FF',
+      colorAccento: '#80CBC4',
+      tipografia: 'Lora',
+      tipografiaUI: 'Open Sans',
+    }
+  },
+  {
+    id: 'fisioterapia',
+    nombre: '💪 Fisioterapia / Rehabilitación',
+    desc: 'Naranja energía + Azul — Movimiento y fuerza',
+    preview: ['#FF7043', '#1565C0', '#FFF3E0'],
+    vars: {
+      colorPrimario: '#FF7043',
+      colorSecundario: '#1565C0',
+      colorFondo: '#FFF3E0',
+      colorAccento: '#4CAF50',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
+  {
+    id: 'oftalmologia',
+    nombre: '👁️ Oftalmología / Óptica',
+    desc: 'Azul marino + Celeste — Claridad y precisión',
+    preview: ['#1E88E5', '#90CAF9', '#E3F2FD'],
+    vars: {
+      colorPrimario: '#1E88E5',
+      colorSecundario: '#0D47A1',
+      colorFondo: '#E3F2FD',
+      colorAccento: '#F9A825',
+      tipografia: 'Inter',
+      tipografiaUI: 'Inter',
+    }
+  },
+
+  // ── Negocios de bienestar ─────────────────────────────
+  {
+    id: 'spa_lux',
+    nombre: '💆 Spa & Relajación',
+    desc: 'Dorado + Crema — Lujo tranquilo',
+    preview: ['#C4A35A', '#3E2723', '#FAF8F2'],
+    vars: {
+      colorPrimario: '#C4A35A',
+      colorSecundario: '#3E2723',
+      colorFondo: '#FAF8F2',
+      colorAccento: '#A5D6A7',
+      tipografia: 'Cormorant Garamond',
+      tipografiaUI: 'DM Sans',
+    }
+  },
+  {
+    id: 'spa_moderno',
+    nombre: '🌿 Spa & Bienestar Moderno',
+    desc: 'Sage + Blanco — Minimalista y fresco',
+    preview: ['#80A88A', '#3D5A45', '#F7FBF8'],
+    vars: {
+      colorPrimario: '#80A88A',
+      colorSecundario: '#3D5A45',
+      colorFondo: '#F7FBF8',
+      colorAccento: '#D4A853',
+      tipografia: 'Josefin Sans',
+      tipografiaUI: 'Josefin Sans',
+    }
+  },
+  {
+    id: 'estetica',
+    nombre: '💅 Estética & Belleza',
+    desc: 'Rosa palo + Dorado — Femenino y elegante',
+    preview: ['#E57FA1', '#B8860B', '#FFF0F5'],
+    vars: {
+      colorPrimario: '#E57FA1',
+      colorSecundario: '#C2185B',
+      colorFondo: '#FFF0F5',
+      colorAccento: '#B8860B',
+      tipografia: 'Raleway',
+      tipografiaUI: 'Raleway',
+    }
+  },
+  {
+    id: 'pilates_yoga',
+    nombre: '🧘 Pilates & Yoga',
+    desc: 'Terracota + Crema — Equilibrio y consciencia',
+    preview: ['#C0785A', '#8D4E38', '#FBF7F4'],
+    vars: {
+      colorPrimario: '#C0785A',
+      colorSecundario: '#8D4E38',
+      colorFondo: '#FBF7F4',
+      colorAccento: '#81A892',
+      tipografia: 'Lora',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'clinica_fresca',
+    nombre: '🏥 Clínica Fresca',
+    desc: 'Aguamarina + Blanco — Moderno y accesible',
+    preview: ['#26C6DA', '#00838F', '#F0FFFE'],
+    vars: {
+      colorPrimario: '#26C6DA',
+      colorSecundario: '#00838F',
+      colorFondo: '#F0FFFE',
+      colorAccento: '#FF7043',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
 ]
 
 const TIPOGRAFIAS = [
@@ -142,7 +314,7 @@ const TIPOGRAFIAS = [
 export default function SitioWeb() {
   const { tenantId, tenant } = useTenant()
   const [config, setConfig] = useState({
-    themeId: 'docvias_principal',
+    themeId: 'clinica_fresca',
     colorPrimario: '#4AAECC',
     colorSecundario: '#E8623A',
     colorFondo: '#F4F9FB',
@@ -184,7 +356,7 @@ export default function SitioWeb() {
     setConfig(prev => ({
       ...prev,
       nombreConsultorio: '', nombreDoctor: '', especialidad: '',
-      colorPrimario: '#0A8076', themeId: 'docvias_principal',
+      colorPrimario: '#0A8076', themeId: 'clinica_fresca',
     }))
     getDoc(doc(db, `tenants/${tenantId}`)).then(snap => {
       if (snap.exists() && snap.data().sitioWeb) {

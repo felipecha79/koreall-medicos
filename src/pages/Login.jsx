@@ -35,7 +35,7 @@ export default function Login() {
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">DocVias</h1>
+          <h1 className="text-3xl font-bold text-slate-900">DocVia</h1>
           <p className="text-sm text-gray-400 mt-1">Sistema de gestión médica</p>
         </div>
 

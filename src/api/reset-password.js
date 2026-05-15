@@ -1,4 +1,4 @@
-// api/reset-password.js — DocVias v23
+// api/reset-password.js — DocVia v23
 // Envía email de restablecimiento de contraseña
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
@@ -32,14 +32,14 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${sgKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           personalizations: [{ to: [{ email }] }],
-          from: { email: 'juan.felipe.bezares@outlook.es', name: 'DocVias' },
-          subject: 'Restablecer contraseña — DocVias',
+          from: { email: 'juan.felipe.bezares@outlook.es', name: 'DocVia' },
+          subject: 'Restablecer contraseña — DocVia',
           content: [{
             type: 'text/html',
             value: `
               <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
                 <div style="background:#1A2E42;padding:20px;border-radius:12px 12px 0 0">
-                  <h1 style="color:#fff;font-size:18px;margin:0">DocVias</h1>
+                  <h1 style="color:#fff;font-size:18px;margin:0">DocVia</h1>
                 </div>
                 <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
                   <h2 style="font-size:16px;color:#1A2E42">Restablece tu contraseña</h2>
