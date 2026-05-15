@@ -73,74 +73,6 @@ function MedidorPacientes({ tenantId, plan }) {
         </p>
       )}
     </div>
-
-      {/* Modal crear usuario */}
-      {modalTid && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setModalTid(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-            onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-1 text-gray-800">Nuevo usuario</h3>
-            <p className="text-xs text-gray-400 mb-4">
-              Consultorio: <strong>{tenants.find(t=>t.id===modalTid)?.nombre}</strong>
-            </p>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                {[['nombre','Nombre *','Juan'],['apellidos','Apellidos','García']].map(([f,l,p]) => (
-                  <div key={f}>
-                    <label className="block text-xs text-gray-500 mb-1">{l}</label>
-                    <input type="text" value={formUser[f]}
-                      onChange={e => setFormUser(x => ({ ...x, [f]: e.target.value }))}
-                      placeholder={p}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                                 focus:outline-none focus:ring-2 focus:ring-teal-400" />
-                  </div>
-                ))}
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Email *</label>
-                <input type="email" value={formUser.email}
-                  onChange={e => setFormUser(x => ({ ...x, email: e.target.value }))}
-                  placeholder="doctor@consultorio.com"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-teal-400" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Rol *</label>
-                <select value={formUser.rol}
-                  onChange={e => setFormUser(x => ({ ...x, rol: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-teal-400">
-                  {[
-                    ['doctor','Doctor'],['recepcion','Recepcionista'],
-                    ['enfermeria','Enfermería'],['contador','Contador'],
-                    ['farmacia','Farmacia'],['reportes','Solo Reportes'],
-                    ['dueno','Dueño de clínica'],
-                  ].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="bg-blue-50 rounded-lg p-3 mt-3">
-              <p className="text-xs text-blue-700">
-                📧 Se enviará email automático con instrucciones para configurar contraseña.
-              </p>
-            </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={crearUsuarioDirecto} disabled={savingUser}
-                className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
-                           hover:bg-teal-700 disabled:opacity-50 transition-colors">
-                {savingUser ? 'Creando...' : 'Crear usuario'}
-              </button>
-              <button onClick={() => setModalTid(null)}
-                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
-                           hover:bg-gray-200 transition-colors">
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -326,6 +258,72 @@ function UsuariosPorConsultorio({ tenants }) {
           )
         })}
       </div>
+
+      {modalTid && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setModalTid(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-1 text-gray-800">Nuevo usuario</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Consultorio: <strong>{tenants.find(t => t.id === modalTid)?.nombre}</strong>
+            </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {[['nombre','Nombre *','Juan'],['apellidos','Apellidos','García']].map(([f,l,p]) => (
+                  <div key={f}>
+                    <label className="block text-xs text-gray-500 mb-1">{l}</label>
+                    <input type="text" value={formUser[f]}
+                      onChange={e => setFormUser(x => ({ ...x, [f]: e.target.value }))}
+                      placeholder={p}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Email *</label>
+                <input type="email" value={formUser.email}
+                  onChange={e => setFormUser(x => ({ ...x, email: e.target.value }))}
+                  placeholder="usuario@consultorio.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Rol *</label>
+                <select value={formUser.rol}
+                  onChange={e => setFormUser(x => ({ ...x, rol: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400">
+                  {[
+                    ['doctor','Doctor'],['recepcion','Recepcionista'],
+                    ['enfermeria','Enfermería'],['contador','Contador'],
+                    ['farmacia','Farmacia'],['reportes','Solo Reportes'],
+                    ['dueno','Dueño de clínica'],
+                  ].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3 mt-3">
+              <p className="text-xs text-blue-700">
+                📧 Se enviará email automático con instrucciones para configurar contraseña.
+              </p>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={crearUsuarioDirecto} disabled={savingUser}
+                className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-teal-700 disabled:opacity-50 transition-colors">
+                {savingUser ? 'Creando...' : 'Crear usuario'}
+              </button>
+              <button onClick={() => setModalTid(null)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                           hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
