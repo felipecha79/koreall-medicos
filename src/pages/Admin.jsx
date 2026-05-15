@@ -73,6 +73,74 @@ function MedidorPacientes({ tenantId, plan }) {
         </p>
       )}
     </div>
+
+      {/* Modal crear usuario */}
+      {modalTid && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setModalTid(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-1 text-gray-800">Nuevo usuario</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Consultorio: <strong>{tenants.find(t=>t.id===modalTid)?.nombre}</strong>
+            </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {[['nombre','Nombre *','Juan'],['apellidos','Apellidos','García']].map(([f,l,p]) => (
+                  <div key={f}>
+                    <label className="block text-xs text-gray-500 mb-1">{l}</label>
+                    <input type="text" value={formUser[f]}
+                      onChange={e => setFormUser(x => ({ ...x, [f]: e.target.value }))}
+                      placeholder={p}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Email *</label>
+                <input type="email" value={formUser.email}
+                  onChange={e => setFormUser(x => ({ ...x, email: e.target.value }))}
+                  placeholder="doctor@consultorio.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Rol *</label>
+                <select value={formUser.rol}
+                  onChange={e => setFormUser(x => ({ ...x, rol: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400">
+                  {[
+                    ['doctor','Doctor'],['recepcion','Recepcionista'],
+                    ['enfermeria','Enfermería'],['contador','Contador'],
+                    ['farmacia','Farmacia'],['reportes','Solo Reportes'],
+                    ['dueno','Dueño de clínica'],
+                  ].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3 mt-3">
+              <p className="text-xs text-blue-700">
+                📧 Se enviará email automático con instrucciones para configurar contraseña.
+              </p>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={crearUsuarioDirecto} disabled={savingUser}
+                className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-teal-700 disabled:opacity-50 transition-colors">
+                {savingUser ? 'Creando...' : 'Crear usuario'}
+              </button>
+              <button onClick={() => setModalTid(null)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                           hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -89,7 +157,36 @@ const TABS = ['Organizaciones', 'Consultorios', 'Usuarios', 'Suscripciones', 'Si
 // ── Usuarios por consultorio (SuperAdmin) ──────────────────
 function UsuariosPorConsultorio({ tenants }) {
   const [usuariosPorTenant, setUsuariosPorTenant] = useState({})
-  const [expandido, setExpandido] = useState(null)
+  const [expandido,  setExpandido]  = useState(null)
+  const [modalTid,   setModalTid]   = useState(null)  // tenantId del modal crear usuario
+  const [formUser,   setFormUser]   = useState({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
+  const [savingUser, setSavingUser] = useState(false)
+
+  const crearUsuarioDirecto = async () => {
+    if (!formUser.nombre || !formUser.email) { toast.error('Nombre y email son obligatorios'); return }
+    setSavingUser(true)
+    try {
+      const tenant = tenants.find(t => t.id === modalTid)
+      const res = await fetch('/api/crear-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:        formUser.email.trim().toLowerCase(),
+          nombre:       formUser.nombre.trim(),
+          apellidos:    formUser.apellidos.trim(),
+          rol:          formUser.rol,
+          tenantId:     String(modalTid),
+          tenantNombre: tenant?.nombre ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error al crear usuario')
+      toast.success(`✅ Usuario creado. Email enviado a ${formUser.email}`)
+      setModalTid(null)
+      setFormUser({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
+    } catch(e) { toast.error(e.message) }
+    finally { setSavingUser(false) }
+  }
 
   useEffect(() => {
     if (!tenants.length) return
@@ -209,10 +306,19 @@ function UsuariosPorConsultorio({ tenants }) {
                       </tbody>
                     </table>
                   )}
-                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                  <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
                     <p className="text-xs text-gray-400">
-                      Para crear usuarios ve a este consultorio → módulo Usuarios del sidebar
+                      Selecciona el consultorio en el menú superior para ver su contexto completo
                     </p>
+                    <button
+                      onClick={() => {
+                        setModalTid(t.id)
+                        setFormUser({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
+                      }}
+                      className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg
+                                 hover:bg-teal-700 transition-colors flex items-center gap-1">
+                      + Agregar usuario
+                    </button>
                   </div>
                 </div>
               )}
@@ -1067,50 +1173,72 @@ export default function Admin() {
       {/* ══ Tab: Suscripciones ══════════════════════════ */}
       {tab === 'Suscripciones' && (
         <div className="space-y-3">
-          {orgs.map(org => (
-            <div key={org.id} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">{org.nombre}</p>
-                  <p className="text-xs text-gray-400">
-                    {TIPOS_ORG.find(t=>t.value===org.tipo)?.label} · Plan {org.plan?.toUpperCase()}
-                  </p>
+          {/* Un card por TENANT (no por org) — cada consultorio tiene su plan */}
+          {tenants.map(t => {
+            const planInfo = PLANES.find(p => p.value === (t.plan ?? 'pro')) ?? PLANES[2]
+            const activo   = t.suscripcionActiva !== false
+            return (
+              <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-800">{t.nombre}</p>
+                    <p className="text-xs text-gray-400 font-mono">{t.id}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {t.especialidad ?? 'Consultorio'} · Dr. {t.nombreDoctor ?? '—'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-teal-600">
+                      ${planInfo.precio.toLocaleString('es-MX')} MXN/mes
+                    </p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                      ${activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                      {activo ? '● Activo' : '● Suspendido'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-teal-600">${(org.mrr??0).toLocaleString('es-MX')} MXN/mes</p>
-                  <p className="text-xs text-gray-400">
-                    {tenants.filter(t=>t.orgId===org.id||t.id===org.id).length} consultorios
-                  </p>
+
+                <div className="flex gap-2 pt-3 border-t border-gray-100">
+                  <select
+                    value={t.plan ?? 'pro'}
+                    onChange={async (e) => {
+                      const plan = e.target.value
+                      const mrr  = PLANES.find(p => p.value === plan)?.precio ?? 0
+                      await updateDoc(doc(db, 'tenants', String(t._docId ?? t.id)), { plan })
+                      // Actualizar también la org si existe
+                      if (t.orgId) {
+                        await updateDoc(doc(db, 'organizaciones', String(t.orgId)), { plan, mrr })
+                          .catch(() => {})
+                      }
+                      toast.success(`Plan de ${t.nombre} → ${plan.toUpperCase()}`)
+                    }}
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    {PLANES.map(p => (
+                      <option key={p.value} value={p.value}>
+                        {p.label} — ${p.precio.toLocaleString('es-MX')}/mes
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => toggleSuscripcion('tenant', t._docId ?? t.id, activo)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
+                      ${activo
+                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'}`}>
+                    {activo ? '🔒 Suspender' : '✅ Reactivar'}
+                  </button>
+                </div>
+
+                {/* Medidor de pacientes */}
+                <div className="mt-2">
+                  <MedidorPacientes tenantId={String(t._docId ?? t.id)} plan={t.plan ?? 'pro'} />
                 </div>
               </div>
-              <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                <select
-                  value={org.plan ?? 'pro'}
-                  onChange={async (e) => {
-                    const plan = e.target.value
-                    const mrr  = PLANES.find(p => p.value === plan)?.precio ?? 0
-                    await updateDoc(doc(db, `organizaciones/${org.id}`), { plan, mrr })
-                    toast.success(`Plan actualizado: ${plan.toUpperCase()}`)
-                  }}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-teal-400">
-                  {PLANES.map(p => (
-                    <option key={p.value} value={p.value}>
-                      {p.label} — ${p.precio.toLocaleString('es-MX')}/mes
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => toggleSuscripcion('org', org.id, org.suscripcionActiva!==false)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
-                    ${org.suscripcionActiva!==false
-                      ? 'bg-red-50 text-red-600 border-red-200'
-                      : 'bg-green-50 text-green-600 border-green-200'}`}>
-                  {org.suscripcionActiva!==false ? '🔒 Suspender' : '✅ Reactivar'}
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
+
           <div className="bg-teal-50 rounded-xl border border-teal-200 p-4 mt-4">
             <p className="text-sm font-semibold text-teal-800">
               MRR Total: ${mrrTotal.toLocaleString('es-MX')} MXN/mes

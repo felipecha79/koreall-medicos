@@ -372,8 +372,9 @@ export default function Pacientes() {
                       ✏️ Editar
                     </button>
                     <button onClick={e => { e.stopPropagation(); navigate(`/pacientes/${p.id}`) }}
-                      className="text-xs text-teal-600 hover:underline whitespace-nowrap">
-                      Expediente →
+                      className="text-xs px-3 py-1.5 bg-teal-50 border border-teal-200 text-teal-700
+                                 rounded-lg hover:bg-teal-100 whitespace-nowrap font-medium transition-colors">
+                      📋 Expediente & Notas SOAP →
                     </button>
                   </div>
                 </td>
