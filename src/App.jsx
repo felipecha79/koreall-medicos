@@ -91,8 +91,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
                 <select value={org?.id ?? ''}
                   onChange={e => switchOrg(e.target.value)}
                   className="w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2"
-                  style={{ background: '#fff', color: textoColor, borderColor: sidebarBorde,
-                           focusRingColor: colorPrimario }}>
+                  style={{ background: '#fff', color: textoColor, borderColor: sidebarBorde }}>
                   {allOrgs.map(o => (
                     <option key={o.id} value={o.id}>{o.nombre}</option>
                   ))}
@@ -123,6 +122,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
                   <option key={t.id} value={t.id}>{t.nombre}</option>
                 ))}
               </select>
+            </div>
           ) : (
             <div className="flex items-center gap-1.5 mt-1">
               <p className="text-xs truncate font-medium" style={{color: textoColor}}>
