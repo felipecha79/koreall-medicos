@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'reac
 import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import { useTenant } from './hooks/useTenant'
+import { puedeVer, MODULO_RUTA } from './services/permisos'
 import Login              from './pages/Login'
 import Agenda             from './pages/Agenda'
 import Pacientes          from './pages/Pacientes'
@@ -24,6 +25,7 @@ import ImportarPacientes  from './pages/ImportarPacientes'
 import Telemedicina       from './pages/Telemedicina'
 
 function Spinner() {
+  const navItems = navDeRol(role, isSuperAdmin)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
@@ -41,23 +43,29 @@ function PrivateRoute({ children }) {
   return children
 }
 
-const NAV_MAIN = [
-  { to: '/agenda',      label: 'Agenda',      icon: '📅' },
-  { to: '/pacientes',   label: 'Pacientes',   icon: '👤' },
-  { to: '/importar',    label: 'Importar',    icon: '📥' },
-  { to: '/cobros',      label: 'Cobros y Pagos', icon: '💳' },
-  { to: '/suscripcion',  label: 'Mi suscripción',  icon: '📋' },
-  { to: '/facturacion', label: 'Facturación', icon: '🧾' },
-  { to: '/recetas',     label: 'Recetas',     icon: '📋' },
-  { to: '/reportes',    label: 'Reportes',    icon: '📊' },
-  { to: '/usuarios',    label: 'Usuarios',    icon: '👥' },
-  { to: '/sitio-web',   label: 'Mi sitio',    icon: '🌐' },
-  { to: '/encuesta',    label: 'Encuestas',   icon: '⭐' },
-  { to: '/telemedicina', label: 'Telemedicina', icon: '📹' },
+// Todos los items de navegación posibles
+const NAV_TODOS = [
+  { to: '/agenda',       label: 'Agenda',          icon: '📅', modulo: 'agenda'       },
+  { to: '/pacientes',    label: 'Pacientes',        icon: '👤', modulo: 'pacientes'    },
+  { to: '/expediente',   label: 'Expediente',       icon: '📋', modulo: 'expediente'   },
+  { to: '/cobros',       label: 'Cobros y Pagos',   icon: '💳', modulo: 'cobros'       },
+  { to: '/recetas',      label: 'Recetas',          icon: '💊', modulo: 'recetas'      },
+  { to: '/facturacion',  label: 'Facturación',      icon: '🧾', modulo: 'facturacion'  },
+  { to: '/reportes',     label: 'Reportes',         icon: '📊', modulo: 'reportes'     },
+  { to: '/telemedicina', label: 'Telemedicina',     icon: '📹', modulo: 'telemedicina' },
+  { to: '/sitio-web',    label: 'Mi sitio',         icon: '🌐', modulo: 'sitio'        },
+  { to: '/encuesta',     label: 'Encuestas',        icon: '⭐', modulo: 'encuesta'     },
+  { to: '/importar',     label: 'Importar CSV',     icon: '📥', modulo: 'importar'     },
+  { to: '/usuarios',     label: 'Usuarios',         icon: '👥', modulo: 'usuarios'     },
+  { to: '/suscripcion',  label: 'Mi suscripción',   icon: '📋', modulo: 'suscripcion'  },
 ]
-const NAV_BOTTOM = NAV_MAIN.slice(0, 4)
 
-function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, onClose }) {
+function navDeRol(rol, isSuperAdmin) {
+  if (isSuperAdmin) return NAV_TODOS
+  return NAV_TODOS.filter(n => puedeVer(rol ?? 'recepcion', n.modulo))
+}
+
+function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, onClose, role }) {
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
@@ -113,7 +121,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto min-h-0">
-        {NAV_MAIN.map(({ to, label, icon }) => (
+        {navItems.map(({ to, label, icon }) => (
           <NavLink key={to} to={to} onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
@@ -168,7 +176,7 @@ function BottomNav() {
 }
 
 function AppLayout({ children }) {
-  const { tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg } = useTenant()
+  const { tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, role } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'DocVias'
@@ -186,6 +194,7 @@ function AppLayout({ children }) {
           <div className="w-60 flex flex-col h-full shadow-xl">
             <Sidebar tenant={tenant} org={org} isSuperAdmin={isSuperAdmin}
               suscripcionActiva={suscripcionActiva}
+              role={role}
               allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
               switchTenant={switchTenant} switchOrg={switchOrg}
               onClose={() => setDrawerOpen(false)} />
@@ -220,6 +229,7 @@ export default function App() {
     ['/sitio-web',      <SitioWeb />],
     ['/encuesta',       <Encuesta />],
     ['/telemedicina',   <Telemedicina />],
+    ['/usuarios',       <GestionUsuarios />],
     ['/admin',          <Admin />],
   ]
   return (

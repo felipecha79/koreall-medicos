@@ -31,9 +31,23 @@ export function useTenant() {
       if (!user) { setState(s => ({ ...s, user: null, loading: false })); return }
       try {
         const token        = await getIdTokenResult(user, true)
-        const role         = token.claims.role       ?? null
+        let   role         = token.claims.role       ?? null
         const isSuperAdmin = token.claims.superAdmin === true
         const isPaciente   = role === 'paciente'
+
+        // Verificar si hay un cambio de rol pendiente en Firestore
+        // (cuando Dulce cambia el rol desde GestionUsuarios sin cerrar sesión)
+        if (!isSuperAdmin && user.uid) {
+          try {
+            const claimSnap = await getDoc(doc(db, 'claims_pendientes', user.uid))
+            if (claimSnap.exists()) {
+              const claimData = claimSnap.data()
+              if (!claimData.procesado && claimData.rol) {
+                role = claimData.rol  // usar rol actualizado de Firestore
+              }
+            }
+          } catch(e) { /* ignorar si no existe la colección */ }
+        }
 
         let tenantId = token.claims.tenantId ?? null
         let orgId    = token.claims.orgId    ?? null
@@ -58,6 +72,18 @@ export function useTenant() {
           else if (!orgId && allOrgs.length > 0) orgId = allOrgs[0].id
           // Si no hay orgs todavía, usar el tenantId como orgId (retrocompatibilidad)
           else if (!orgId && tenantId) orgId = tenantId
+        }
+
+        // Actualizar ultimoAcceso en Firestore para el usuario actual
+        if (!isSuperAdmin && tenantId && user.uid) {
+          try {
+            const { updateDoc: upd, doc: fsdoc, serverTimestamp } = await import('firebase/firestore')
+            // No bloquear — fire and forget
+            import('firebase/firestore').then(({ updateDoc, doc: d, Timestamp: T }) => {
+              updateDoc(d(db, `tenants/${tenantId}/usuarios/${user.uid}`),
+                { ultimoAcceso: T.now() }).catch(() => {})
+            })
+          } catch(e) { /* ignorar */ }
         }
 
         let tenant = null, suscripcionActiva = true, enGracia = false, diasRestantes = 0

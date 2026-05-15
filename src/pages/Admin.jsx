@@ -285,6 +285,124 @@ function PlantillasReceta({ tenants }) {
   )
 }
 
+// ── Configuración de Planes y Precios ───────────────────
+function ConfigPlanes() {
+  const PLANES_DEFAULT = [
+    { id: 'starter',    label: 'Starter',    precio: 649,  alta: 1500, activo: true,
+      descripcion: 'Hasta 50 pacientes/mes. Sin CFDI ni IA.' },
+    { id: 'basico',     label: 'Básico',     precio: 999,  alta: 2000, activo: true,
+      descripcion: '51–150 pacientes. Con telemedicina y sitio web.' },
+    { id: 'pro',        label: 'Pro',        precio: 1899, alta: 2500, activo: true,
+      descripcion: '151–350 pacientes. CFDI, IA, OCR, Reportes.' },
+    { id: 'clinica',    label: 'Clínica',    precio: 2800, alta: 3500, activo: true,
+      descripcion: '351–800 pacientes. Multi-tenant hasta 3.' },
+    { id: 'enterprise', label: 'Enterprise', precio: 6500, alta: 5000, activo: true,
+      descripcion: '800+ pacientes. Tenants ilimitados + SLA 4h.' },
+  ]
+  const [planes, setPlanes]   = useState(PLANES_DEFAULT)
+  const [saving, setSaving]   = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    getDoc(doc(db, 'configuracion', 'planes')).then(snap => {
+      if (snap.exists() && snap.data().lista) setPlanes(snap.data().lista)
+    }).catch(() => {})
+  }, [])
+
+  const guardar = async () => {
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'configuracion', 'planes'), {
+        lista: planes, actualizadoEn: Timestamp.now()
+      })
+      toast.success('Precios actualizados')
+    } catch(e) { toast.error('Error: ' + e.message) }
+    finally { setSaving(false) }
+  }
+
+  const actualizar = (id, campo, valor) =>
+    setPlanes(ps => ps.map(p => p.id === id ? { ...p, [campo]: valor } : p))
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <button onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between text-left">
+        <div>
+          <p className="text-sm font-semibold text-gray-700">💰 Planes y Precios</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Administra los precios de suscripción. Los cambios aplican a nuevos contratos.
+          </p>
+        </div>
+        <span className="text-gray-400">{expanded ? '▲' : '▼'}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-4">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  {['Plan','Descripción','Precio/mes (MXN)','Alta inicial (MXN)','Activo'].map(h => (
+                    <th key={h} className="text-left px-2 py-2 text-xs font-medium text-gray-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {planes.map(p => (
+                  <tr key={p.id}>
+                    <td className="px-2 py-2">
+                      <span className="font-semibold text-gray-800">{p.label}</span>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input type="text" value={p.descripcion}
+                        onChange={e => actualizar(p.id, 'descripcion', e.target.value)}
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs
+                                   focus:outline-none focus:ring-1 focus:ring-teal-400" />
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-400">$</span>
+                        <input type="number" value={p.precio} min="0"
+                          onChange={e => actualizar(p.id, 'precio', Number(e.target.value))}
+                          className="w-24 border border-gray-200 rounded px-2 py-1 text-sm font-semibold
+                                     focus:outline-none focus:ring-1 focus:ring-teal-400" />
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-400">$</span>
+                        <input type="number" value={p.alta} min="0"
+                          onChange={e => actualizar(p.id, 'alta', Number(e.target.value))}
+                          className="w-24 border border-gray-200 rounded px-2 py-1 text-sm
+                                     focus:outline-none focus:ring-1 focus:ring-teal-400" />
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <input type="checkbox" checked={p.activo}
+                        onChange={e => actualizar(p.id, 'activo', e.target.checked)}
+                        className="rounded" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button onClick={guardar} disabled={saving}
+              className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg
+                         hover:bg-teal-700 disabled:opacity-50 transition-colors">
+              {saving ? 'Guardando...' : '💾 Guardar precios'}
+            </button>
+            <p className="text-xs text-gray-400">
+              Los cambios aplican a nuevas suscripciones. Las activas no se afectan.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Configuración fiscal y comercial de DocVias ─────────
 function ConfigDocVias() {
   const FORM_VACIO = {
@@ -1018,6 +1136,8 @@ export default function Admin() {
           </div>
 
           {/* ── Configuración Fiscal DocVias ── */}
+          <ConfigPlanes />
+
           <ConfigDocVias />
 
           {/* ── Facturapi por consultorio ── */}
