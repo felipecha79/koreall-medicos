@@ -1272,6 +1272,20 @@ export default function Admin() {
           {/* Plantillas de receta por consultorio */}
           <PlantillasReceta tenants={tenants} />
 
+          {/* ── Importar pacientes CSV (parte del onboarding) ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">📥 Importar pacientes CSV</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Sube el padrón de pacientes durante la configuración inicial del consultorio.
+                  Incluido en el cobro de alta. También disponible para actualizaciones periódicas.
+                </p>
+              </div>
+            </div>
+            <ImportarPacientes />
+          </div>
+
           {/* ── Mapa del sistema — ABAJO ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <button onClick={() => setMapaExpanded && setMapaExpanded(v => !v)}

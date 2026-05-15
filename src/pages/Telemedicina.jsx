@@ -260,7 +260,7 @@ export default function Telemedicina() {
         <p className="text-sm text-gray-400">
           {DAILY_KEY
             ? 'Salas privadas Daily.co — hasta 4 participantes, expiran en 2h'
-            : 'Telemedicina gratuita — Whereby (sala fija) o Jitsi Meet (sala por cita)'}
+            : ''}
         </p>
       </div>
 
@@ -276,7 +276,7 @@ export default function Telemedicina() {
             &nbsp;→&nbsp; 3. Agrega en Vercel: <code className="bg-amber-100 px-1 rounded">VITE_DAILY_API_KEY=...</code>
           </p>
           <p className="text-xs text-amber-600 mt-1">
-            Sin Daily.co: usa Whereby (configura tu sala en Admin → Sistema → Videollamada) o Jitsi Meet automáticamente. Ambos gratis y sin límite de tiempo para 2 personas.
+            
           </p>
         </div>
       )}
