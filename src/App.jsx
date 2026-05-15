@@ -162,7 +162,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
 function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 flex z-40 md:hidden">
-      {NAV_BOTTOM.map(({ to, label, icon }) => (
+      {NAV_TODOS.slice(0, 4).map(({ to, label, icon }) => (
         <NavLink key={to} to={to}
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center py-2 text-xs transition-colors
@@ -179,7 +179,7 @@ function AppLayout({ children }) {
   const { tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, role } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
-  const pageTitle = NAV_MAIN.find(n => location.pathname.startsWith(n.to))?.label ?? 'DocVias'
+  const pageTitle = NAV_TODOS.find(n => location.pathname.startsWith(n.to))?.label ?? 'DocVias'
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
