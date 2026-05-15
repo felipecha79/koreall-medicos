@@ -67,51 +67,34 @@ function SelectorRango({ desde, hasta, onChange }) {
 
 const TABS = ['Pagos y facturas', 'Consultas', 'Corte diario', 'Seguimiento pacientes', 'Resumen KPIs']
 
-// CSS de impresión inyectado dinámicamente solo cuando se imprime
-const PRINT_STYLE = `
-  @media print {
-    body > * { display: none !important; }
-    #corte-diario-print { display: block !important; }
-    #corte-diario-print { position: fixed; top: 0; left: 0; width: 100%; }
-    .no-print { display: none !important; }
-    @page { margin: 15mm; size: A4; }
-  }
-`
-
 function imprimirCorte() {
   const el = document.getElementById('corte-diario-print')
   if (!el) return
-  const win = window.open('', '_blank', 'width=800,height=600')
-  win.document.write(\`
-    <html><head>
-    <title>Corte Diario — DocVias</title>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 20px; color: #1a2e42; }
-      table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
-      th { background: #1a2e42; color: white; padding: 6px 10px; text-align: left; font-size: 11px; }
-      td { padding: 5px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
-      tr:nth-child(even) { background: #f9fafb; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-      .title { font-size: 20px; font-weight: 700; }
-      .subtitle { font-size: 13px; color: #6b7280; }
-      .totales { margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; }
-      .total-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 16px; min-width: 120px; }
-      .total-label { font-size: 10px; color: #6b7280; text-transform: uppercase; }
-      .total-valor { font-size: 18px; font-weight: 700; margin-top: 2px; }
-      .footer { margin-top: 24px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-      .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
-      .badge-efectivo { background: #d1fae5; color: #065f46; }
-      .badge-tarjeta { background: #ede9fe; color: #5b21b6; }
-      .badge-stripe { background: #e0e7ff; color: #3730a3; }
-      .badge-transferencia { background: #dbeafe; color: #1e40af; }
-    </style>
-    </head><body>
-    \${el.innerHTML}
-    </body></html>
-  \`)
+  const css = [
+    'body{font-family:Arial,sans-serif;padding:20px;color:#1a2e42}',
+    'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}',
+    'th{background:#1a2e42;color:white;padding:6px 10px;text-align:left;font-size:11px}',
+    'td{padding:5px 10px;border-bottom:1px solid #e5e7eb;font-size:12px}',
+    'tr:nth-child(even){background:#f9fafb}',
+    '.total-box{border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;display:inline-block;margin:4px}',
+    '.total-label{font-size:10px;color:#6b7280;text-transform:uppercase}',
+    '.total-valor{font-size:18px;font-weight:700;margin-top:2px}',
+    '.footer{margin-top:24px;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}',
+    '.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}',
+    '.badge-efectivo{background:#d1fae5;color:#065f46}',
+    '.badge-tarjeta{background:#ede9fe;color:#5b21b6}',
+    '.badge-stripe{background:#e0e7ff;color:#3730a3}',
+    '.badge-transferencia{background:#dbeafe;color:#1e40af}',
+  ].join('')
+  const html = '<html><head><title>Corte Diario — DocVia</title>'
+    + '<style>' + css + '</style>'
+    + '</head><body>' + el.innerHTML + '</body></html>'
+  const win = window.open('', '_blank', 'width=800,height=700')
+  if (!win) { alert('Activa los popups para imprimir'); return }
+  win.document.write(html)
   win.document.close()
   win.focus()
-  setTimeout(() => { win.print(); win.close() }, 300)
+  setTimeout(function() { win.print(); win.close() }, 400)
 }
 
 export default function Reportes() {
