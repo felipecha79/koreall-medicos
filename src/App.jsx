@@ -46,7 +46,7 @@ function PrivateRoute({ children }) {
 const NAV_TODOS = [
   { to: '/agenda',       label: 'Agenda',          icon: '📅', modulo: 'agenda'       },
   { to: '/pacientes',    label: 'Pacientes',        icon: '👤', modulo: 'pacientes'    },
-  { to: '/expediente',   label: 'Expediente',       icon: '📋', modulo: 'expediente'   },
+  { to: '/pacientes',    label: 'Expedientes',      icon: '📋', modulo: 'expediente'   },
   { to: '/cobros',       label: 'Cobros y Pagos',   icon: '💳', modulo: 'cobros'       },
   { to: '/recetas',      label: 'Recetas',          icon: '💊', modulo: 'recetas'      },
   { to: '/facturacion',  label: 'Facturación',      icon: '🧾', modulo: 'facturacion'  },

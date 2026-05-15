@@ -14,6 +14,166 @@ import { PLANTILLAS_SOAP, LISTA_PLANTILLAS } from '../data/plantillasSOAP'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
+// NOM-004-SSA3-2012 — Tipos de notas médicas
+const TIPOS_NOTA = {
+  inicial: {
+    id: 'inicial',
+    label: 'Nota Inicial',
+    icon: '🏥',
+    color: 'bg-teal-100 text-teal-800 border-teal-300',
+    descripcion: 'Primera valoración del paciente',
+    campos: [
+      // Datos de identificación (ya están en el expediente)
+      // Motivo de consulta
+      { id: 'motivoConsulta',     label: 'Motivo de consulta',                tipo: 'textarea', required: true,
+        guia: 'Causa principal por la que el paciente solicita atención médica. Describir en palabras del paciente.' },
+      // Antecedentes heredofamiliares
+      { id: 'antHeredofam',       label: 'Antecedentes heredofamiliares',     tipo: 'textarea',
+        guia: 'Enfermedades en familiares directos: padres, hermanos, abuelos. Diabetes, HAS, cardiopatías, cáncer, etc.' },
+      // Antecedentes personales no patológicos
+      { id: 'antNoPatologicos',   label: 'Antecedentes personales no patológicos', tipo: 'textarea',
+        guia: 'Tabaquismo, alcoholismo, toxicomanías, alimentación, actividad física, ocupación, escolaridad, estado civil.' },
+      // Antecedentes personales patológicos
+      { id: 'antPatologicos',     label: 'Antecedentes personales patológicos', tipo: 'textarea',
+        guia: 'Enfermedades, cirugías, hospitalizaciones, traumatismos, alergias, transfusiones previas.' },
+      // Antecedentes gineco-obstétricos (si aplica)
+      { id: 'antGinecoObstet',    label: 'Antecedentes gineco-obstétricos',   tipo: 'textarea', opcional: true,
+        guia: 'FUM, gestas, partos, cesáreas, abortos, método anticonceptivo. Dejar en blanco si no aplica.' },
+      // Padecimiento actual
+      { id: 'padecimientoActual', label: 'Padecimiento actual (S)',           tipo: 'textarea', required: true,
+        guia: 'S — Subjetivo. Descripción cronológica del padecimiento: inicio, evolución, síntomas asociados, tratamientos previos.' },
+      // Exploración física
+      { id: 'exploracionFisica',  label: 'Exploración física (O)',            tipo: 'textarea', required: true,
+        guia: 'O — Objetivo. Signos vitales ya registrados arriba. Hallazgos por aparatos y sistemas relevantes.' },
+      // Resultados de laboratorio/gabinete
+      { id: 'resultadosEstudios', label: 'Resultados de laboratorio y gabinete', tipo: 'textarea', opcional: true,
+        guia: 'Resultados de estudios previos relevantes para el caso.' },
+      // Diagnóstico
+      { id: 'diagnostico',        label: 'Diagnóstico (A)',                   tipo: 'text',     required: true,
+        guia: 'A — Diagnóstico nosológico o sindromático. Incluir diferenciales si aplica.' },
+      { id: 'cie10',              label: 'Código CIE-10',                     tipo: 'text',
+        guia: 'Ej: J06.9, E11, I10' },
+      // Plan terapéutico
+      { id: 'tratamiento',        label: 'Plan terapéutico (P)',              tipo: 'textarea', required: true,
+        guia: 'P — Medicamentos con dosis, vía y frecuencia. Procedimientos indicados.' },
+      { id: 'indicaciones',       label: 'Indicaciones no farmacológicas',    tipo: 'textarea',
+        guia: 'Dieta, reposo, actividad física, medidas higiénicas.' },
+      { id: 'planSeguimiento',    label: 'Plan de seguimiento y pronóstico',  tipo: 'textarea',
+        guia: 'Próxima cita, estudios pendientes, criterios de alarma, pronóstico.' },
+    ]
+  },
+
+  evolucion: {
+    id: 'evolucion',
+    label: 'Nota de Evolución',
+    icon: '📈',
+    color: 'bg-blue-100 text-blue-800 border-blue-300',
+    descripcion: 'Seguimiento y evolución del paciente',
+    campos: [
+      { id: 'motivoConsulta',     label: 'Motivo de la consulta',             tipo: 'textarea', required: true,
+        guia: 'Razón de la consulta de seguimiento. ¿Cómo ha evolucionado el padecimiento?' },
+      { id: 'subjetivo',          label: 'Subjetivo (S)',                     tipo: 'textarea', required: true,
+        guia: 'S — Síntomas referidos por el paciente. Evolución desde la última consulta.' },
+      { id: 'exploracionFisica',  label: 'Objetivo (O)',                      tipo: 'textarea', required: true,
+        guia: 'O — Exploración física actual. Cambios respecto a consulta previa.' },
+      { id: 'diagnostico',        label: 'Análisis (A)',                      tipo: 'text',     required: true,
+        guia: 'A — Diagnóstico actual. ¿Mejoría, deterioro, sin cambios?' },
+      { id: 'cie10',              label: 'CIE-10',                           tipo: 'text' },
+      { id: 'tratamiento',        label: 'Plan (P)',                          tipo: 'textarea', required: true,
+        guia: 'P — Ajuste o continuación del tratamiento. Nuevas indicaciones.' },
+      { id: 'planSeguimiento',    label: 'Próxima cita y seguimiento',        tipo: 'textarea',
+        guia: 'Fecha de seguimiento, estudios pendientes, criterios de alarma.' },
+    ]
+  },
+
+  urgencias: {
+    id: 'urgencias',
+    label: 'Nota de Urgencias',
+    icon: '🚨',
+    color: 'bg-red-100 text-red-800 border-red-300',
+    descripcion: 'Atención de urgencia',
+    campos: [
+      { id: 'motivoConsulta',     label: 'Motivo de urgencia',                tipo: 'textarea', required: true,
+        guia: 'Descripción del problema urgente. Hora de inicio, mecanismo de lesión si aplica.' },
+      { id: 'estadoConciencia',   label: 'Estado de conciencia / Triage',     tipo: 'text',
+        guia: 'Alerta, orientado, Glasgow si aplica. Nivel de triage (I-V).' },
+      { id: 'padecimientoActual', label: 'Padecimiento actual (S)',           tipo: 'textarea', required: true,
+        guia: 'Descripción cronológica del evento urgente.' },
+      { id: 'exploracionFisica',  label: 'Exploración física (O)',            tipo: 'textarea', required: true,
+        guia: 'Estado general, signos vitales (ya registrados), hallazgos relevantes por sistemas.' },
+      { id: 'resultadosEstudios', label: 'Estudios de urgencia',              tipo: 'textarea',
+        guia: 'Laboratorio, imagen, ECG, etc. realizados en urgencias.' },
+      { id: 'diagnostico',        label: 'Diagnóstico (A)',                   tipo: 'text',     required: true,
+        guia: 'Diagnóstico de urgencia o impresión diagnóstica.' },
+      { id: 'cie10',              label: 'CIE-10',                           tipo: 'text' },
+      { id: 'tratamiento',        label: 'Manejo y tratamiento (P)',          tipo: 'textarea', required: true,
+        guia: 'Medidas inmediatas, medicamentos, procedimientos realizados.' },
+      { id: 'planSeguimiento',    label: 'Destino del paciente',              tipo: 'textarea', required: true,
+        guia: 'Alta, hospitalización, interconsulta, referencia. Condición al egreso.' },
+    ]
+  },
+
+  interconsulta: {
+    id: 'interconsulta',
+    label: 'Nota de Interconsulta',
+    icon: '🔄',
+    color: 'bg-purple-100 text-purple-800 border-purple-300',
+    descripcion: 'Solicitud o respuesta de interconsulta',
+    campos: [
+      { id: 'servicioSolicitante', label: 'Servicio / Médico solicitante',   tipo: 'text',
+        guia: 'Nombre del médico o especialidad que solicita la interconsulta.' },
+      { id: 'servicioConsultado',  label: 'Servicio consultado',             tipo: 'text', required: true,
+        guia: 'Especialidad a la que se solicita la interconsulta.' },
+      { id: 'motivoConsulta',     label: 'Motivo de la interconsulta',       tipo: 'textarea', required: true,
+        guia: 'Problema específico por el que se solicita la opinión especializada.' },
+      { id: 'padecimientoActual', label: 'Resumen del caso (S)',             tipo: 'textarea', required: true,
+        guia: 'S — Resumen clínico relevante del paciente para el especialista.' },
+      { id: 'exploracionFisica',  label: 'Exploración relevante (O)',        tipo: 'textarea',
+        guia: 'O — Hallazgos pertinentes a la interconsulta.' },
+      { id: 'resultadosEstudios', label: 'Estudios relacionados',            tipo: 'textarea',
+        guia: 'Resultados de laboratorio, imagen u otros estudios relevantes.' },
+      { id: 'diagnostico',        label: 'Diagnóstico de envío (A)',         tipo: 'text',     required: true,
+        guia: 'A — Diagnóstico por el que se solicita la interconsulta.' },
+      { id: 'cie10',              label: 'CIE-10',                           tipo: 'text' },
+      { id: 'tratamiento',        label: 'Opinión / Recomendación (P)',      tipo: 'textarea', required: true,
+        guia: 'P — Respuesta de la interconsulta: diagnóstico, plan, medicamentos recomendados.' },
+      { id: 'planSeguimiento',    label: 'Seguimiento y acuerdos',           tipo: 'textarea',
+        guia: 'Acuerdos entre servicios, citas de seguimiento, criterios de re-interconsulta.' },
+    ]
+  },
+
+  egreso: {
+    id: 'egreso',
+    label: 'Nota de Egreso',
+    icon: '🏠',
+    color: 'bg-green-100 text-green-800 border-green-300',
+    descripcion: 'Alta o egreso del paciente',
+    campos: [
+      { id: 'fechaIngreso',       label: 'Fecha de ingreso / inicio',        tipo: 'text',
+        guia: 'Fecha en que inició la atención o el internamiento.' },
+      { id: 'motivoConsulta',     label: 'Diagnóstico de ingreso',           tipo: 'text',     required: true,
+        guia: 'Diagnóstico con el que ingresó o inició el tratamiento.' },
+      { id: 'padecimientoActual', label: 'Resumen de la evolución',          tipo: 'textarea', required: true,
+        guia: 'Descripción de la evolución durante el tratamiento: cambios, complicaciones, respuesta.' },
+      { id: 'resultadosEstudios', label: 'Estudios realizados',              tipo: 'textarea',
+        guia: 'Resumen de laboratorios, imagen y otros estudios durante el episodio.' },
+      { id: 'tratamiento',        label: 'Tratamiento recibido',             tipo: 'textarea', required: true,
+        guia: 'Medicamentos, procedimientos y manejos realizados durante el episodio.' },
+      { id: 'diagnostico',        label: 'Diagnóstico de egreso',            tipo: 'text',     required: true,
+        guia: 'Diagnóstico final confirmado al egreso.' },
+      { id: 'cie10',              label: 'CIE-10',                           tipo: 'text' },
+      { id: 'condicionEgreso',    label: 'Condición al egreso',              tipo: 'text',
+        guia: 'Curado, mejorado, sin cambios, agravado, voluntario. Condición general.' },
+      { id: 'indicaciones',       label: 'Indicaciones para el hogar',       tipo: 'textarea', required: true,
+        guia: 'Medicamentos con dosis y horario, cuidados en casa, dieta, actividad, signos de alarma.' },
+      { id: 'planSeguimiento',    label: 'Plan de seguimiento ambulatorio',  tipo: 'textarea', required: true,
+        guia: 'Próxima cita, médico responsable del seguimiento, referencia si aplica.' },
+    ]
+  },
+}
+
+const TIPOS_NOTA_LISTA = Object.values(TIPOS_NOTA)
+
 const TIPO_DOC = {
   laboratorio: { label: 'Laboratorio',    color: 'bg-teal-100 text-teal-700 border-teal-200' },
   imagen:      { label: 'Imagen/Estudio', color: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -55,10 +215,16 @@ export default function Expediente() {
   const fileInputRef = useRef()
 
   const [plantillaId, setPlantillaId] = useState('general')
+  const [tipoNota, setTipoNota]       = useState('evolucion')
   const [formConsulta, setFormConsulta] = useState({
     motivoConsulta:'', exploracionFisica:'', diagnostico:'',
     cie10:'', tratamiento:'', indicaciones:'', peso:'', talla:'',
     ta:'', fc:'', fr:'', temperatura:'', spo2:'',
+    // Campos adicionales NOM-004
+    antHeredofam:'', antNoPatologicos:'', antPatologicos:'', antGinecoObstet:'',
+    padecimientoActual:'', subjetivo:'', resultadosEstudios:'', planSeguimiento:'',
+    estadoConciencia:'', condicionEgreso:'', fechaIngreso:'',
+    servicioSolicitante:'', servicioConsultado:'',
   })
   const [formDoc, setFormDoc] = useState({
     tipo:'laboratorio', nombre:'', motivo:'', consultaId:'', notas:'', archivo: null,
@@ -141,6 +307,7 @@ export default function Expediente() {
     try {
       const consultaRef = await addDoc(collection(db, `tenants/${tenantId}/consultas`), {
         ...formConsulta, pacienteId: id, tenantId,
+        tipoNota, tipoNotaLabel: TIPOS_NOTA[tipoNota]?.label ?? tipoNota,
         fecha: Timestamp.now(), subidoPor: user?.uid ?? '',
       })
       if (formConsulta.peso || formConsulta.ta || formConsulta.fc) {
@@ -702,63 +869,165 @@ export default function Expediente() {
 
       {/* ═══════════ MODALES ═══════════ */}
 
-      {/* Modal nueva consulta */}
+      {/* ═══ Modal nueva nota clínica NOM-004-SSA3-2012 ═══ */}
       {modalConsulta && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={()=>setModalConsulta(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-5 text-gray-800">Nueva consulta — {paciente.nombre}</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3"
+          onClick={() => setModalConsulta(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[95vh]
+                          flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}>
 
-            {/* Selector de plantilla */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-2">Plantilla clínica</label>
-              <div className="flex gap-1.5 flex-wrap">
-                {LISTA_PLANTILLAS.map(pl => (
-                  <button key={pl.id}
-                    onClick={() => {
-                      setPlantillaId(pl.id)
-                      setFormConsulta(fc => ({
-                        ...fc,
-                        motivoConsulta: '', exploracionFisica: '', diagnostico: '',
-                        cie10: '', tratamiento: '', indicaciones: '',
-                      }))
-                    }}
-                    className={`text-xs px-3 py-1.5 rounded-lg border transition-all
-                      ${plantillaId === pl.id
-                        ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-                    {pl.icono} {pl.nombre}
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-base font-semibold text-gray-800">
+                  Nueva nota clínica — {paciente?.nombre} {paciente?.apellidos}
+                </h3>
+                <button onClick={() => setModalConsulta(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+              </div>
+              <p className="text-xs text-gray-400">NOM-004-SSA3-2012 · Del expediente clínico</p>
+            </div>
+
+            {/* Selector de tipo de nota */}
+            <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Tipo de nota *
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {TIPOS_NOTA_LISTA.map(t => (
+                  <button key={t.id}
+                    onClick={() => setTipoNota(t.id)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border-2
+                                font-medium transition-all ${tipoNota === t.id
+                      ? t.color + ' border-current'
+                      : 'border-gray-200 text-gray-500 bg-white hover:border-gray-300'}`}>
+                    <span>{t.icon}</span>
+                    <span>{t.label}</span>
                   </button>
                 ))}
               </div>
+              {tipoNota && (
+                <p className="text-xs text-gray-400 mt-1.5 italic">
+                  {TIPOS_NOTA[tipoNota]?.descripcion}
+                </p>
+              )}
             </div>
 
-            <p className="text-xs font-medium text-gray-500 uppercase mb-2">Signos vitales</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-              {[['peso','Peso (kg)','number'],['talla','Talla (cm)','number'],['ta','TA (mmHg)','text'],['fc','FC (lpm)','number'],['temperatura','Temp (°C)','number'],['spo2','SpO₂ (%)','number']].map(([f,l,t])=>(
-                <div key={f}>
-                  <label className="block text-xs text-gray-400 mb-0.5">{l}</label>
-                  <input type={t} value={formConsulta[f]} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))}
-                    className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"/>
+            {/* Cuerpo scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+              {/* Signos vitales — siempre presentes */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <span>❤️</span> Signos vitales
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-gray-50 rounded-xl">
+                  {[
+                    ['peso','Peso (kg)','number'],
+                    ['talla','Talla (cm)','number'],
+                    ['ta','TA (mmHg)','text'],
+                    ['fc','FC (lpm)','number'],
+                    ['temperatura','Temp (°C)','number'],
+                    ['spo2','SpO₂ (%)','number'],
+                  ].map(([f,l,t]) => (
+                    <div key={f}>
+                      <label className="block text-xs text-gray-400 mb-0.5">{l}</label>
+                      <input type={t} value={formConsulta[f] ?? ''}
+                        onChange={e => setFormConsulta(fc => ({ ...fc, [f]: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm
+                                   focus:outline-none focus:ring-1 focus:ring-teal-400 bg-white" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Campos según tipo de nota */}
+              {tipoNota && TIPOS_NOTA[tipoNota]?.campos.map(campo => (
+                <div key={campo.id}>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    {campo.label}
+                    {campo.required && <span className="text-red-400 ml-0.5">*</span>}
+                    {campo.opcional && <span className="text-gray-400 ml-1 font-normal">(opcional)</span>}
+                  </label>
+                  {campo.tipo === 'textarea' ? (
+                    <textarea
+                      value={formConsulta[campo.id] ?? ''}
+                      rows={3}
+                      placeholder={campo.guia ?? ''}
+                      onChange={e => setFormConsulta(fc => ({ ...fc, [campo.id]: e.target.value }))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
+                  ) : (
+                    <input type="text"
+                      value={formConsulta[campo.id] ?? ''}
+                      placeholder={campo.guia ?? ''}
+                      onChange={e => setFormConsulta(fc => ({ ...fc, [campo.id]: e.target.value }))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  )}
+                  {campo.guia && (
+                    <p className="text-xs text-gray-400 mt-0.5 italic leading-tight">
+                      {campo.guia}
+                    </p>
+                  )}
                 </div>
               ))}
-            </div>
-            <div className="space-y-3">
-              {[['motivoConsulta','Motivo de consulta','textarea'],['exploracionFisica','Exploración física','textarea'],['diagnostico','Diagnóstico *','text'],['cie10','CIE-10','text'],['tratamiento','Tratamiento','textarea'],['indicaciones','Indicaciones','textarea']].map(([f,l,t])=>{
-                const guia = PLANTILLAS_SOAP[plantillaId]?.guias?.[f]
-                return (
-                <div key={f}>
-                  <label className="block text-xs text-gray-500 mb-1">{l}</label>
-                  {t==='textarea'
-                    ?<textarea value={formConsulta[f]} rows={2} placeholder={guia ?? ''} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"/>
-                    :<input type="text" value={formConsulta[f]} placeholder={guia ?? ''} onChange={e=>setFormConsulta(fc=>({...fc,[f]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"/>
-                  }
-                  {guia && <p className="text-xs text-gray-400 mt-0.5 italic">{guia}</p>}
+
+              {/* Plantilla de especialidad */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Plantilla de especialidad
+                </p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {LISTA_PLANTILLAS.map(pl => (
+                    <button key={pl.id}
+                      onClick={() => setPlantillaId(pl.id)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all
+                        ${plantillaId === pl.id
+                          ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                          : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}>
+                      {pl.icono} {pl.nombre}
+                    </button>
+                  ))}
                 </div>
-              )})}
+              </div>
+
+              {/* Nota interna (no visible al paciente) */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Notas internas
+                  <span className="text-gray-400 ml-1 font-normal">(no visible al paciente)</span>
+                </label>
+                <textarea
+                  value={formConsulta.notasInternas ?? ''}
+                  rows={2}
+                  placeholder="Observaciones privadas, recordatorios, coordinación con equipo..."
+                  onChange={e => setFormConsulta(fc => ({ ...fc, notasInternas: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none
+                             bg-amber-50 border-amber-200" />
+              </div>
+
             </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={guardarConsulta} className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-teal-700">Guardar consulta</button>
-              <button onClick={()=>setModalConsulta(false)} className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm hover:bg-gray-200">Cancelar</button>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+              <div className="flex gap-3">
+                <button onClick={guardarConsulta}
+                  className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm
+                             font-semibold hover:bg-teal-700 transition-colors">
+                  Guardar nota clínica
+                </button>
+                <button onClick={() => setModalConsulta(false)}
+                  className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                             hover:bg-gray-200 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                NOM-004-SSA3-2012 · Nota firmada electrónicamente por {'{'}user?.email{'}'}
+              </p>
             </div>
           </div>
         </div>
