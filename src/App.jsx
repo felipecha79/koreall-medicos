@@ -25,7 +25,6 @@ import ImportarPacientes  from './pages/ImportarPacientes'
 import Telemedicina       from './pages/Telemedicina'
 
 function Spinner() {
-  const navItems = navDeRol(role, isSuperAdmin)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
@@ -66,6 +65,7 @@ function navDeRol(rol, isSuperAdmin) {
 }
 
 function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, onClose, role }) {
+  const navItems = navDeRol(role, isSuperAdmin)
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-white">
       <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
