@@ -2,12 +2,9 @@
 // Videollamada integrada usando Daily.co — sin instalar nada, funciona en el browser
 //
 // CONFIGURACIÓN REQUERIDA:
-//   1. Crear cuenta gratis en daily.co (10,000 min/mes gratis)
-//   2. Obtener API Key en Daily.co → Developers → API Keys
 //   3. Agregar en Vercel: VITE_DAILY_API_KEY=xxxxx
 //
 // ALTERNATIVA SIN CUENTA (Jitsi):
-//   Si no configuras VITE_DAILY_API_KEY, el sistema usa Jitsi Meet automáticamente
 //   (gratis, sin límites, sin cuenta) — menos control sobre la UI
 
 import { useState, useEffect, useRef } from 'react'
@@ -257,29 +254,10 @@ export default function Telemedicina() {
     <div className="p-4 md:p-6 max-w-4xl">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Telemedicina</h2>
-        <p className="text-sm text-gray-400">
-          {DAILY_KEY
-            ? 'Salas privadas Daily.co — hasta 4 participantes, expiran en 2h'
-            : ''}
-        </p>
+
       </div>
 
-      {/* Banner configuración */}
-      {!DAILY_KEY && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
-          <p className="text-sm font-medium text-amber-800 mb-1">
-            ⚡ Para salas privadas con tu marca: configura Daily.co
-          </p>
-          <p className="text-xs text-amber-700">
-            1. Crea cuenta gratis en daily.co (10,000 min/mes gratuitos)
-            &nbsp;→&nbsp; 2. Copia tu API Key
-            &nbsp;→&nbsp; 3. Agrega en Vercel: <code className="bg-amber-100 px-1 rounded">VITE_DAILY_API_KEY=...</code>
-          </p>
-          <p className="text-xs text-amber-600 mt-1">
-            
-          </p>
-        </div>
-      )}
+
 
       {/* Lista de citas del día */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

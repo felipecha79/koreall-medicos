@@ -1288,15 +1288,14 @@ export default function Admin() {
 
           {/* ── Mapa del sistema — ABAJO ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <button onClick={() => setMapaExpanded && setMapaExpanded(v => !v)}
-              className="w-full flex items-center justify-between text-left">
+            <div className="w-full flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-700">🗺️ Arquitectura del sistema</p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   Mapa completo: BD, hosting, servicios satélite y flujo de datos
                 </p>
               </div>
-            </button>
+            </div>
             <div className="mt-4 space-y-4">
               {/* Stack principal */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

@@ -448,7 +448,23 @@ export default function PortalPaciente() {
       query(collection(db, `tenants/${tenantId}/cobros`),
             where('pacienteId', '==', paciente.id),
             orderBy('fechaPago','desc')),
-      snap => setCobros(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => setCobros(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {
+        // Fallback sin orderBy si falla el índice
+        onSnapshot(
+          query(collection(db, `tenants/${tenantId}/cobros`),
+                where('pacienteId', '==', paciente.id)),
+          snap2 => {
+            const docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }))
+            docs.sort((a, b) => {
+              const ta = a.fechaPago?.toDate?.()?.getTime?.() ?? 0
+              const tb = b.fechaPago?.toDate?.()?.getTime?.() ?? 0
+              return tb - ta
+            })
+            setCobros(docs)
+          }
+        )
+      }
     )
     const unsubFacturas = onSnapshot(
       query(collection(db, `tenants/${tenantId}/facturas`),
@@ -520,7 +536,7 @@ export default function PortalPaciente() {
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">MediDesk</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">DocVia</h1>
         <p className="text-sm text-gray-500 mb-6">Portal del paciente</p>
         <a href="/login"
           className="block w-full px-6 py-3 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700">
@@ -558,7 +574,7 @@ export default function PortalPaciente() {
       <div className="bg-slate-900 text-white px-4 py-3 sticky top-0 z-30">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-sm font-bold leading-tight">MediDesk</h1>
+            <h1 className="text-sm font-bold leading-tight">DocVia</h1>
             <p className="text-xs text-slate-400 leading-tight truncate max-w-[140px]">
               {tenant?.nombre ?? 'Portal del paciente'}
             </p>

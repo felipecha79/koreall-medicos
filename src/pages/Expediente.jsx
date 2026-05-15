@@ -583,8 +583,9 @@ export default function Expediente() {
                   + Receta sin consulta
                 </button>
                 <button onClick={() => setModalConsulta(true)}
-                  className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700">
-                  + Nueva consulta
+                  className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg
+                             hover:bg-teal-700 flex items-center gap-1.5">
+                  📝 Nueva nota clínica (SOAP)
                 </button>
               </div>
             </div>
