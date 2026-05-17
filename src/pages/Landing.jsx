@@ -739,14 +739,10 @@ export default function Landing() {
         <div className="modal">
           <button className="mclose" onClick={closeModal}>✕</button>
           <h3>Bienvenido</h3>
-          <p className="msub">Seleccione su perfil para continuar</p>
-          <div className="rtabs">
-            {[['doctor','🩺','Doctor'],['recepcion','👩‍💼','Recepción'],['paciente','👤','Paciente']].map(([r,ico,lbl]) => (
-              <div key={r} className={`rt ${role===r?'active':''}`} onClick={() => setRole(r)}>
-                <span className="rt-ico">{ico}</span>{lbl}
-              </div>
-            ))}
-          </div>
+          <p className="msub">Ingresa con tu correo y contraseña</p>
+          <p style={{fontSize:12,color:'#9ca3af',marginBottom:8,textAlign:'center'}}>
+            El sistema reconoce tu rol automáticamente
+          </p>
           <form onSubmit={handleLogin}>
             <div className="mfg">
               <label>Correo electrónico</label>

@@ -32,10 +32,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
@@ -45,5 +41,11 @@
       "path": "/api/cron-suscripciones",
       "schedule": "0 8 1 * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  }
 }
