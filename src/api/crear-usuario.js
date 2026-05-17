@@ -23,14 +23,38 @@ function generarPassword() {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end()
+  // Siempre responder JSON aunque falle
+  res.setHeader('Content-Type', 'application/json')
 
-  const { email, nombre, apellidos, rol, tenantId, tenantNombre } = req.body
-  if (!email || !nombre || !rol || !tenantId) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' })
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método no permitido' })
   }
 
-  const { auth, db } = getAdmin()
+  // Verificar variables de entorno críticas
+  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+    return res.status(500).json({
+      error: 'Variables de entorno de Firebase Admin no configuradas. ' +
+             'Agrega FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en Vercel → Settings → Environment Variables.'
+    })
+  }
+
+  const body = req.body ?? {}
+  const { email, nombre, apellidos, rol, tenantId, tenantNombre } = body
+
+  if (!email || !nombre || !rol || !tenantId) {
+    return res.status(400).json({ error: 'Faltan campos: email, nombre, rol y tenantId son obligatorios' })
+  }
+
+  let auth, db
+  try {
+    const admin = getAdmin()
+    auth = admin.auth
+    db   = admin.db
+  } catch(initErr) {
+    console.error('[crear-usuario] Firebase Admin init error:', initErr)
+    return res.status(500).json({ error: 'Error al inicializar Firebase Admin: ' + initErr.message })
+  }
+
   const passwordTemporal = generarPassword()
 
   try {
@@ -142,6 +166,6 @@ export default async function handler(req, res) {
     })
   } catch(e) {
     console.error('[crear-usuario]', e)
-    return res.status(500).json({ error: e.message })
+    return res.status(500).json({ error: e.message ?? 'Error interno del servidor' })
   }
 }
