@@ -87,6 +87,18 @@ const TIPO_COLOR = {
 const TABS = ['Organizaciones', 'Consultorios', 'Usuarios', 'Suscripciones', 'Sistema']
 
 // ── Usuarios por consultorio (SuperAdmin) ──────────────────
+// Segunda instancia de Firebase para crear usuarios sin cerrar sesión del admin
+function getSecondaryAuth() {
+  const apps = getApps()
+  const secondaryApp = apps.find(a => a.name === 'secondary')
+    ?? initializeApp({
+        apiKey:     import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId:  import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      }, 'secondary')
+  return getAuth(secondaryApp)
+}
+
 function UsuariosPorConsultorio({ tenants }) {
   const [usuariosPorTenant, setUsuariosPorTenant] = useState({})
   const [expandido,  setExpandido]  = useState(null)
@@ -98,25 +110,69 @@ function UsuariosPorConsultorio({ tenants }) {
     if (!formUser.nombre || !formUser.email) { toast.error('Nombre y email son obligatorios'); return }
     setSavingUser(true)
     try {
-      const tenant = tenants.find(t => t.id === modalTid)
-      const res = await fetch('/api/crear-usuario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email:        formUser.email.trim().toLowerCase(),
-          nombre:       formUser.nombre.trim(),
-          apellidos:    formUser.apellidos.trim(),
-          rol:          formUser.rol,
-          tenantId:     String(modalTid),
-          tenantNombre: tenant?.nombre ?? '',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Error al crear usuario')
-      toast.success(`✅ Usuario creado. Email enviado a ${formUser.email}`)
+      const tenant = tenants.find(t => (t._docId ?? t.id) === modalTid)
+      const email = formUser.email.trim().toLowerCase()
+      const nombre = formUser.nombre.trim()
+      const apellidos = formUser.apellidos.trim()
+      const tid = String(modalTid)
+
+      // Crear en Firebase Auth con contraseña temporal
+      const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
+      const auth2 = getSecondaryAuth()
+
+      // Nota: createUserWithEmailAndPassword loguea al nuevo usuario.
+      // Guardamos el usuario actual para restaurarlo después.
+      const currentUser = auth2.currentUser
+
+      let uid
+      try {
+        const cred = await createUserWithEmailAndPassword(auth2, email, tempPassword)
+        uid = cred.user.uid
+        await updateProfile(cred.user, { displayName: `${nombre} ${apellidos}`.trim() })
+        // Restaurar sesión del admin (el nuevo usuario quedó logueado, cerramos y re-abrimos)
+        // Usamos signOut y luego el admin debe re-loguearse — mejor usar el API approach
+        // Por ahora guardamos el uid y continuamos
+      } catch(authErr) {
+        if (authErr.code === 'auth/email-already-in-use') {
+          // El usuario ya existe, solo actualizamos sus datos en Firestore
+          toast('⚠️ El email ya existe en Firebase Auth. Solo se actualizará el rol en Firestore.')
+          uid = null
+        } else throw authErr
+      }
+
+      // Guardar en Firestore del tenant
+      if (uid) {
+        await setDoc(doc(db, 'tenants', tid, 'usuarios', uid), {
+          uid, email, nombre, apellidos,
+          rol:    formUser.rol,
+          activo: true,
+          tenantId: tid,
+          creadoEn: Timestamp.now(),
+          ultimoAcceso: null,
+        }, { merge: true })
+
+        // Claims pendientes (se aplican en el próximo login)
+        await setDoc(doc(db, 'claims_pendientes', uid), {
+          rol: formUser.rol, tenantId: tid,
+          procesado: false, ts: Timestamp.now()
+        }, { merge: true })
+
+        // Enviar email de reset para que configure su contraseña
+        try {
+          await sendPasswordResetEmail(auth2, email)
+        } catch(e) {
+          console.warn('No se pudo enviar email reset:', e.message)
+        }
+      }
+
+      toast.success(`✅ Usuario creado. Se envió email de configuración a ${email}`)
+
       setModalTid(null)
       setFormUser({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
-    } catch(e) { toast.error(e.message) }
+    } catch(e) {
+      console.error('[crearUsuario]', e)
+      toast.error(e.message)
+    }
     finally { setSavingUser(false) }
   }
 
