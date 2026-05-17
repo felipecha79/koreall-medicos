@@ -107,7 +107,30 @@ function UsuariosPorConsultorio({ tenants }) {
   const [modalTid,   setModalTid]   = useState(null)
   const [formUser,   setFormUser]   = useState({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
   const [savingUser, setSavingUser] = useState(false)
-  const [resetEmail, setResetEmail] = useState(null)  // email para modal de reset
+  const [resetEmail,  setResetEmail]  = useState(null)
+  const [editRolUser, setEditRolUser] = useState(null)  // {uid, email, nombre, rol, tenantId}
+
+  const guardarRol = async () => {
+    if (!editRolUser) return
+    try {
+      await setDoc(
+        doc(db, 'tenants', String(editRolUser.tenantId), 'usuarios', editRolUser.uid),
+        { rol: editRolUser.rolNuevo, actualizadoEn: Timestamp.now() },
+        { merge: true }
+      )
+      // Marcar claims pendientes para que aplique en próximo login
+      await setDoc(doc(db, 'claims_pendientes', editRolUser.uid), {
+        rol: editRolUser.rolNuevo,
+        tenantId: String(editRolUser.tenantId),
+        procesado: false,
+        ts: Timestamp.now()
+      }, { merge: true })
+      toast.success(`Rol de ${editRolUser.nombre} actualizado a ${editRolUser.rolNuevo}`)
+      setEditRolUser(null)
+    } catch(e) {
+      toast.error('Error: ' + e.message)
+    }
+  }
 
   const enviarResetPassword = async () => {
     if (!resetEmail) return
@@ -295,9 +318,17 @@ function UsuariosPorConsultorio({ tenants }) {
                             <td className="px-4 py-2 font-medium text-gray-800">{u.nombre}</td>
                             <td className="px-4 py-2 text-gray-500 text-xs">{u.email}</td>
                             <td className="px-4 py-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[u.rol] ?? 'bg-gray-100 text-gray-500'}`}>
-                                {u.rol}
-                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[u.rol] ?? 'bg-gray-100 text-gray-500'}`}>
+                                  {u.rol}
+                                </span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditRolUser({ uid: u.uid ?? u.id, email: u.email, nombre: u.nombre, rol: u.rol, rolNuevo: u.rol, tenantId: t.id }) }}
+                                  className="text-gray-300 hover:text-gray-500 transition-colors"
+                                  title="Cambiar rol">
+                                  ✏️
+                                </button>
+                              </div>
                             </td>
                             <td className="px-4 py-2">
                               <span className={`text-xs px-2 py-0.5 rounded-full ${u.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
@@ -309,7 +340,7 @@ function UsuariosPorConsultorio({ tenants }) {
                                 onClick={(e) => { e.stopPropagation(); setResetEmail(u.email) }}
                                 className="text-xs px-2 py-1 border border-blue-200 text-blue-600
                                            rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-                                🔑 Reset pwd
+                                🔑 Reset
                               </button>
                             </td>
                           </tr>
@@ -337,6 +368,57 @@ function UsuariosPorConsultorio({ tenants }) {
           )
         })}
       </div>
+
+      {/* Modal editar rol */}
+      {editRolUser && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setEditRolUser(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-gray-800 mb-1">✏️ Cambiar rol</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              {editRolUser.nombre} · {editRolUser.email}
+            </p>
+            <div className="space-y-2 mb-5">
+              {[
+                ['doctor','Doctor','Acceso clínico completo'],
+                ['recepcion','Recepcionista','Agenda, pacientes y cobros'],
+                ['enfermeria','Enfermería','Expediente y pacientes'],
+                ['contador','Contador','Cobros y reportes'],
+                ['farmacia','Farmacia','Solo recetas'],
+                ['reportes','Reportes','Solo módulo reportes'],
+                ['dueno','Dueño de clínica','Todo excepto super admin'],
+              ].map(([val, label, desc]) => (
+                <button key={val} type="button"
+                  onClick={() => setEditRolUser(r => ({ ...r, rolNuevo: val }))}
+                  className={`w-full text-left p-2.5 rounded-xl border-2 transition-colors
+                    ${editRolUser.rolNuevo === val
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'}`}>
+                  <span className="text-sm font-medium text-gray-800">{label}</span>
+                  {editRolUser.rolNuevo === val && <span className="ml-2 text-xs text-teal-600">✓ seleccionado</span>}
+                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 mb-4">
+              ⚠️ El nuevo rol aplica en el próximo inicio de sesión del usuario.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={guardarRol}
+                className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-teal-700 transition-colors">
+                Guardar rol
+              </button>
+              <button onClick={() => setEditRolUser(null)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                           hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal confirmar reset password */}
       {resetEmail && (

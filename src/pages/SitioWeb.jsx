@@ -356,7 +356,7 @@ export default function SitioWeb() {
     setConfig(prev => ({
       ...prev,
       nombreConsultorio: '', nombreDoctor: '', especialidad: '',
-      colorPrimario: '#0A8076', themeId: 'clinica_fresca',
+      colorPrimario: '#26C6DA', themeId: 'clinica_fresca',
     }))
     getDoc(doc(db, `tenants/${tenantId}`)).then(snap => {
       if (snap.exists() && snap.data().sitioWeb) {

@@ -290,10 +290,10 @@ const buildCSS = (c) => `
 
 // ── Defaults ──────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  colorPrimario:    '#4AAECC',
-  colorSecundario:  '#E8623A',
-  colorFondo:       '#F4F9FB',
-  colorAccento:     '#1A2E42',
+  colorPrimario:    '#26C6DA',
+  colorSecundario:  '#00838F',
+  colorFondo:       '#F0FFFE',
+  colorAccento:     '#FF7043',
   tipografia:       'Plus Jakarta Sans',
   tipografiaUI:     'Plus Jakarta Sans',
   nombreConsultorio: 'Consultorio Chávez',
