@@ -14,6 +14,7 @@ import Recetas            from './pages/Recetas'
 import Reportes           from './pages/Reportes'
 import Admin              from './pages/Admin'
 import GestionUsuarios    from './pages/GestionUsuarios'
+import MiCuenta           from './pages/MiCuenta'
 import SitioWeb           from './pages/SitioWeb'
 import PortalPaciente     from './pages/PortalPaciente'
 import Landing            from './pages/Landing'
@@ -51,6 +52,7 @@ const NAV_TODOS = [
   { to: '/facturacion',  label: 'Facturación',      icon: '🧾', modulo: 'facturacion'  },
   { to: '/reportes',     label: 'Reportes',         icon: '📊', modulo: 'reportes'     },
   { to: '/telemedicina', label: 'Telemedicina',     icon: '📹', modulo: 'telemedicina' },
+  { to: '/mi-cuenta',    label: 'Mi cuenta',         icon: '👤', modulo: 'suscripcion'  },
   { to: '/sitio-web',    label: 'Mi sitio',         icon: '🌐', modulo: 'sitio'        },
   { to: '/encuesta',     label: 'Encuestas',        icon: '⭐', modulo: 'encuesta'     },
 ]
@@ -260,6 +262,7 @@ export default function App() {
     ['/recetas',        <Recetas />],
     ['/reportes',       <Reportes />],
     ['/usuarios',       <GestionUsuarios />],
+    ['/mi-cuenta',      <MiCuenta />],
     ['/sitio-web',      <SitioWeb />],
     ['/encuesta',       <Encuesta />],
     ['/telemedicina',   <Telemedicina />],
