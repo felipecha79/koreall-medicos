@@ -446,15 +446,15 @@ function PlantillasReceta({ tenants }) {
 function ConfigPlanes() {
   const PLANES_DEFAULT = [
     { id: 'starter',    label: 'Starter',    precio: 649,  alta: 1500, activo: true,
-      descripcion: 'Hasta 50 pacientes/mes. Sin CFDI ni IA.' },
+      descripcion: 'Hasta 50 pacientes/mes. Sin CFDI ni IA.', paymentLink: '' },
     { id: 'basico',     label: 'Básico',     precio: 999,  alta: 2000, activo: true,
-      descripcion: '51–150 pacientes. Con telemedicina y sitio web.' },
+      descripcion: '51–150 pacientes. Con telemedicina y sitio web.', paymentLink: '' },
     { id: 'pro',        label: 'Pro',        precio: 1899, alta: 2500, activo: true,
-      descripcion: '151–350 pacientes. CFDI, IA, OCR, Reportes.' },
+      descripcion: '151–350 pacientes. CFDI, IA, OCR, Reportes.', paymentLink: '' },
     { id: 'clinica',    label: 'Clínica',    precio: 2800, alta: 3500, activo: true,
-      descripcion: '351–800 pacientes. Multi-tenant hasta 3.' },
+      descripcion: '351–800 pacientes. Multi-tenant hasta 3.', paymentLink: '' },
     { id: 'enterprise', label: 'Enterprise', precio: 6500, alta: 5000, activo: true,
-      descripcion: '800+ pacientes. Tenants ilimitados + SLA 4h.' },
+      descripcion: '800+ pacientes. Tenants ilimitados + SLA 4h.', paymentLink: '' },
   ]
   const [planes, setPlanes]   = useState(PLANES_DEFAULT)
   const [saving, setSaving]   = useState(false)
@@ -499,7 +499,7 @@ function ConfigPlanes() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  {['Plan','Descripción','Precio/mes (MXN)','Alta inicial (MXN)','Activo'].map(h => (
+                  {['Plan','Descripción','Precio/mes (MXN)','Alta inicial (MXN)','Payment Link Stripe','Activo'].map(h => (
                     <th key={h} className="text-left px-2 py-2 text-xs font-medium text-gray-500">{h}</th>
                   ))}
                 </tr>
@@ -533,6 +533,13 @@ function ConfigPlanes() {
                           className="w-24 border border-gray-200 rounded px-2 py-1 text-sm
                                      focus:outline-none focus:ring-1 focus:ring-teal-400" />
                       </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input type="url" value={p.paymentLink ?? ''}
+                        onChange={e => actualizar(p.id, 'paymentLink', e.target.value)}
+                        placeholder="https://buy.stripe.com/..."
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs font-mono
+                                   focus:outline-none focus:ring-1 focus:ring-teal-400" />
                     </td>
                     <td className="px-2 py-2 text-center">
                       <input type="checkbox" checked={p.activo}
@@ -643,18 +650,16 @@ function ConfigDocVias() {
             </select>
           </div>
 
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">
-            Stripe — cobro de suscripciones
-          </p>
-          <div className="grid grid-cols-1 gap-3">
-            {campo('stripePaymentLinkDocVias', 'Payment Link para pago manual (buy.stripe.com/...)',
-              'https://buy.stripe.com/...')}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {campo('stripePriceIdBasico',     'Price ID Plan Básico',     'price_xxx')}
-            {campo('stripePriceIdPro',        'Price ID Plan Pro',        'price_xxx')}
-            {campo('stripePriceIdClinica',    'Price ID Plan Clínica',    'price_xxx')}
-            {campo('stripePriceIdEnterprise', 'Price ID Plan Enterprise', 'price_xxx')}
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-teal-800 mb-1">
+              💳 Payment Links de Stripe por plan
+            </p>
+            <p className="text-xs text-teal-700">
+              Los Payment Links se configuran en <strong>Sistema → Planes y Precios</strong>
+              (sección de arriba). Cada plan tiene su propio link de Stripe.
+              Cuando el doctor necesite pagar su suscripción, el sistema usará el link
+              correspondiente a su plan.
+            </p>
           </div>
 
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">

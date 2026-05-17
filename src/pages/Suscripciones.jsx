@@ -88,22 +88,40 @@ export default function Suscripciones() {
     getDoc(doc(db, 'configuracion', 'docvias'))
       .then(snap => { if (snap.exists()) setConfig(snap.data()) })
       .catch(() => {})
+    // Cargar también los planes para obtener el paymentLink del plan del doctor
+    getDoc(doc(db, 'configuracion', 'planes'))
+      .then(snap => {
+        if (snap.exists() && snap.data().lista) {
+          setConfig(prev => ({ ...prev, _planes: snap.data().lista }))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   // ── Pago único con Stripe Checkout ────────────────────────────────────────
   const pagarAhora = async () => {
-    const link = config?.stripePaymentLinkDocVias ?? tenant?.stripePaymentLinkDocVias
+    // Buscar el payment link del plan actual desde configuracion/planes
+    const planesLista = config?._planes ?? []
+    const planData    = planesLista.find(p => p.id === plan)
+    const link        = planData?.paymentLink || config?.stripePaymentLinkDocVias || null
     if (!link) {
-      toast.error('Configura el Payment Link de DocVia en Admin → Sistema → Configuración')
+      toast.error(
+        'El Payment Link para el plan ' + plan.toUpperCase() + ' no está configurado. ' +
+        'Ve a Admin → Sistema → Planes y Precios y agrega el link de Stripe.'
+      )
       return
     }
-    const url = new URL(link)
-    if (tenant?.email) url.searchParams.set('prefilled_email', tenant.email)
-    url.searchParams.set('client_reference_id', String(tenantId))
-    const win = window.open(url.toString(), 'pago_docvias',
-      'width=520,height=700,left=200,top=80,resizable=yes,scrollbars=yes')
-    if (!win) toast.error('Activa los popups para pagar')
-    else setModalPago(true)
+    try {
+      const url = new URL(link)
+      if (tenant?.email) url.searchParams.set('prefilled_email', tenant.email)
+      url.searchParams.set('client_reference_id', String(tenantId))
+      const win = window.open(url.toString(), 'pago_docvias',
+        'width=520,height=700,left=200,top=80,resizable=yes,scrollbars=yes')
+      if (!win) toast.error('Activa los popups para pagar en tu navegador')
+      else setModalPago(true)
+    } catch {
+      toast.error('El Payment Link configurado no es válido. Verifica la URL en Planes y Precios.')
+    }
   }
 
   // ── Activar suscripción automática con Stripe ─────────────────────────────
@@ -366,10 +384,13 @@ export default function Suscripciones() {
             onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-4">💳</div>
             <h3 className="text-base font-semibold text-gray-800 mb-2">Página de pago abierta</h3>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-sm text-gray-500 mb-2">
               Completa el pago de{' '}
               <strong>${montoTotal.toLocaleString('es-MX')} MXN</strong>{' '}
-              en la ventana de Stripe. Tu acceso se reactivará automáticamente.
+              en la ventana de Stripe.
+            </p>
+            <p className="text-xs text-gray-400 mb-5">
+              Plan {planInfo.label} · Con IVA incluido · Sin guardar tarjeta
             </p>
             <button onClick={() => setModalPago(false)}
               className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
