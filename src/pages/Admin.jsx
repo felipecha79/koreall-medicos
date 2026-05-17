@@ -5,6 +5,8 @@ import {
   doc, getDoc, Timestamp, query, where, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
+import { getAuth, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth'
+import { initializeApp, getApps } from 'firebase/app'
 import { useTenant } from '../hooks/useTenant'
 import toast from 'react-hot-toast'
 
