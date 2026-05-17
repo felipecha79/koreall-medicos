@@ -2,6 +2,7 @@
 // Página del doctor: suscripción actual + pagar + usuarios del consultorio
 import { useState, useEffect } from 'react'
 import { collection, onSnapshot, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore'
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import { infoRol } from '../services/permisos'
@@ -73,16 +74,13 @@ export default function MiCuenta() {
 
   const resetPassword = async (usuario) => {
     try {
-      const res = await fetch('/api/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: usuario.email }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      toast.success(`Email de restablecimiento enviado a ${usuario.email}`)
+      const auth = getAuth()
+      await sendPasswordResetEmail(auth, usuario.email)
+      toast.success('✅ Email enviado a ' + usuario.email)
       setModalReset(null)
-    } catch(e) { toast.error('Error: ' + e.message) }
+    } catch(e) {
+      toast.error('Error: ' + (e.message ?? 'No se pudo enviar'))
+    }
   }
 
   const toggleActivo = async (u) => {

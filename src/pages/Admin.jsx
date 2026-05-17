@@ -284,7 +284,7 @@ function UsuariosPorConsultorio({ tenants }) {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
-                          {['Nombre','Email','Rol','Estado'].map(h => (
+                          {['Nombre','Email','Rol','Estado','Acciones'].map(h => (
                             <th key={h} className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">{h}</th>
                           ))}
                         </tr>
@@ -303,6 +303,14 @@ function UsuariosPorConsultorio({ tenants }) {
                               <span className={`text-xs px-2 py-0.5 rounded-full ${u.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                                 {u.activo !== false ? 'Activo' : 'Inactivo'}
                               </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setResetEmail(u.email) }}
+                                className="text-xs px-2 py-1 border border-blue-200 text-blue-600
+                                           rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+                                🔑 Reset pwd
+                              </button>
                             </td>
                           </tr>
                         ))}

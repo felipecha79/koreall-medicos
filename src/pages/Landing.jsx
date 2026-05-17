@@ -343,6 +343,7 @@ export default function Landing() {
   const [role, setRole]         = useState('doctor')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [showPass,  setShowPass]  = useState(false)
   const [loginErr, setLoginErr] = useState('')
   const [logging, setLogging]   = useState(false)
 
@@ -413,7 +414,7 @@ export default function Landing() {
   }, [cssReady])
 
   // ── Login con Firebase ────────────────────────────────
-  const closeModal = () => { setModal(false); setLoginErr(''); setEmail(''); setPassword('') }
+  const closeModal = () => { setModal(false); setLoginErr(''); setEmail(''); setPassword(''); setShowPass(false) }
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -751,8 +752,17 @@ export default function Landing() {
             </div>
             <div className="mfg">
               <label>Contraseña</label>
-              <input type="password" placeholder="••••••••"
-                value={password} onChange={e => { setPassword(e.target.value); setLoginErr('') }} />
+              <div style={{position:'relative'}}>
+                <input type={showPass ? 'text' : 'password'} placeholder="••••••••"
+                  value={password} onChange={e => { setPassword(e.target.value); setLoginErr('') }} />
+                <button type="button" tabIndex={-1}
+                  onClick={() => setShowPass(v => !v)}
+                  style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
+                          background:'none',border:'none',cursor:'pointer',padding:0,
+                          fontSize:18,color:'#9ca3af',lineHeight:1}}>
+                  {showPass ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             {loginErr && <div className="merr">{loginErr}</div>}
             <button type="submit" className="mbtn" disabled={logging}>
