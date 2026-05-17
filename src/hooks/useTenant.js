@@ -136,26 +136,21 @@ export function useTenant() {
   }, [])
 
   const switchTenant = async (newTenantId) => {
+    if (newTenantId === state.tenantId) return   // ya es el mismo, no hacer nada
     localStorage.setItem(STORAGE_KEY_TENANT, newTenantId)
-    const snap = await getDoc(doc(db, `tenants/${newTenantId}`))
-    const tenant = snap.exists() ? { id: snap.id, ...snap.data() } : null
-    const suscripcionActiva = tenant
-      ? tenant.activo !== false && tenant.suscripcionActiva !== false : true
-    const newOrgId = tenant?.orgId ?? newTenantId
-    setState(s => ({ ...s, tenantId: newTenantId, tenant, suscripcionActiva, orgId: newOrgId }))
+    // Reload completo para que todos los onSnapshot se re-suscriban al nuevo tenant
+    // Es la forma más confiable de aislar datos entre consultorios
+    window.location.reload()
   }
 
   const switchOrg = async (newOrgId) => {
+    if (newOrgId === state.orgId) return
     localStorage.setItem(STORAGE_KEY_ORG, newOrgId)
-    const orgSnap = await getDoc(doc(db, `organizaciones/${newOrgId}`))
-    const org = orgSnap.exists() ? { id: orgSnap.id, ...orgSnap.data() } : null
-    setState(s => {
-      const orgTenants = s.allTenants.filter(t => t.orgId === newOrgId || t.id === newOrgId)
-      const first = orgTenants[0] ?? null
-      if (first) localStorage.setItem(STORAGE_KEY_TENANT, first.id)
-      return { ...s, orgId: newOrgId, org, orgTenants,
-        tenantId: first?.id ?? s.tenantId, tenant: first ?? s.tenant }
-    })
+    // Buscar el primer tenant de la nueva org y guardarlo
+    const orgTenants = state.allTenants.filter(t => t.orgId === newOrgId || t.id === newOrgId)
+    const first = orgTenants[0] ?? null
+    if (first) localStorage.setItem(STORAGE_KEY_TENANT, first.id)
+    window.location.reload()
   }
 
   return { ...state, switchTenant, switchOrg }

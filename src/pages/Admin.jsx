@@ -104,9 +104,22 @@ function getSecondaryAuth() {
 function UsuariosPorConsultorio({ tenants }) {
   const [usuariosPorTenant, setUsuariosPorTenant] = useState({})
   const [expandido,  setExpandido]  = useState(null)
-  const [modalTid,   setModalTid]   = useState(null)  // tenantId del modal crear usuario
+  const [modalTid,   setModalTid]   = useState(null)
   const [formUser,   setFormUser]   = useState({ nombre:'', apellidos:'', email:'', rol:'recepcion' })
   const [savingUser, setSavingUser] = useState(false)
+  const [resetEmail, setResetEmail] = useState(null)  // email para modal de reset
+
+  const enviarResetPassword = async () => {
+    if (!resetEmail) return
+    try {
+      const authInst = getAuth()
+      await sendPasswordResetEmail(authInst, resetEmail)
+      toast.success(`Email de restablecimiento enviado a ${resetEmail}`)
+      setResetEmail(null)
+    } catch(e) {
+      toast.error('Error: ' + (e.message ?? 'No se pudo enviar'))
+    }
+  }
 
   const crearUsuarioDirecto = async () => {
     if (!formUser.nombre || !formUser.email) { toast.error('Nombre y email son obligatorios'); return }
@@ -316,6 +329,33 @@ function UsuariosPorConsultorio({ tenants }) {
           )
         })}
       </div>
+
+      {/* Modal confirmar reset password */}
+      {resetEmail && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setResetEmail(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-gray-800 mb-2">🔑 Restablecer contraseña</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Se enviará un email de restablecimiento a:
+              <br/><strong className="text-gray-800">{resetEmail}</strong>
+            </p>
+            <div className="flex gap-3">
+              <button onClick={enviarResetPassword}
+                className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-blue-700 transition-colors">
+                Enviar email
+              </button>
+              <button onClick={() => setResetEmail(null)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm
+                           hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalTid && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"

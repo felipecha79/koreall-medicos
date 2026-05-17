@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 export default function Login() {
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -49,10 +50,19 @@ export default function Login() {
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
-            <input type="password" value={pass} required
-              onChange={e => setPass(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5
-                         text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+            <div className="relative">
+              <input type={showPass ? 'text' : 'password'} value={pass} required
+                onChange={e => setPass(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 pr-11
+                           text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <button type="button" tabIndex={-1}
+                onClick={() => setShowPass(v => !v)}
+                style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
+                        background:'none',border:'none',cursor:'pointer',padding:0,
+                        fontSize:18,color:'#9ca3af',lineHeight:1}}>
+                {showPass ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={loading}
             className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium
