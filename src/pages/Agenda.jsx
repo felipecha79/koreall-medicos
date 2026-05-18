@@ -461,7 +461,7 @@ export default function Agenda() {
 
       {/* Vista semana — con slots de 30 min */}
       {vista === 'semana' && <div className="flex-1 overflow-auto">
-        <div className="grid" style={{ gridTemplateColumns: '52px repeat(6,1fr)', minWidth: 700 }}>
+        <div className="grid" style={{ gridTemplateColumns: '52px repeat(7,1fr)', minWidth: 820 }}>
           {/* Cabecera de días */}
           <div className="bg-white border-b border-r border-gray-200 sticky top-0 z-10" />
           {dias.map(dia => (
