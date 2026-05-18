@@ -124,7 +124,7 @@ export default function Agenda() {
   const MAX_POR_SLOT = 2 // máximo 2 pacientes por franja de 30 min
 
   const lunes = startOfWeek(semanaBase, { weekStartsOn: 1 })
-  const dias  = Array.from({ length: 6 }, (_, i) => addDays(lunes, i))
+  const dias  = Array.from({ length: 7 }, (_, i) => addDays(lunes, i))  // Lun-Dom
 
   useEffect(() => {
     if (!tenantId) return

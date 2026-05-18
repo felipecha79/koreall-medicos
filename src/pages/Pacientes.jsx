@@ -19,6 +19,15 @@ const generarPacienteId = async (tenantId) => {
   return `PAC-${String(num).padStart(5, '0')}`
 }
 
+const NACIONALIDADES = [
+  'Mexicana','Estadounidense','Canadiense','Argentina','Brasileña','Chilena',
+  'Colombiana','Venezolana','Peruana','Ecuatoriana','Boliviana','Paraguaya',
+  'Uruguaya','Cubana','Dominicana','Guatemalteca','Hondureña','Salvadoreña',
+  'Nicaragüense','Costarricense','Panameña','Española','Alemana','Francesa',
+  'Italiana','Británica','Portuguesa','Holandesa','Belga','Suiza','Austriaca',
+  'Japonesa','China','Coreana','Hindú','Árabe','Israelí','Turca','Otra',
+]
+
 const FORM_VACIO = {
   // Datos personales
   nombre:           '',
@@ -448,7 +457,7 @@ export default function Pacientes() {
                     ['apellidos','Apellidos *','text'],
                     ['fechaNacimiento','Fecha de nacimiento','date'],
                     ['grupoSanguineo','Grupo sanguíneo','text'],
-                    ['nacionalidad','Nacionalidad','text'],
+                    // nacionalidad se maneja con select abajo
                     ['ocupacion','Ocupación','text'],
                   ].map(([f,l,t]) => (
                     <div key={f}>

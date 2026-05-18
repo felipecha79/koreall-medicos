@@ -1426,17 +1426,47 @@ export default function Admin() {
                 <div className="mt-2">
                   <MedidorPacientes tenantId={String(t._docId ?? t.id)} plan={t.plan ?? 'pro'} />
                 </div>
+
+                {/* Estado de pago de suscripción DocVia */}
+                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      t.ultimoPagoStripe ? 'bg-green-400' : 'bg-amber-400'
+                    }`} />
+                    <span className="text-xs text-gray-500">
+                      {t.ultimoPagoStripe
+                        ? 'Pago recibido ' + new Date(t.ultimoPagoStripe?.toDate?.() ?? t.ultimoPagoStripe).toLocaleDateString('es-MX')
+                        : t.fechaProximoPago
+                        ? 'Pendiente — vence ' + new Date(t.fechaProximoPago?.toDate?.() ?? t.fechaProximoPago).toLocaleDateString('es-MX')
+                        : 'Sin historial de pago'}
+                    </span>
+                  </div>
+                  {t.ultimoCFDIUrl && (
+                    <a href={t.ultimoCFDIUrl} target="_blank" rel="noreferrer"
+                      className="text-xs text-teal-600 hover:underline">
+                      Ver CFDI
+                    </a>
+                  )}
+                </div>
               </div>
             )
           })}
 
           <div className="bg-teal-50 rounded-xl border border-teal-200 p-4 mt-4">
-            <p className="text-sm font-semibold text-teal-800">
-              MRR Total: ${mrrTotal.toLocaleString('es-MX')} MXN/mes
-            </p>
-            <p className="text-xs text-teal-600 mt-0.5">
-              ARR proyectado: ${(mrrTotal*12).toLocaleString('es-MX')} MXN/año
-            </p>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-teal-800">
+                  MRR Total: ${mrrTotal.toLocaleString('es-MX')} MXN/mes
+                </p>
+                <p className="text-xs text-teal-600 mt-0.5">
+                  ARR proyectado: ${(mrrTotal*12).toLocaleString('es-MX')} MXN/año
+                </p>
+              </div>
+              <div className="text-right text-xs text-teal-700">
+                <p>✅ Al día: {tenants.filter(t => t.ultimoPagoStripe).length}</p>
+                <p>⏳ Pendientes: {tenants.filter(t => !t.ultimoPagoStripe).length}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -247,7 +247,7 @@ function RecetaPreview({ receta, tenant }) {
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
         textAlign: 'center', fontSize: 10, color: '#9ca3af'
       }}>
-        Receta generada por MediDesk  {tenant?.nombre} \u00b7 {fecha}
+        Receta generada por DocVia  {tenant?.nombre} : {fecha}
       </div>
     </div>
   )
