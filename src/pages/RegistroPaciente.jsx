@@ -680,7 +680,5 @@ export default function RegistroPaciente() {
         <a href="/" className="underline hover:opacity-80">Inicia sesión</a>
       </p>
     </div>
-  </>
-    </>
   )
 }
