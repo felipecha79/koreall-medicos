@@ -1,4 +1,4 @@
-// src/services/permisos.js — DocVias v23
+// src/services/permisos.js — Novaryk.Med v23
 // Definición central de roles y permisos
 // Los módulos usan puedeVer(rol, modulo) para decidir si mostrar contenido
 

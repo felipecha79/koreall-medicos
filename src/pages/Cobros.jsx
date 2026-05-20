@@ -1,4 +1,4 @@
-// src/pages/Cobros.jsx — DocVias v21
+// src/pages/Cobros.jsx — Novaryk.Med v21
 // Cobros con soporte Stripe Connect + métodos tradicionales
 // NO se altera la lógica existente — Stripe es opción adicional
 import { useState, useEffect } from 'react'

@@ -28,7 +28,7 @@ export default function SuscripcionVencida({ tenant }) {
               ⚠️ {diasRestantes} día{diasRestantes !== 1 ? 's' : ''} para regularizar
             </p>
             <p className="text-sm text-amber-700">
-              Tu suscripción DocVia está pendiente de pago.
+              Tu suscripción Novaryk.Med está pendiente de pago.
               Tienes {diasRestantes} día{diasRestantes !== 1 ? 's' : ''} antes de que se suspenda el acceso.
             </p>
           </div>
@@ -54,7 +54,7 @@ export default function SuscripcionVencida({ tenant }) {
             ¿Necesitas ayuda?
           </p>
           <div className="space-y-2">
-            <a href="https://wa.me/528331234567?text=Hola,%20necesito%20reactivar%20mi%20cuenta%20DocVia"
+            <a href="https://wa.me/528331234567?text=Hola,%20necesito%20reactivar%20mi%20cuenta%20Novaryk.Med"
                target="_blank" rel="noreferrer"
                className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200
                           hover:bg-green-100 transition-colors">

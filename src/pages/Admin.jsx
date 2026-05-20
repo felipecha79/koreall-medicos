@@ -755,11 +755,11 @@ function ConfigPlanes() {
   )
 }
 
-// ── Configuración fiscal y comercial de DocVia ─────────
-function ConfigDocVias() {
+// ── Configuración fiscal y comercial de Novaryk.Med ─────────
+function ConfigNovaryk.Med() {
   const FORM_VACIO = {
     rfc:'', nombreLegal:'', cp:'', regimen:'612', email:'',
-    telefono:'', stripePaymentLinkDocVias:'',
+    telefono:'', stripePaymentLinkNovaryk.Med:'',
     stripePriceIdBasico:'', stripePriceIdPro:'',
     stripePriceIdClinica:'', stripePriceIdEnterprise:'',
     diasGraciaDefault: 10,
@@ -784,7 +784,7 @@ function ConfigDocVias() {
         ...form,
         actualizadoEn: Timestamp.now(),
       }, { merge: true })
-      toast.success('Configuración DocVia guardada')
+      toast.success('Configuración Novaryk.Med guardada')
     } catch(e) { toast.error('Error: ' + e.message) }
     finally { setSaving(false) }
   }
@@ -806,7 +806,7 @@ function ConfigDocVias() {
         className="w-full flex items-center justify-between text-left">
         <div>
           <p className="text-sm font-semibold text-gray-700">
-            🏢 Configuración Fiscal DocVia
+            🏢 Configuración Fiscal Novaryk
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
             Tu RFC, datos fiscales, precios de planes y claves de Stripe para facturar a los doctores
@@ -866,7 +866,7 @@ function ConfigDocVias() {
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-xs text-blue-700">
               <strong>Price IDs de Stripe:</strong> Ve a Stripe Dashboard → Products → Crea un producto
-              "DocVia Plan Pro" con precio $1,800 MXN/mes recurrente → copia el Price ID (empieza con price_).
+              "Novaryk.Med Plan Pro" con precio $1,800 MXN/mes recurrente → copia el Price ID (empieza con price_).
               Uno por cada plan que uses.
             </p>
           </div>
@@ -874,7 +874,7 @@ function ConfigDocVias() {
           <button onClick={guardar} disabled={saving}
             className="w-full bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
                        hover:bg-teal-700 disabled:opacity-50 transition-colors">
-            {saving ? 'Guardando...' : '💾 Guardar configuración DocVia'}
+            {saving ? 'Guardando...' : '💾 Guardar configuración'}
           </button>
         </div>
       )}
@@ -1427,7 +1427,7 @@ export default function Admin() {
                   <MedidorPacientes tenantId={String(t._docId ?? t.id)} plan={t.plan ?? 'pro'} />
                 </div>
 
-                {/* Estado de pago de suscripción DocVia */}
+                {/* Estado de pago de suscripción Novaryk.Med */}
                 <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${
@@ -1477,7 +1477,7 @@ export default function Admin() {
 
           {/* ── 1. Parámetros globales — ARRIBA ── */}
           <ConfigPlanes />
-          <ConfigDocVias />
+          <ConfigNovaryk.Med />
 
           {/* ── 2. Configuración IA por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -1587,7 +1587,7 @@ export default function Admin() {
             </div>
             <div className="mt-3 bg-blue-50 rounded-lg p-3">
               <p className="text-xs text-blue-700">
-                <strong>¿Cómo funciona?</strong> Al configurar, DocVia crea una organización en tu cuenta
+                <strong>¿Cómo funciona?</strong> Al configurar, Novaryk.Med crea una organización en tu cuenta
                 de Facturapi vinculada al RFC del doctor. Cada CFDI se timbra usando esa organización,
                 por lo que el XML lleva el RFC del consultorio (no el tuyo). El doctor no ve su API key.
               </p>
@@ -1719,7 +1719,7 @@ export default function Admin() {
                 <p>3. <strong>Doctor atiende</strong> → Expediente SOAP NOM-004 → Firestore consultas/</p>
                 <p>4. <strong>Cobro generado</strong> → Doctor marca pagado o Paciente paga con Stripe</p>
                 <p>5. <strong>Factura CFDI</strong> → Facturapi → SAT → PDF/XML en portal paciente</p>
-                <p>6. <strong>Día 1 c/mes</strong> → Cron Vercel → CFDI suscripción DocVia → WA al doctor</p>
+                <p>6. <strong>Día 1 c/mes</strong> → Cron Vercel → CFDI suscripción Novaryk.Med → WA al doctor</p>
                 <p>7. <strong>Pago suscripción</strong> → Stripe → Webhook → suscripcionActiva = true</p>
               </div>
 

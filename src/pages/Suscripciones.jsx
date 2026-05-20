@@ -1,4 +1,4 @@
-// src/pages/Suscripciones.jsx — DocVia v22
+// src/pages/Suscripciones.jsx — Novaryk.Med v22
 // Portal de suscripción del doctor — ver plan, facturas, pagar, configurar modo de cobro
 import { useState, useEffect } from 'react'
 import { collection, query, orderBy, onSnapshot, doc, getDoc, Timestamp } from 'firebase/firestore'
@@ -70,7 +70,7 @@ export default function Suscripciones() {
   const enGracia     = diasVencido > 0 && diasVencido <= diasGracia
   const diasRestantes = Math.max(0, diasGracia - diasVencido)
 
-  // Cargar historial de facturas DocVia
+  // Cargar historial de facturas Novaryk.Med
   useEffect(() => {
     if (!tenantId) return
     const q = query(
@@ -83,7 +83,7 @@ export default function Suscripciones() {
     )
   }, [tenantId])
 
-  // Cargar config DocVia (para mostrar datos de contacto/soporte)
+  // Cargar config Novaryk.Med (para mostrar datos de contacto/soporte)
   useEffect(() => {
     getDoc(doc(db, 'configuracion', 'docvias'))
       .then(snap => { if (snap.exists()) setConfig(snap.data()) })
@@ -103,7 +103,7 @@ export default function Suscripciones() {
     // Buscar el payment link del plan actual desde configuracion/planes
     const planesLista = config?._planes ?? []
     const planData    = planesLista.find(p => p.id === plan)
-    const link        = planData?.paymentLink || config?.stripePaymentLinkDocVias || null
+    const link        = planData?.paymentLink || config?.stripePaymentLinkNovaryk.Med || null
     if (!link) {
       toast.error(
         'El Payment Link para el plan ' + plan.toUpperCase() + ' no está configurado. ' +
@@ -128,7 +128,7 @@ export default function Suscripciones() {
   const activarSuscripcionAuto = async () => {
     const priceId = config?.stripePriceId?.[plan]
     if (!priceId) {
-      toast.error('Configura los Price IDs de Stripe en Admin → Sistema → Configuración DocVia')
+      toast.error('Configura los Price IDs de Stripe en Admin → Sistema → Configuración Novaryk.Med')
       return
     }
     setCargandoSub(true)
@@ -160,7 +160,7 @@ export default function Suscripciones() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Mi suscripción</h2>
-        <p className="text-sm text-gray-400 mt-0.5">DocVia · {tenant?.nombre ?? ''}</p>
+        <p className="text-sm text-gray-400 mt-0.5">Novaryk.Med · {tenant?.nombre ?? ''}</p>
       </div>
 
       {/* Alerta periodo de gracia */}
@@ -305,7 +305,7 @@ export default function Suscripciones() {
       {config?.rfc && (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mt-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Datos fiscales de DocVia (emisor)
+            Datos fiscales de Novaryk.Med (emisor)
           </p>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
             <div><span className="text-gray-400">RFC: </span>{config.rfc}</div>
@@ -323,7 +323,7 @@ export default function Suscripciones() {
             onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-1 text-gray-800">Modo de cobro</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Elige cómo quieres pagar tu suscripción DocVia cada mes.
+              Elige cómo quieres pagar tu suscripción Novaryk.Med cada mes.
             </p>
 
             {/* Opción Manual */}

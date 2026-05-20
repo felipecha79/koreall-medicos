@@ -66,7 +66,7 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
   const navItems = navDeRol(role, isSuperAdmin)
 
   // Colores del tema del doctor — leídos de tenant.sitioWeb
-  const colorPrimario = tenant?.sitioWeb?.colorPrimario ?? (isSuperAdmin ? '#4AAECC' : '#4AAECC')
+  const colorPrimario = tenant?.sitioWeb?.colorPrimario ?? '#0D9488'  // Novaryk.Med Teal
   const colorFondo    = tenant?.sitioWeb?.colorFondo    ?? '#F4F9FB'
   // Sidebar: fondo derivado del colorPrimario en tono muy claro
   // Para SuperAdmin: gris azulado claro
@@ -82,10 +82,18 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
       <div className="px-4 py-3 flex items-center justify-between"
         style={{ borderBottom: '1px solid ' + sidebarBorde }}>
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold" style={{ color: textoColor }}>DocVia</h1>
-          <span className="inline-flex items-center gap-1 text-[10px] mt-0.5" style={{ color: textoSub }}>
-            <span style={{fontSize:9}}>🦀</span>Hecho en Tampico
-          </span>
+          {/* Logo Novaryk.Med */}
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <svg width="28" height="26" viewBox="0 0 56 52" fill="none" style={{flexShrink:0}}>
+              <path d="M6 46 Q28 6 50 46" stroke={colorPrimario} strokeWidth="4.5" strokeLinecap="round"/>
+              <path d="M16 46 Q28 18 40 46" stroke={colorPrimario} strokeWidth="2.8" strokeLinecap="round"/>
+              <circle cx="28" cy="13" r="5.5" fill="#0D9488"/>
+            </svg>
+            <div>
+              <h1 className="text-sm font-semibold" style={{ color: textoColor, letterSpacing:'-0.3px', lineHeight:1.1 }}>Novaryk</h1>
+              <p style={{ color:'#0D9488', fontSize:9, fontWeight:600, letterSpacing:'2.5px', lineHeight:1 }}>MED</p>
+            </div>
+          </div>
           {isSuperAdmin && allOrgs?.length > 1 ? (
             <div className="mt-2 space-y-1.5">
               <div>
@@ -215,7 +223,7 @@ function AppLayout({ children }) {
   const { tenant, tenantId, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, role } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
-  const pageTitle = NAV_TODOS.find(n => location.pathname.startsWith(n.to))?.label ?? 'DocVia'
+  const pageTitle = NAV_TODOS.find(n => location.pathname.startsWith(n.to))?.label ?? 'Novaryk.Med'
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">

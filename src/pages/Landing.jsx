@@ -9,11 +9,11 @@ const buildCSS = (c) => `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');
 
   :root {
-    --ld-teal:  ${c.colorPrimario   || '#0A8076'};
+    --ld-teal:  ${c.colorPrimario   || '#0D9488'};
     --ld-navy:  ${c.colorSecundario || '#0D1F35'};
     --ld-cream: ${c.colorFondo      || '#F7F4EF'};
     --ld-gold:  ${c.colorAccento    || '#C4A265'};
-    --ld-teal-lt: ${c.colorPrimario || '#0A8076'}CC;
+    --ld-teal-lt: ${c.colorPrimario || '#0D9488'}CC;
     --ld-font-d:  '${c.tipografia   || 'Cormorant Garamond'}', Georgia, serif;
     --ld-font-ui: '${c.tipografiaUI || 'DM Sans'}', system-ui, sans-serif;
   }
@@ -30,7 +30,8 @@ const buildCSS = (c) => `
     display:flex;align-items:center;justify-content:space-between;height:66px }
   .ld .logo { font-family:var(--ld-font-d);font-size:21px;font-weight:300;
     color:#fff;letter-spacing:.02em }
-  .ld .logo span { color:var(--ld-teal);font-style:italic }
+  .ld .logo span { color:var(--ld-teal);font-style:normal;font-weight:600;letter-spacing:-0.3px }
+  .ld .logo .med-tag { font-size:9px;font-weight:700;letter-spacing:2.5px;color:#0D9488;display:block;margin-top:-2px }
   .ld .lnav-links { display:flex;align-items:center;gap:28px;list-style:none }
   .ld .lnav-links a { font-size:13px;color:rgba(255,255,255,.7);transition:color .2s }
   .ld .lnav-links a:hover { color:#fff }
@@ -290,8 +291,8 @@ const buildCSS = (c) => `
 
 // ── Defaults ──────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  colorPrimario:    '#26C6DA',
-  colorSecundario:  '#00838F',
+  colorPrimario:    '#0D9488',
+  colorSecundario:  '#0A6E65',
   colorFondo:       '#F0FFFE',
   colorAccento:     '#FF7043',
   tipografia:       'Plus Jakarta Sans',
@@ -520,7 +521,7 @@ export default function Landing() {
             <h3>{cfg.nombreDoctor}</h3>
             <p className="sub">{cfg.especialidad?.split('·')[0]?.trim()} · Cédula {cfg.cedulaProfesional}</p>
             <div className="cr"><div className="cr-ico">🎓</div><span>Cédula Prof. {cfg.cedulaProfesional} — SSA</span></div>
-            <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con DocVia</span></div>
+            <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con Novaryk.Med</span></div>
             <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>
             <div className="stats">
               <div className="st"><div className="st-n">15+</div><div className="st-l">Años</div></div>
@@ -591,7 +592,7 @@ export default function Landing() {
       <section className="sec-navy" id="tecnologia">
         <div className="ldc" style={{position:'relative',zIndex:1}}>
           <div className="sh rev">
-            <span className="tag" style={{color:'var(--ld-teal)'}}>Powered by DocVia</span>
+            <span className="tag" style={{color:'var(--ld-teal)'}}>Powered by Novaryk.Med</span>
             <h2>Su consultorio en<br/>la <em>era digital</em></h2>
             <p>Sistema médico integral que conecta al doctor con sus pacientes.</p>
           </div>
@@ -725,7 +726,7 @@ export default function Landing() {
           </div>
           <div className="fb-bot">
             <span>© 2026 {cfg.nombreConsultorio} · Todos los derechos reservados</span>
-            <span>Powered by <a href="https://medideskmx.com" target="_blank" rel="noreferrer">DocVia</a></span>
+            <span>Powered by <a href="https://novaryk.mx" target="_blank" rel="noreferrer">Novaryk.Med</a></span>
           </div>
         </div>
       </footer>

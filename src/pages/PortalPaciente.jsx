@@ -536,7 +536,7 @@ export default function PortalPaciente() {
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">DocVia</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Novaryk.Med</h1>
         <p className="text-sm text-gray-500 mb-6">Portal del paciente</p>
         <a href="/login"
           className="block w-full px-6 py-3 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700">
@@ -574,7 +574,7 @@ export default function PortalPaciente() {
       <div className="bg-slate-900 text-white px-4 py-3 sticky top-0 z-30">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-sm font-bold leading-tight">DocVia</h1>
+            <h1 className="text-sm font-bold leading-tight">Novaryk.Med</h1>
             <p className="text-xs text-slate-400 leading-tight truncate max-w-[140px]">
               {tenant?.nombre ?? 'Portal del paciente'}
             </p>

@@ -1,9 +1,9 @@
-// src/services/stripe.js — DocVias v21
-// Stripe Connect — pagos directos a la cuenta del doctor (sin pasar por DocVias)
+// src/services/stripe.js — Novaryk.Med v1
+// Stripe Connect — pagos directos a la cuenta del doctor (sin pasar por Novaryk.Med)
 //
 // ARQUITECTURA:
 //   Paciente → paga → cuenta Stripe del doctor (Connected Account)
-//   DocVias  → recibe application_fee (% de comisión opcional, hoy en 0)
+//   Novaryk.Med → recibe application_fee (% de comisión opcional, hoy en 0)
 //
 // SETUP INICIAL (ver README.stripe.md que se genera con este archivo):
 //   VITE_STRIPE_PUBLIC_KEY = pk_test_... (tu llave pública de plataforma)

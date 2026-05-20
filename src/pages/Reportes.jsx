@@ -86,7 +86,7 @@ function imprimirCorte() {
     '.badge-stripe{background:#e0e7ff;color:#3730a3}',
     '.badge-transferencia{background:#dbeafe;color:#1e40af}',
   ].join('')
-  const html = '<html><head><title>Corte Diario — DocVia</title>'
+  const html = '<html><head><title>Corte Diario — Novaryk.Med</title>'
     + '<style>' + css + '</style>'
     + '</head><body>' + el.innerHTML + '</body></html>'
   const win = window.open('', '_blank', 'width=800,height=700')

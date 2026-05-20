@@ -57,7 +57,7 @@ function urlWhereby(tenant) {
 
 // ── Generar URL Jitsi (fallback sin cuenta) ───────────────
 function urlJitsi(citaId, nombreDoctor) {
-  const room = `DocVia-${citaId.slice(0, 12)}`
+  const room = `Novaryk.Med-${citaId.slice(0, 12)}`
   const nombre = encodeURIComponent(nombreDoctor ?? 'Doctor')
   return `https://meet.jit.si/${room}#userInfo.displayName="${nombre}"`
 }

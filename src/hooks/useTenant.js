@@ -59,17 +59,19 @@ export function useTenant() {
             getDocs(collection(db, 'organizaciones')).catch(() => ({ docs: [] })),
             getDocs(collection(db, 'tenants')).catch(() => ({ docs: [] })),
           ])
-          allOrgs    = orgsSnap.docs.map(d   => ({ id: d.id, ...d.data() }))
-          allTenants = tenantsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          allOrgs    = orgsSnap.docs.map(d   => ({ ...d.data(), id: d.id, _docId: d.id }))
+          allTenants = tenantsSnap.docs.map(d => ({ ...d.data(), id: d.id, _docId: d.id }))
 
           const savedTenant = localStorage.getItem(STORAGE_KEY_TENANT)
           const savedOrg    = localStorage.getItem(STORAGE_KEY_ORG)
 
-          if (savedTenant && allTenants.find(t => t.id === savedTenant)) tenantId = savedTenant
-          else if (!tenantId && allTenants.length > 0) tenantId = allTenants[0].id
+          const tenantMatch = allTenants.find(t => t._docId === savedTenant || t.id === savedTenant)
+          if (savedTenant && tenantMatch) tenantId = savedTenant
+          else if (!tenantId && allTenants.length > 0) tenantId = allTenants[0]._docId ?? allTenants[0].id
 
-          if (savedOrg && allOrgs.find(o => o.id === savedOrg)) orgId = savedOrg
-          else if (!orgId && allOrgs.length > 0) orgId = allOrgs[0].id
+          const orgMatch = allOrgs.find(o => o._docId === savedOrg || o.id === savedOrg)
+          if (savedOrg && orgMatch) orgId = savedOrg
+          else if (!orgId && allOrgs.length > 0) orgId = allOrgs[0]._docId ?? allOrgs[0].id
           // Si no hay orgs todavía, usar el tenantId como orgId (retrocompatibilidad)
           else if (!orgId && tenantId) orgId = tenantId
         }
@@ -136,10 +138,9 @@ export function useTenant() {
   }, [])
 
   const switchTenant = async (newTenantId) => {
-    if (newTenantId === state.tenantId) return   // ya es el mismo, no hacer nada
-    localStorage.setItem(STORAGE_KEY_TENANT, newTenantId)
-    // Reload completo para que todos los onSnapshot se re-suscriban al nuevo tenant
-    // Es la forma más confiable de aislar datos entre consultorios
+    if (newTenantId === state.tenantId) return
+    console.log('[switchTenant] cambiando a:', newTenantId)
+    localStorage.setItem(STORAGE_KEY_TENANT, String(newTenantId))
     window.location.reload()
   }
 

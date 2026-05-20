@@ -1,4 +1,4 @@
-// src/services/facturapi.js — DocVias v20 · Multi-org Facturapi
+// src/services/facturapi.js — Novaryk.Med v1 · Multi-org Facturapi
 // Cada tenant puede tener su propia API key de Facturapi (su propia organización).
 // Si el tenant no tiene key propia, cae al VITE_FACTURAPI_KEY global (tu cuenta).
 // NUNCA almacenes keys en Firestore sin cifrar — aquí se guardan como

@@ -1,4 +1,4 @@
-// src/pages/MiCuenta.jsx — DocVia v26
+// src/pages/MiCuenta.jsx — Novaryk.Med v1
 // Página del doctor: suscripción actual + pagar + usuarios del consultorio
 import { useState, useEffect } from 'react'
 import { collection, onSnapshot, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore'
@@ -58,7 +58,7 @@ export default function MiCuenta() {
     const planData = planesConf.find(p => p.id === plan)
     const link = planData?.paymentLink || null
     if (!link) {
-      toast.error('El link de pago no está configurado. Contacta a soporte DocVia.')
+      toast.error('El link de pago no está configurado. Contacta a soporte Novaryk.Med.')
       return
     }
     try {
@@ -175,7 +175,7 @@ export default function MiCuenta() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-700">🧾 Última factura DocVia</p>
+              <p className="text-sm font-semibold text-gray-700">🧾 Última factura Novaryk.Med</p>
               <p className="text-xs text-gray-400 mt-0.5">CFDI disponible para descarga</p>
             </div>
             <a href={tenant.ultimoCFDIUrl} target="_blank" rel="noreferrer"

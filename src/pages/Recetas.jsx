@@ -247,7 +247,7 @@ function RecetaPreview({ receta, tenant }) {
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
         textAlign: 'center', fontSize: 10, color: '#9ca3af'
       }}>
-        Receta generada por DocVia  {tenant?.nombre} : {fecha}
+        Receta generada por MediDesk  {tenant?.nombre} \u00b7 {fecha}
       </div>
     </div>
   )
@@ -463,7 +463,7 @@ export default function Recetas() {
                 )}
                 {form.pacienteId && (
                   <p className="text-xs text-teal-600 mt-1">
-                     {form.pacienteIdLegible}  {form.pacienteNombre}
+                    \u2713 {form.pacienteIdLegible} \u2014 {form.pacienteNombre}
                   </p>
                 )}
               </div>
@@ -516,7 +516,7 @@ export default function Recetas() {
                 </label>
                 <input type="text" value={form.proximaCita}
                   onChange={e => setForm(f => ({ ...f, proximaCita: e.target.value }))}
-                  placeholder="En 7 dia, 15 de mayo 2026..."
+                  placeholder="En 7 d\u00edas, 15 de mayo 2026..."
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400" />
               </div>

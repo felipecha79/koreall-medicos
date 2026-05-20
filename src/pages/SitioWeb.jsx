@@ -4,11 +4,11 @@ import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import toast from 'react-hot-toast'
 
-// ── Themes prediseñados DocVia ──────────────────────────
+// ── Themes prediseñados Novaryk.Med ──────────────────────────
 const THEMES = [
   {
     id: 'docvias_principal',
-    nombre: '✦ DocVia — Principal',
+    nombre: '✦ Novaryk.Med — Principal',
     desc: 'Azul cielo + Coral — Tecnología humana y cercana',
     preview: ['#4AAECC', '#E8623A', '#1A2E42'],
     vars: {
