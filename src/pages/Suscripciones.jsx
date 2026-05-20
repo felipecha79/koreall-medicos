@@ -103,7 +103,7 @@ export default function Suscripciones() {
     // Buscar el payment link del plan actual desde configuracion/planes
     const planesLista = config?._planes ?? []
     const planData    = planesLista.find(p => p.id === plan)
-    const link        = planData?.paymentLink || config?.stripePaymentLinkNovaryk.Med || null
+    const link        = planData?.paymentLink || config?.stripePaymentLinkNovMed || null
     if (!link) {
       toast.error(
         'El Payment Link para el plan ' + plan.toUpperCase() + ' no está configurado. ' +

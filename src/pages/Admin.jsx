@@ -759,7 +759,7 @@ function ConfigPlanes() {
 function ConfigNovaryk() {
   const FORM_VACIO = {
     rfc:'', nombreLegal:'', cp:'', regimen:'612', email:'',
-    telefono:'', stripePaymentLinkNovaryk.Med:'',
+    telefono:'', stripePaymentLinkNovMed:'',
     stripePriceIdBasico:'', stripePriceIdPro:'',
     stripePriceIdClinica:'', stripePriceIdEnterprise:'',
     diasGraciaDefault: 10,
