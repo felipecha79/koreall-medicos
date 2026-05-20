@@ -219,6 +219,26 @@ function BottomNav() {
   )
 }
 
+// BottomNav dinámico: muestra los módulos del rol actual (primeros 4)
+function BottomNavDynamic() {
+  const { role, isSuperAdmin } = useTenant()
+  const navItems = navDeRol(role, isSuperAdmin).slice(0, 4)
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700
+                    flex z-40 md:hidden safe-area-inset-bottom">
+      {navItems.map(({ to, label, icon }) => (
+        <NavLink key={to} to={to}
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2.5 text-xs transition-colors
+             ${isActive ? 'text-teal-400' : 'text-slate-400 hover:text-slate-200'}`}>
+          <span style={{ fontSize: 20 }}>{icon}</span>
+          <span className="text-[9px] mt-0.5 leading-none">{label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
+
 function AppLayout({ children }) {
   const { tenant, tenantId, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, role } = useTenant()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -233,28 +253,48 @@ function AppLayout({ children }) {
           allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
           switchTenant={switchTenant} switchOrg={switchOrg} />
       </div>
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="w-60 flex flex-col h-full shadow-xl">
-            <Sidebar tenant={tenant} org={org} isSuperAdmin={isSuperAdmin}
-              suscripcionActiva={suscripcionActiva}
-              role={role}
-              allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
-              switchTenant={switchTenant} switchOrg={switchOrg}
-              onClose={() => setDrawerOpen(false)} />
-          </div>
-          <div className="flex-1 bg-black/50" onClick={() => setDrawerOpen(false)} />
+      {/* Drawer móvil con overlay y swipe-to-close */}
+      <div className={`fixed inset-0 z-50 md:hidden transition-opacity duration-200
+                       ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        {/* Overlay oscuro */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={() => setDrawerOpen(false)} />
+        {/* Panel lateral */}
+        <div className={`absolute left-0 top-0 h-full w-64 shadow-2xl
+                         transition-transform duration-250 ease-out
+                         ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <Sidebar tenant={tenant} org={org} isSuperAdmin={isSuperAdmin}
+            suscripcionActiva={suscripcionActiva} role={role}
+            allTenants={allTenants} allOrgs={allOrgs} orgTenants={orgTenants}
+            switchTenant={switchTenant} switchOrg={switchOrg}
+            onClose={() => setDrawerOpen(false)} />
         </div>
-      )}
+      </div>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-3 flex-shrink-0">
-          <button onClick={() => setDrawerOpen(true)} className="text-slate-300 text-2xl">☰</button>
-          <span className="text-sm font-semibold">{pageTitle}</span>
-          <span className="text-xs text-slate-400 truncate max-w-[100px]">{tenant?.nombre ?? ''}</span>
+        <header className="md:hidden flex items-center gap-3 bg-slate-900 text-white px-3 py-2.5 flex-shrink-0 shadow-lg">
+          {/* Botón hamburguesa — más visible en móvil */}
+          <button onClick={() => setDrawerOpen(true)}
+            className="flex flex-col items-center justify-center w-10 h-10 rounded-xl
+                       bg-slate-700 hover:bg-slate-600 active:bg-teal-700
+                       transition-colors flex-shrink-0 gap-1.5">
+            <span className="block w-5 h-0.5 bg-white rounded-full" />
+            <span className="block w-5 h-0.5 bg-white rounded-full" />
+            <span className="block w-3.5 h-0.5 bg-white rounded-full self-start ml-0.5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{pageTitle}</p>
+            <p className="text-[10px] text-slate-400 truncate">{tenant?.nombre ?? ''}</p>
+          </div>
+          {/* Logo compacto */}
+          <svg width="22" height="20" viewBox="0 0 56 52" fill="none" className="flex-shrink-0 opacity-70">
+            <path d="M6 46 Q28 6 50 46" stroke="#0D9488" strokeWidth="4.5" strokeLinecap="round"/>
+            <path d="M16 46 Q28 18 40 46" stroke="#0D9488" strokeWidth="2.8" strokeLinecap="round"/>
+            <circle cx="28" cy="13" r="5.5" fill="#0D9488"/>
+          </svg>
         </header>
         <main key={String(tenantId ?? 'default')} className="flex-1 overflow-auto pb-16 md:pb-0">{children}</main>
       </div>
-      <BottomNav />
+      <BottomNavDynamic />
     </div>
   )
 }

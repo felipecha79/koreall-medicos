@@ -184,7 +184,7 @@ function RecetaPreview({ receta, tenant }) {
             </p>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 3 }}>
               {med.dosis      && <span style={{ fontSize: 12, color: '#374151' }}>Dosis: <b>{med.dosis}</b></span>}
-              {med.via        && <span style={{ fontSize: 12, color: '#374151' }}>V\u00eda: <b>{med.via}</b></span>}
+              {med.via        && <span style={{ fontSize: 12, color: '#374151' }}>Via: <b>{med.via}</b></span>}
               {med.frecuencia && <span style={{ fontSize: 12, color: '#374151' }}>Cada: <b>{med.frecuencia}</b></span>}
               {med.duracion   && <span style={{ fontSize: 12, color: '#374151' }}>Por: <b>{med.duracion}</b></span>}
               {med.cantidad   && <span style={{ fontSize: 12, color: '#374151' }}>Cantidad: <b>{med.cantidad}</b></span>}
@@ -247,7 +247,7 @@ function RecetaPreview({ receta, tenant }) {
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
         textAlign: 'center', fontSize: 10, color: '#9ca3af'
       }}>
-        Receta generada por MediDesk  {tenant?.nombre} \u00b7 {fecha}
+        Receta generada por Novaryk  {tenant?.nombre}  :  {fecha}
       </div>
     </div>
   )
@@ -309,7 +309,7 @@ export default function Recetas() {
       const numero = `RX-${Date.now().toString().slice(-6)}`
       const receta = { ...form, numero, tenantId, fecha: Timestamp.now() }
       await addDoc(collection(db, `tenants/${tenantId}/recetas`), receta)
-      toast.success('Receta guardada \u2713')
+      toast.success('Receta guardada correctamente')
       setPreview(receta)
       setModal(false)
       setForm({
@@ -330,7 +330,7 @@ export default function Recetas() {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Receta M\u00e9dica</title>
+        <title>Receta Medica</title>
         <style>
           body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
           @media print {
@@ -463,7 +463,7 @@ export default function Recetas() {
                 )}
                 {form.pacienteId && (
                   <p className="text-xs text-teal-600 mt-1">
-                    \u2713 {form.pacienteIdLegible} \u2014 {form.pacienteNombre}
+                    {form.pacienteIdLegible}  {form.pacienteNombre}
                   </p>
                 )}
               </div>
@@ -516,7 +516,7 @@ export default function Recetas() {
                 </label>
                 <input type="text" value={form.proximaCita}
                   onChange={e => setForm(f => ({ ...f, proximaCita: e.target.value }))}
-                  placeholder="En 7 d\u00edas, 15 de mayo 2026..."
+                  placeholder="En 7 dias, 15 de mayo 2026..."
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400" />
               </div>

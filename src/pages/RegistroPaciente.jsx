@@ -97,6 +97,7 @@ export default function RegistroPaciente() {
   const [paso, setPaso]         = useState(0) // 0=INE, 1=datos, 2=cuenta, 3=listo
   const [escaneando, setEsc]    = useState(false)
   const [saving, setSaving]     = useState(false)
+  const [modalPriv, setModalPriv] = useState(false)
   const [preview, setPreview]   = useState(null)
   const [tenantId, setTenantId] = useState(tenantParam ?? null)
   const [tenantNombre, setTenantNombre] = useState('')
@@ -246,6 +247,18 @@ export default function RegistroPaciente() {
         ultimaConsulta:  null,
       })
 
+      // 5. Registrar aceptación de privacidad para auditoría (NOM-024, LFPDPPP)
+      await addDoc(collection(db, `tenants/${tid}/aceptaciones_privacidad`), {
+        uid:            cred.user.uid,
+        email:          form.email,
+        nombre:         `${form.nombre} ${form.apellidos}`.trim(),
+        fechaAceptacion: Timestamp.now(),
+        version:        'v1.0 Mayo 2026',
+        ip:             'registro-web',
+        dispositivo:    navigator?.userAgent?.slice(0, 100) ?? 'desconocido',
+        tenantId:       tid,
+      })
+
       toast.success(`¡Cuenta creada! Revisa tu email para verificarla.`)
       setPaso(3)
     } catch(e) {
@@ -262,11 +275,45 @@ export default function RegistroPaciente() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4"
       style={{ background: 'linear-gradient(135deg, #0D1F35 0%, #083030 100%)' }}>
 
+      {/* Modal Aviso de Privacidad */}
+      {modalPriv && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setModalPriv(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-800">Aviso de Privacidad</h3>
+              <span className="text-xs text-gray-400">Novaryk.Med v1.0</span>
+            </div>
+            <div className="overflow-y-auto px-5 py-4 flex-1 text-sm text-gray-700 space-y-3 leading-relaxed">
+              <p><strong>Responsable:</strong> Novaryk Technology Group, conforme a la LFPDPPP.</p>
+              <p><strong>Datos recabados:</strong> Nombre, fecha de nacimiento, sexo, CURP, email, teléfono, domicilio y datos de salud para expediente clínico (NOM-004-SSA3-2012).</p>
+              <p><strong>Finalidad:</strong> Expediente clínico, agenda de citas, CFDI, comunicaciones de salud y cumplimiento legal.</p>
+              <p><strong>Derechos ARCO:</strong> Puede Acceder, Rectificar, Cancelar u Oponerse al tratamiento escribiendo a privacidad@novaryk.mx</p>
+              <p><strong>Transferencia:</strong> Sus datos no se comparten con terceros sin consentimiento, salvo disposición legal.</p>
+              <p><strong>Seguridad:</strong> Google Cloud con cifrado. Solo su médico accede al expediente.</p>
+              <p><strong>Terminos:</strong> La plataforma apoya la gestion medica sin sustituir la relacion medico-paciente.</p>
+              <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">Novaryk Technology Group · Tampico, Tamps. · Mayo 2026</p>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-3">
+              <button onClick={() => { set('aceptaTerminos', true); setModalPriv(false) }}
+                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700">
+                He leido y acepto
+              </button>
+              <button onClick={() => setModalPriv(false)}
+                className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Logo / Nombre */}
       <div className="text-center mb-6">
         <p className="text-white text-xl font-light"
           style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-          {tenantNombre || 'MediDesk'}
+          {tenantNombre || 'Novaryk.Med'}
         </p>
         <p className="text-white text-sm mt-1" style={{ opacity: 0.5 }}>
           Portal del paciente — Registro
@@ -552,18 +599,33 @@ export default function RegistroPaciente() {
                                focus:outline-none focus:ring-2 focus:ring-teal-400" />
                 </div>
 
-                <label className="flex items-start gap-2 cursor-pointer mt-2">
-                  <input type="checkbox" checked={form.aceptaTerminos}
-                    onChange={e => set('aceptaTerminos', e.target.checked)}
-                    className="mt-0.5 w-4 h-4 accent-teal-600" />
-                  <span className="text-xs text-gray-600">
-                    Acepto el{' '}
-                    <a href="#" className="text-teal-600 hover:underline">aviso de privacidad</a>
-                    {' '}y{' '}
-                    <a href="#" className="text-teal-600 hover:underline">términos de uso</a>
-                    {' '}de MediDesk.
-                  </span>
-                </label>
+                <div className="mt-3">
+                  {/* Aviso: debe leer primero */}
+                  <button type="button" onClick={() => setModalPriv(true)}
+                    className="w-full text-left text-xs text-teal-700 bg-teal-50 border border-teal-200
+                               rounded-xl px-3 py-2.5 mb-2 hover:bg-teal-100 transition-colors">
+                    📋 <span className="font-medium">Leer Aviso de Privacidad y Términos</span>
+                    <span className="text-teal-500 ml-1">→ obligatorio antes de continuar</span>
+                  </button>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.aceptaTerminos}
+                      onChange={e => set('aceptaTerminos', e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-teal-600 flex-shrink-0" />
+                    <span className="text-xs text-gray-600 leading-relaxed">
+                      He leído y acepto el{' '}
+                      <button type="button" onClick={() => setModalPriv(true)}
+                        className="text-teal-600 hover:underline font-medium">
+                        Aviso de Privacidad
+                      </button>
+                      {' '}y los{' '}
+                      <button type="button" onClick={() => setModalPriv(true)}
+                        className="text-teal-600 hover:underline font-medium">
+                        Términos de Uso
+                      </button>
+                      {' '}de Novaryk.Med. Confirmo que mis datos serán tratados conforme a la LFPDPPP.
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex gap-3 mt-5">
@@ -618,5 +680,7 @@ export default function RegistroPaciente() {
         <a href="/" className="underline hover:opacity-80">Inicia sesión</a>
       </p>
     </div>
+  </>
+    </>
   )
 }
