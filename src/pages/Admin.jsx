@@ -756,7 +756,7 @@ function ConfigPlanes() {
 }
 
 // ── Configuración fiscal y comercial de Novaryk.Med ─────────
-function ConfigNovaryk.Med() {
+function ConfigNovaryk() {
   const FORM_VACIO = {
     rfc:'', nombreLegal:'', cp:'', regimen:'612', email:'',
     telefono:'', stripePaymentLinkNovaryk.Med:'',
@@ -1477,7 +1477,7 @@ export default function Admin() {
 
           {/* ── 1. Parámetros globales — ARRIBA ── */}
           <ConfigPlanes />
-          <ConfigNovaryk.Med />
+          <ConfigNovaryk />
 
           {/* ── 2. Configuración IA por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
