@@ -290,6 +290,320 @@ const buildCSS = (c) => `
 `
 
 // ── Defaults ──────────────────────────────────────────────
+const THEMES = [
+  {
+    id: 'docvias_principal',
+    nombre: '✦ Novaryk.Med — Principal',
+    desc: 'Azul cielo + Coral — Tecnología humana y cercana',
+    preview: ['#4AAECC', '#E8623A', '#1A2E42'],
+    vars: {
+      colorPrimario: '#4AAECC',
+      colorSecundario: '#E8623A',
+      colorFondo: '#F4F9FB',
+      colorAccento: '#1A2E42',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
+  {
+    id: 'teal_navy',
+    nombre: 'Médico Profesional',
+    desc: 'Teal + Navy — Clásico y confiable',
+    preview: ['#0A8076', '#0D1F35', '#F7F4EF'],
+    vars: {
+      colorPrimario: '#0A8076',
+      colorSecundario: '#0D1F35',
+      colorFondo: '#F7F4EF',
+      colorAccento: '#C4A265',
+      tipografia: 'Cormorant Garamond',
+      tipografiaUI: 'DM Sans',
+    }
+  },
+  {
+    id: 'blue_white',
+    nombre: 'Clínica Moderna',
+    desc: 'Azul + Blanco — Limpio y tecnológico',
+    preview: ['#1E6FCC', '#0A2540', '#F0F7FF'],
+    vars: {
+      colorPrimario: '#1E6FCC',
+      colorSecundario: '#0A2540',
+      colorFondo: '#F0F7FF',
+      colorAccento: '#E8A830',
+      tipografia: 'Playfair Display',
+      tipografiaUI: 'Inter',
+    }
+  },
+  {
+    id: 'green_earth',
+    nombre: 'Bienestar Natural',
+    desc: 'Verde + Tierra — Cálido y humano',
+    preview: ['#2D7A3A', '#1A3A20', '#F5F2EC'],
+    vars: {
+      colorPrimario: '#2D7A3A',
+      colorSecundario: '#1A3A20',
+      colorFondo: '#F5F2EC',
+      colorAccento: '#B8860B',
+      tipografia: 'Lora',
+      tipografiaUI: 'Source Sans Pro',
+    }
+  },
+  {
+    id: 'pink_pediatria',
+    nombre: 'Pediatría',
+    desc: 'Rosa + Naranja — Amigable para niños',
+    preview: ['#E84393', '#FF6B35', '#FFF5F9'],
+    vars: {
+      colorPrimario: '#E84393',
+      colorSecundario: '#FF6B35',
+      colorFondo: '#FFF5F9',
+      colorAccento: '#FFD700',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'purple_oncology',
+    nombre: 'Especialista',
+    desc: 'Morado + Gris — Serio y esperanzador',
+    preview: ['#6B3FA0', '#2D2D3A', '#F8F5FF'],
+    vars: {
+      colorPrimario: '#6B3FA0',
+      colorSecundario: '#2D2D3A',
+      colorFondo: '#F8F5FF',
+      colorAccento: '#A0C4FF',
+      tipografia: 'Merriweather',
+      tipografiaUI: 'Open Sans',
+    }
+  },
+  {
+    id: 'red_dental',
+    nombre: 'Dental / Estética',
+    desc: 'Rojo coral + Blanco — Sonrisas brillantes',
+    preview: ['#E53935', '#212121', '#FFFAFA'],
+    vars: {
+      colorPrimario: '#E53935',
+      colorSecundario: '#212121',
+      colorFondo: '#FFFAFA',
+      colorAccento: '#FF8A65',
+      tipografia: 'Raleway',
+      tipografiaUI: 'Raleway',
+    }
+  },
+  {
+    id: 'mint_derma',
+    nombre: 'Dermatología / Estética',
+    desc: 'Menta + Azul acero — Limpio y sofisticado',
+    preview: ['#9EDFCC', '#2B5D87', '#F4FFFE'],
+    vars: {
+      colorPrimario: '#9EDFCC',
+      colorSecundario: '#2B5D87',
+      colorFondo: '#F4FFFE',
+      colorAccento: '#6AA9D9',
+      tipografia: 'Josefin Sans',
+      tipografiaUI: 'Josefin Sans',
+    }
+  },
+  {
+    id: 'warm_gine',
+    nombre: 'Ginecología / Maternidad',
+    desc: 'Durazno + Lavanda — Cálido y seguro',
+    preview: ['#E8844A', '#7C6FA0', '#FFF8F4'],
+    vars: {
+      colorPrimario: '#E8844A',
+      colorSecundario: '#7C6FA0',
+      colorFondo: '#FFF8F4',
+      colorAccento: '#F2C4A0',
+      tipografia: 'Lora',
+      tipografiaUI: 'Nunito',
+    }
+  },
+
+  // ── Especialidades médicas ────────────────────────────
+  {
+    id: 'dental',
+    nombre: '🦷 Dental / Estomatología',
+    desc: 'Azul bebé + Blanco — Limpio y brillante',
+    preview: ['#5BB5F7', '#FFFFFF', '#EBF7FF'],
+    vars: {
+      colorPrimario: '#5BB5F7',
+      colorSecundario: '#1A6FA8',
+      colorFondo: '#EBF7FF',
+      colorAccento: '#FF8A65',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'pediatria_alegre',
+    nombre: '🧒 Pediatría Alegre',
+    desc: 'Amarillo + Naranja — Divertido para niños',
+    preview: ['#FFB347', '#FF7043', '#FFFBF0'],
+    vars: {
+      colorPrimario: '#FFB347',
+      colorSecundario: '#FF7043',
+      colorFondo: '#FFFBF0',
+      colorAccento: '#4CAF50',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'veterinaria',
+    nombre: '🐾 Veterinaria',
+    desc: 'Verde pasto + Café — Amor por las mascotas',
+    preview: ['#66BB6A', '#795548', '#F1F8E9'],
+    vars: {
+      colorPrimario: '#66BB6A',
+      colorSecundario: '#795548',
+      colorFondo: '#F1F8E9',
+      colorAccento: '#FFA726',
+      tipografia: 'Nunito',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'nutricion',
+    nombre: '🥑 Nutrición y Bienestar',
+    desc: 'Verde olivo + Crema — Fresco y saludable',
+    preview: ['#8BC34A', '#558B2F', '#F9FBF2'],
+    vars: {
+      colorPrimario: '#8BC34A',
+      colorSecundario: '#558B2F',
+      colorFondo: '#F9FBF2',
+      colorAccento: '#FF8F00',
+      tipografia: 'Lora',
+      tipografiaUI: 'Source Sans Pro',
+    }
+  },
+  {
+    id: 'psicologia',
+    nombre: '🧠 Psicología / Salud mental',
+    desc: 'Lavanda + Azul sereno — Tranquilo y empático',
+    preview: ['#9575CD', '#5C6BC0', '#F5F0FF'],
+    vars: {
+      colorPrimario: '#9575CD',
+      colorSecundario: '#5C6BC0',
+      colorFondo: '#F5F0FF',
+      colorAccento: '#80CBC4',
+      tipografia: 'Lora',
+      tipografiaUI: 'Open Sans',
+    }
+  },
+  {
+    id: 'fisioterapia',
+    nombre: '💪 Fisioterapia / Rehabilitación',
+    desc: 'Naranja energía + Azul — Movimiento y fuerza',
+    preview: ['#FF7043', '#1565C0', '#FFF3E0'],
+    vars: {
+      colorPrimario: '#FF7043',
+      colorSecundario: '#1565C0',
+      colorFondo: '#FFF3E0',
+      colorAccento: '#4CAF50',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
+  {
+    id: 'oftalmologia',
+    nombre: '👁️ Oftalmología / Óptica',
+    desc: 'Azul marino + Celeste — Claridad y precisión',
+    preview: ['#1E88E5', '#90CAF9', '#E3F2FD'],
+    vars: {
+      colorPrimario: '#1E88E5',
+      colorSecundario: '#0D47A1',
+      colorFondo: '#E3F2FD',
+      colorAccento: '#F9A825',
+      tipografia: 'Inter',
+      tipografiaUI: 'Inter',
+    }
+  },
+
+  // ── Negocios de bienestar ─────────────────────────────
+  {
+    id: 'spa_lux',
+    nombre: '💆 Spa & Relajación',
+    desc: 'Dorado + Crema — Lujo tranquilo',
+    preview: ['#C4A35A', '#3E2723', '#FAF8F2'],
+    vars: {
+      colorPrimario: '#C4A35A',
+      colorSecundario: '#3E2723',
+      colorFondo: '#FAF8F2',
+      colorAccento: '#A5D6A7',
+      tipografia: 'Cormorant Garamond',
+      tipografiaUI: 'DM Sans',
+    }
+  },
+  {
+    id: 'spa_moderno',
+    nombre: '🌿 Spa & Bienestar Moderno',
+    desc: 'Sage + Blanco — Minimalista y fresco',
+    preview: ['#80A88A', '#3D5A45', '#F7FBF8'],
+    vars: {
+      colorPrimario: '#80A88A',
+      colorSecundario: '#3D5A45',
+      colorFondo: '#F7FBF8',
+      colorAccento: '#D4A853',
+      tipografia: 'Josefin Sans',
+      tipografiaUI: 'Josefin Sans',
+    }
+  },
+  {
+    id: 'estetica',
+    nombre: '💅 Estética & Belleza',
+    desc: 'Rosa palo + Dorado — Femenino y elegante',
+    preview: ['#E57FA1', '#B8860B', '#FFF0F5'],
+    vars: {
+      colorPrimario: '#E57FA1',
+      colorSecundario: '#C2185B',
+      colorFondo: '#FFF0F5',
+      colorAccento: '#B8860B',
+      tipografia: 'Raleway',
+      tipografiaUI: 'Raleway',
+    }
+  },
+  {
+    id: 'pilates_yoga',
+    nombre: '🧘 Pilates & Yoga',
+    desc: 'Terracota + Crema — Equilibrio y consciencia',
+    preview: ['#C0785A', '#8D4E38', '#FBF7F4'],
+    vars: {
+      colorPrimario: '#C0785A',
+      colorSecundario: '#8D4E38',
+      colorFondo: '#FBF7F4',
+      colorAccento: '#81A892',
+      tipografia: 'Lora',
+      tipografiaUI: 'Nunito',
+    }
+  },
+  {
+    id: 'clinica_fresca',
+    nombre: '🏥 Clínica Fresca',
+    desc: 'Aguamarina + Blanco — Moderno y accesible',
+    preview: ['#26C6DA', '#00838F', '#F0FFFE'],
+    vars: {
+      colorPrimario: '#26C6DA',
+      colorSecundario: '#00838F',
+      colorFondo: '#F0FFFE',
+      colorAccento: '#FF7043',
+      tipografia: 'Plus Jakarta Sans',
+      tipografiaUI: 'Plus Jakarta Sans',
+    }
+  },
+]
+
+// Resolver colores de un themeId
+function resolverTheme(themeId, sitioWeb = {}) {
+  const theme = THEMES.find(t => t.id === themeId)
+  if (!theme) return sitioWeb
+  // Los vars del tema son base; los overrides de sitioWeb tienen prioridad
+  return {
+    ...theme.vars,
+    ...Object.fromEntries(
+      Object.entries(sitioWeb).filter(([k,v]) => v !== undefined && v !== null && v !== '')
+    )
+  }
+}
+
 const DEFAULT_CONFIG = {
   colorPrimario:    '#0D9488',
   colorSecundario:  '#0A6E65',
@@ -368,25 +682,30 @@ export default function Landing() {
     const applyTenant = (docData) => {
       const t = docData
       const sw = t.sitioWeb ?? {}
+      // Resolver colores: themeId → vars del tema como base, luego overrides de sitioWeb
+      const themeId = sw.themeId ?? t.themeId ?? null
+      const colors = resolverTheme(themeId, sw)
       setCfg(prev => ({
         ...prev,
-        ...sw,
-        nombreDoctor:      t.nombreDoctor   ?? sw.nombreDoctor   ?? prev.nombreDoctor,
-        especialidad:      t.especialidad   ?? sw.especialidad   ?? prev.especialidad,
-        telefonoContacto:  t.telefono       ?? sw.telefonoContacto ?? prev.telefonoContacto,
-        emailContacto:     t.email          ?? sw.emailContacto  ?? prev.emailContacto,
-        cedulaProfesional: t.cedula         ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
-        direccion:         t.direccion      ?? sw.direccion      ?? prev.direccion,
-        nombreConsultorio: t.nombre         ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
-        horarios:          sw.horarios      ?? t.horarios        ?? prev.horarios,
-        servicios:         sw.servicios     ?? prev.servicios,
+        // Datos del doctor/consultorio
+        nombreDoctor:      t.nombreDoctor    ?? sw.nombreDoctor      ?? prev.nombreDoctor,
+        especialidad:      t.especialidad    ?? sw.especialidad      ?? prev.especialidad,
+        telefonoContacto:  t.telefono        ?? sw.telefonoContacto  ?? prev.telefonoContacto,
+        emailContacto:     t.email           ?? sw.emailContacto     ?? prev.emailContacto,
+        cedulaProfesional: t.cedula          ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
+        direccion:         t.direccion       ?? sw.direccion         ?? prev.direccion,
+        nombreConsultorio: t.nombre          ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
+        horarios:          sw.horarios       ?? t.horarios           ?? prev.horarios,
+        servicios:         sw.servicios      ?? prev.servicios,
         certificaciones:   sw.certificaciones ?? prev.certificaciones,
-        colorPrimario:     sw.colorPrimario    ?? prev.colorPrimario,
-        colorSecundario:   sw.colorSecundario  ?? prev.colorSecundario,
-        colorFondo:        sw.colorFondo       ?? prev.colorFondo,
-        colorAccento:      sw.colorAccento     ?? prev.colorAccento,
-        tipografia:        sw.tipografia       ?? prev.tipografia,
-        tipografiaUI:      sw.tipografiaUI     ?? prev.tipografiaUI,
+        // Colores resueltos desde el tema
+        colorPrimario:     colors.colorPrimario    ?? prev.colorPrimario,
+        colorSecundario:   colors.colorSecundario  ?? prev.colorSecundario,
+        colorFondo:        colors.colorFondo       ?? prev.colorFondo,
+        colorAccento:      colors.colorAccento     ?? prev.colorAccento,
+        tipografia:        colors.tipografia       ?? prev.tipografia,
+        tipografiaUI:      colors.tipografiaUI     ?? prev.tipografiaUI,
+        themeId,
       }))
     }
 
