@@ -592,16 +592,18 @@ const THEMES = [
 ]
 
 // Resolver colores de un themeId
+// Si hay themeId → los colores del tema SIEMPRE ganan (ignorar colorPrimario guardado)
+// Si no hay themeId → usar los colores que vienen en sitioWeb directamente
+const COLOR_KEYS = ['colorPrimario','colorSecundario','colorFondo','colorAccento','tipografia','tipografiaUI']
 function resolverTheme(themeId, sitioWeb = {}) {
   const theme = THEMES.find(t => t.id === themeId)
-  if (!theme) return sitioWeb
-  // Los vars del tema son base; los overrides de sitioWeb tienen prioridad
-  return {
-    ...theme.vars,
-    ...Object.fromEntries(
-      Object.entries(sitioWeb).filter(([k,v]) => v !== undefined && v !== null && v !== '')
-    )
-  }
+  if (!theme) return sitioWeb  // Sin tema: usar todo lo que venga en sitioWeb
+  // Con tema: usar SOLO los vars del tema para colores, ignorar los guardados en sitioWeb
+  // (evita que colorPrimario del tema anterior sobreescriba el nuevo)
+  const sinColores = Object.fromEntries(
+    Object.entries(sitioWeb).filter(([k]) => !COLOR_KEYS.includes(k))
+  )
+  return { ...sinColores, ...theme.vars }
 }
 
 const DEFAULT_CONFIG = {
