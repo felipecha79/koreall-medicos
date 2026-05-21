@@ -7,6 +7,25 @@ import { auth, db } from '../firebase'
 const STORAGE_KEY_TENANT = 'medidesk_active_tenant'
 const STORAGE_KEY_ORG    = 'medidesk_active_org'
 
+// ── Detectar subdominio de doctor ────────────────────────────────────
+// drsalas.novaryk.com → "drsalas"
+// med.novaryk.com → null (app principal)
+// localhost → null
+function detectarSubdominio() {
+  const hostname = window.location.hostname
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return null
+  const parts = hostname.split('.')
+  // ej: drsalas.novaryk.com → parts = ['drsalas','novaryk','com']
+  if (parts.length < 3) return null
+  const sub = parts[0].toLowerCase()
+  // Excluir subdominios reservados del sistema
+  const RESERVED = ['med', 'www', 'app', 'api', 'admin', 'staging', 'dev']
+  if (RESERVED.includes(sub)) return null
+  return sub  // ej: "drsalas"
+}
+
+const SUBDOMINIO_DOCTOR = detectarSubdominio()
+
 export function useTenant() {
   const [state, setState] = useState({
     user:              null,
@@ -52,6 +71,20 @@ export function useTenant() {
         let tenantId = token.claims.tenantId ?? null
         let orgId    = token.claims.orgId    ?? null
         let allTenants = [], allOrgs = []
+
+        // Si hay subdominio de doctor, sobreescribir tenantId buscando por slug
+        if (SUBDOMINIO_DOCTOR && !isSuperAdmin) {
+          try {
+            const subSnap = await getDocs(
+              query(collection(db, 'tenants'),
+                where('slug', '==', SUBDOMINIO_DOCTOR),
+                limit(1))
+            ).catch(() => null)
+            if (subSnap && !subSnap.empty) {
+              tenantId = subSnap.docs[0].id
+            }
+          } catch(e) { console.warn('[useTenant] slug lookup error:', e) }
+        }
 
         if (isSuperAdmin) {
           // Cargar orgs y tenants — tolerante a colección organizaciones vacía
