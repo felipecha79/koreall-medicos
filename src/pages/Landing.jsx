@@ -714,13 +714,27 @@ export default function Landing() {
 
     let unsub
     if (tenantParam && tenantParam.startsWith('__slug__')) {
-      // Buscar tenant por slug (subdominio)
+      // Buscar tenant por slug — getDocs de todos + filtro en memoria (sin índice)
       const slug = tenantParam.replace('__slug__', '')
-      unsub = onSnapshot(
-        query(collection(db, 'tenants'), where('slug', '==', slug), limit(1)),
-        snap => { if (!snap.empty) applyTenant(snap.docs[0].data()) },
-        () => {}
-      )
+      console.log('[NovMed] Buscando slug:', slug)
+      getDocs(collection(db, 'tenants')).then(snap => {
+        const match = snap.docs.find(d => {
+          const data = d.data()
+          const tenantSlug = data.slug ?? data.id ?? d.id
+          console.log('[NovMed] Comparando:', tenantSlug, 'vs', slug, '| nombre:', data.nombre)
+          return tenantSlug === slug
+        })
+        if (match) {
+          console.log('[NovMed] ✓ Tenant encontrado:', match.data().nombre)
+          applyTenant(match.data())
+          // Suscribir en tiempo real para cambios
+          unsub = onSnapshot(doc(db, 'tenants', match.id),
+            s => { if (s.exists()) applyTenant(s.data()) }, () => {})
+        } else {
+          console.warn('[NovMed] ✗ No se encontró tenant con slug:', slug)
+        }
+      }).catch(e => console.error('[NovMed] Error:', e))
+      unsub = () => {}  // placeholder hasta que se resuelva el getDocs
     } else if (tenantParam) {
       // Escuchar en tiempo real el tenant específico por ID
       unsub = onSnapshot(doc(db, 'tenants', tenantParam), snap => {
