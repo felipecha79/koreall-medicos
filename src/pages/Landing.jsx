@@ -687,6 +687,7 @@ export default function Landing() {
       // Resolver colores: themeId → vars del tema como base, luego overrides de sitioWeb
       const themeId = sw.themeId ?? t.themeId ?? null
       const colors = resolverTheme(themeId, sw)
+      console.log('[NovMed] tenant:', t.nombre, '| themeId:', themeId, '| colorPrimario resuelto:', colors.colorPrimario)
       setCfg(prev => ({
         ...prev,
         // Datos del doctor/consultorio
