@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { signInWithEmailAndPassword, getIdTokenResult } from 'firebase/auth'
 import { auth, db } from '../firebase'
-import { collection, getDocs, query, limit, onSnapshot, doc } from 'firebase/firestore'
+import { collection, getDocs, query, limit, onSnapshot, doc, where } from 'firebase/firestore'
 
 // ── CSS inyectado dinámicamente ───────────────────────────
 const buildCSS = (c) => `
@@ -337,7 +337,21 @@ const DEFAULT_CONFIG = {
 export default function Landing() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const tenantParam = searchParams.get('t')
+  // Detectar tenant: primero por subdominio, luego por ?t=param
+  const tenantParam = (() => {
+    // Si hay ?t= explícito, usarlo
+    const qParam = searchParams.get('t')
+    if (qParam) return qParam
+    // Detectar subdominio: drsalas.novaryk.com → slug="drsalas"
+    const hostname = window.location.hostname
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return null
+    const parts = hostname.split('.')
+    if (parts.length < 3) return null
+    const sub = parts[0].toLowerCase()
+    const RESERVED = ['med', 'www', 'app', 'api', 'admin', 'staging', 'dev']
+    if (RESERVED.includes(sub)) return null
+    return '__slug__' + sub  // Prefijo especial para buscar por slug
+  })()
   const [cfg, setCfg]           = useState(DEFAULT_CONFIG)
   const [cssReady, setCssReady] = useState(false)
   const [modalOpen, setModal]   = useState(false)
@@ -377,14 +391,21 @@ export default function Landing() {
     }
 
     let unsub
-    if (tenantParam) {
-      // Escuchar en tiempo real el tenant específico
-      const { doc: fDoc, onSnapshot: fSnap } = { doc, onSnapshot }
+    if (tenantParam && tenantParam.startsWith('__slug__')) {
+      // Buscar tenant por slug (subdominio)
+      const slug = tenantParam.replace('__slug__', '')
+      unsub = onSnapshot(
+        query(collection(db, 'tenants'), where('slug', '==', slug), limit(1)),
+        snap => { if (!snap.empty) applyTenant(snap.docs[0].data()) },
+        () => {}
+      )
+    } else if (tenantParam) {
+      // Escuchar en tiempo real el tenant específico por ID
       unsub = onSnapshot(doc(db, 'tenants', tenantParam), snap => {
         if (snap.exists()) applyTenant(snap.data())
       }, () => {})
     } else {
-      // Fallback: primer tenant (página pública sin parámetro)
+      // Fallback: primer tenant (med.novaryk.com o localhost)
       unsub = onSnapshot(query(collection(db, 'tenants'), limit(1)), snap => {
         if (!snap.empty) applyTenant(snap.docs[0].data())
       }, () => {})
