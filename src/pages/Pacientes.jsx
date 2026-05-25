@@ -254,17 +254,15 @@ export default function Pacientes() {
     setTabForm('personal')
   }
 
-  // FIX subsecuentes: comparación directa, sin helper roto
+  // FIX subsecuentes definitivo:
+  // Es subsecuente si: tipoPaciente==='subsecuente' O totalConsultas > 0
+  const esSubsecuente = p =>
+    p.tipoPaciente === 'subsecuente' || Number(p.totalConsultas ?? 0) > 0
+
   const pacientesFiltrados = pacientes
     .filter(p => {
-      if (filtroTipo === 'primera_vez') {
-        // primera_vez: el campo dice primera_vez O está vacío/null (default)
-        if (p.tipoPaciente === 'subsecuente') return false
-      }
-      if (filtroTipo === 'subsecuente') {
-        // subsecuente: SOLO los que tienen el campo explícitamente en 'subsecuente'
-        if (p.tipoPaciente !== 'subsecuente') return false
-      }
+      if (filtroTipo === 'primera_vez'  && esSubsecuente(p)) return false
+      if (filtroTipo === 'subsecuente'  && !esSubsecuente(p)) return false
       if (!busqueda) return true
       const q = busqueda.toLowerCase()
       return `${p.nombre} ${p.apellidos} ${p.pacienteId ?? ''} ${p.email ?? ''} ${p.telefono ?? ''}`
@@ -367,10 +365,10 @@ export default function Pacientes() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                    ${p.tipoPaciente === 'subsecuente'
+                    ${esSubsecuente(p)
                       ? 'bg-green-50 text-green-700'
                       : 'bg-blue-50 text-blue-700'}`}>
-                    {p.tipoPaciente === 'subsecuente' ? 'Subsecuente' : 'Primera vez'}
+                    {esSubsecuente(p) ? 'Subsecuente' : 'Primera vez'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 capitalize">
