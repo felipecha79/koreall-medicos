@@ -10,11 +10,29 @@ import toast from 'react-hot-toast'
 // ── Columnas requeridas y opcionales ─────────────────────
 const COLUMNAS_REQUERIDAS = ['nombre', 'apellidoPaterno', 'telefono']
 const COLUMNAS_OPCIONALES = [
+  // Datos personales
   'apellidoMaterno', 'fechaNacimiento', 'sexo', 'email',
-  'curp', 'rfc', 'grupoSanguineo', 'alergias',
+  'curp', 'rfc', 'estadoCivil', 'nacionalidad',
+  'telefonoEmergencia', 'nombreEmergencia',
+  // Dirección
+  'calle', 'colonia', 'ciudad', 'estado', 'cp',
+  // Fiscal
+  'razonSocial', 'regimenFiscal', 'usoCFDI', 'tipoPersonaFiscal',
+  // Clínico NOM-004
+  'grupoSanguineo', 'alergias',
+  'antecedentesHeredofamiliares', 'antecedentesCronicos',
+  'medicamentosActuales', 'cirugiasPrevias', 'hospitalizaciones',
+  'tabaquismo', 'alcoholismo', 'actividadFisica',
+  'peso', 'talla',
+  // Nota inicial
+  'motivoConsultaInicial', 'diagnosticoInicial',
+  'planTratamientoInicial', 'observacionesGenerales',
+  'fechaPrimeraConsulta',
+  // CRM
+  'tipoPaciente',
   'calle', 'colonia', 'ciudad', 'estado', 'cp',
   'estadoCivil', 'nacionalidad', 'ocupacion',
-  'tipoPaciente', 'canalOrigen', 'notas',
+   'canalOrigen', 'notas',
   // Campos fiscales
   'rfcRazonSocial', 'regimenFiscal', 'usoCFDI', 'cpFiscal',
 ]
@@ -29,8 +47,10 @@ const VALIDACIONES = {
   fechaNacimiento: { regex: /^\d{4}-\d{2}-\d{2}$/, msg: 'Formato YYYY-MM-DD (ej: 1990-05-15)', opcional: true },
   sexo:            { enum: ['M','F','O',''], msg: 'Solo M, F u O', opcional: true },
   curp:            { regex: /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/, msg: '18 caracteres, formato CURP', opcional: true },
+  peso:            { regex: /^(\d{1,3}(\.\d{1,2})?)?$/, msg: 'Número decimal ej. 75.5', opcional: true },
+  talla:           { regex: /^(\d{1}(\.\d{1,2})?)?$/, msg: 'Metros ej. 1.72', opcional: true },
+  tipoPaciente:    { enum: ['primera_vez','subsecuente',''], msg: 'primera_vez o subsecuente', opcional: true },
   rfc:             { regex: /^[A-Z]{3,4}\d{6}[A-Z\d]{3}$/, msg: 'RFC no válido', opcional: true },
-  tipoPaciente:    { enum: ['primera_vez', 'subsecuente', ''], msg: 'primera_vez o subsecuente', opcional: true },
   sexo_values:     ['M','F','O',''],
 }
 
@@ -250,11 +270,31 @@ export default function ImportarPacientes() {
           estadoCivil:     f.estadoCivil      ?? '',
           nacionalidad:    f.nacionalidad     ?? 'Mexicana',
           ocupacion:       f.ocupacion        ?? '',
-          rfcRazonSocial:  f.rfcRazonSocial   ?? '',
+          rfcRazonSocial:  f.razonSocial      ?? f.rfcRazonSocial ?? '',
           regimenFiscal:   f.regimenFiscal    ?? '616',
           usoCFDI:         f.usoCFDI          ?? 'S01',
+          tipoPersonaFiscal: f.tipoPersonaFiscal ?? 'F',
           cpFiscal:        f.cpFiscal         ?? f.cp ?? '',
           tipoPaciente:    f.tipoPaciente     || 'subsecuente',
+          telefonoEmergencia: f.telefonoEmergencia ?? '',
+          nombreEmergencia:   f.nombreEmergencia  ?? '',
+          // Antecedentes clínicos NOM-004 (T-07)
+          antecedentesHeredofamiliares: f.antecedentesHeredofamiliares ?? '',
+          antecedentesCronicos:         f.antecedentesCronicos         ?? '',
+          medicamentosActuales:         f.medicamentosActuales         ?? '',
+          cirugiasPrevias:              f.cirugiasPrevias              ?? '',
+          hospitalizaciones:            f.hospitalizaciones            ?? '',
+          tabaquismo:                   f.tabaquismo                   ?? '',
+          alcoholismo:                  f.alcoholismo                  ?? '',
+          actividadFisica:              f.actividadFisica              ?? '',
+          peso:                         f.peso                         ? Number(f.peso)  : null,
+          talla:                        f.talla                        ? Number(f.talla) : null,
+          // Nota clínica inicial
+          motivoConsultaInicial:        f.motivoConsultaInicial        ?? '',
+          diagnosticoInicial:           f.diagnosticoInicial           ?? '',
+          planTratamientoInicial:       f.planTratamientoInicial       ?? '',
+          observacionesGenerales:       f.observacionesGenerales       ?? '',
+          fechaPrimeraConsulta:         f.fechaPrimeraConsulta         ?? '',
           canalOrigen:     f.canalOrigen      ?? 'migracion',
           notas:           f.notas            ?? '',
           importado:       true,

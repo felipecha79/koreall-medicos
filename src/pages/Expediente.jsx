@@ -236,6 +236,48 @@ export default function Expediente() {
     nombre:'', dosis:'', frecuencia:'', inicio:'', indicadoPor:'', notas:'',
   })
   // Form receta ligada a consulta
+  // T-04: Procedimientos realizados en la consulta
+  const [procedimientos, setProcedimientos] = useState([])
+  const [showProcForm, setShowProcForm]     = useState(false)
+  const PROC_VACIO = { tipo: '', medicamento: '', dosis: '', lote: '', cantidad: 1, precio: 0, descripcion: '' }
+  const [formProc, setFormProc] = useState({ ...PROC_VACIO })
+
+  const TIPOS_PROC = [
+    { id: 'biopsia',     label: '🔬 Biopsia',                  campos: ['descripcion'] },
+    { id: 'sensor',      label: '📡 Sensor / Dispositivo',      campos: ['descripcion'] },
+    { id: 'medicamento', label: '💊 Aplicación de medicamento', campos: ['medicamento','dosis','lote'] },
+  ]
+
+  const MEDICAMENTOS_CAT = [
+    { id: 'mounjaro', nombre: 'Mounjaro (Tirzepatida)', laboratorio: 'Eli Lilly' },
+    { id: 'wegovy',   nombre: 'Wegovy (Semaglutida)',   laboratorio: 'Novo Nordisk' },
+  ]
+
+  const agregarProcedimiento = async () => {
+    if (!formProc.tipo) { toast.error('Selecciona el tipo de procedimiento'); return }
+    if (formProc.tipo === 'medicamento' && !formProc.medicamento) {
+      toast.error('Selecciona el medicamento'); return
+    }
+    const nuevo = {
+      ...formProc,
+      fecha: Timestamp.now(),
+      pacienteId: id,
+      tenantId,
+    }
+    try {
+      await addDoc(
+        collection(db, `tenants/${tenantId}/consultas`),
+        { tipo: 'procedimiento', ...nuevo, creadoEn: Timestamp.now() }
+      )
+      setProcedimientos(prev => [...prev, { id: Date.now().toString(), ...nuevo }])
+      setFormProc({ ...PROC_VACIO })
+      setShowProcForm(false)
+      toast.success('Procedimiento registrado ✓')
+    } catch(e) { toast.error('Error al guardar procedimiento') }
+  }
+
+  const formReceta_placeholder = 0  // separador visual
+
   const [formReceta, setFormReceta] = useState({
     medicamentos: [{ ...MED_VACIO }],
     indicacionesGenerales: '',
@@ -587,7 +629,121 @@ export default function Expediente() {
                              hover:bg-teal-700 flex items-center gap-1.5">
                   📝 Nueva nota clínica (SOAP)
                 </button>
+                <button onClick={() => setShowProcForm(v => !v)}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg
+                             hover:bg-indigo-700 flex items-center gap-1.5">
+                  🔬 + Procedimiento
+                </button>
               </div>
+
+              {/* T-04: Panel de procedimientos */}
+              {showProcForm && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-3">
+                  <p className="text-sm font-semibold text-indigo-800 mb-3">Registrar procedimiento</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500">Tipo de procedimiento *</label>
+                      <select value={formProc.tipo}
+                        onChange={e => setFormProc(p => ({ ...p, tipo: e.target.value, medicamento: '' }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1">
+                        <option value="">— Seleccionar —</option>
+                        {TIPOS_PROC.map(t => (
+                          <option key={t.id} value={t.id}>{t.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {formProc.tipo === 'medicamento' && (
+                      <>
+                        <div>
+                          <label className="text-xs text-gray-500">Medicamento *</label>
+                          <select value={formProc.medicamento}
+                            onChange={e => setFormProc(p => ({ ...p, medicamento: e.target.value }))}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1">
+                            <option value="">— Seleccionar —</option>
+                            {MEDICAMENTOS_CAT.map(m => (
+                              <option key={m.id} value={m.nombre}>{m.nombre}</option>
+                            ))}
+                            <option value="otro">Otro (escribir abajo)</option>
+                          </select>
+                        </div>
+                        {formProc.medicamento === 'otro' && (
+                          <div>
+                            <label className="text-xs text-gray-500">Nombre del medicamento</label>
+                            <input type="text" value={formProc.descripcion}
+                              onChange={e => setFormProc(p => ({ ...p, descripcion: e.target.value }))}
+                              placeholder="Nombre del medicamento..."
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+                          </div>
+                        )}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-500">Dosis</label>
+                            <input type="text" value={formProc.dosis}
+                              onChange={e => setFormProc(p => ({ ...p, dosis: e.target.value }))}
+                              placeholder="ej. 2.5mg"
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Lote</label>
+                            <input type="text" value={formProc.lote}
+                              onChange={e => setFormProc(p => ({ ...p, lote: e.target.value }))}
+                              placeholder="No. lote"
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Precio MXN</label>
+                            <input type="number" value={formProc.precio}
+                              onChange={e => setFormProc(p => ({ ...p, precio: Number(e.target.value) }))}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {(formProc.tipo === 'biopsia' || formProc.tipo === 'sensor') && (
+                      <div>
+                        <label className="text-xs text-gray-500">Descripción</label>
+                        <input type="text" value={formProc.descripcion}
+                          onChange={e => setFormProc(p => ({ ...p, descripcion: e.target.value }))}
+                          placeholder="Detalles del procedimiento..."
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+                      </div>
+                    )}
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={agregarProcedimiento}
+                        className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">
+                        ✓ Guardar procedimiento
+                      </button>
+                      <button onClick={() => setShowProcForm(false)}
+                        className="px-4 bg-gray-100 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-200">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Historial de procedimientos del paciente */}
+              {procedimientos.length > 0 && (
+                <div className="bg-white rounded-xl border border-indigo-100 p-4 mb-3">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">🔬 Procedimientos registrados</p>
+                  <div className="space-y-2">
+                    {procedimientos.map(p => (
+                      <div key={p.id} className="flex items-start gap-3 text-xs border-b border-gray-50 pb-2">
+                        <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium whitespace-nowrap">
+                          {TIPOS_PROC.find(t => t.id === p.tipo)?.label ?? p.tipo}
+                        </span>
+                        <span className="text-gray-700">
+                          {p.medicamento || p.descripcion || '—'}
+                          {p.dosis && <span className="text-gray-400"> · {p.dosis}</span>}
+                          {p.lote && <span className="text-gray-400"> · Lote: {p.lote}</span>}
+                          {p.precio > 0 && <span className="text-gray-500"> · ${p.precio.toLocaleString('es-MX')}</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
             <div className="space-y-3">
               {consultas.map(c => (

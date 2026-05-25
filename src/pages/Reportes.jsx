@@ -61,11 +61,107 @@ function SelectorRango({ desde, hasta, onChange }) {
           className="border border-gray-300 rounded-lg px-2 py-1 text-xs text-gray-800 bg-white
                      focus:outline-none focus:ring-2 focus:ring-teal-400" />
       </div>
+
+      {/* ══ T-04: Tab Medicamentos / Procedimientos ══════════════ */}
+      {tab === '💊 Medicamentos' && (
+        <div>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-gray-800">Dashboard de Medicamentos y Procedimientos</h3>
+              <p className="text-xs text-gray-400">Últimos 90 días · Útil para negociar convenios con laboratorios</p>
+            </div>
+            <button
+              onClick={() => {
+                const rows = procedimientos.map(p =>
+                  [p.fecha?.toDate?.().toLocaleDateString('es-MX') ?? '—',
+                   p.tipo ?? '—', p.medicamento ?? p.descripcion ?? '—',
+                   p.dosis ?? '—', p.lote ?? '—',
+                   p.pacienteId ?? '—', `$${p.precio ?? 0}`].join(',')
+                )
+                const csv = ['Fecha,Tipo,Medicamento/Descripcion,Dosis,Lote,PacienteID,Precio', ...rows].join('\n')
+                const a = document.createElement('a')
+                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+                a.download = 'procedimientos_novaryk.csv'
+                a.click()
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
+              ⬇ Exportar CSV
+            </button>
+          </div>
+
+          {/* Resumen por medicamento */}
+          {(() => {
+            const meds = {}
+            procedimientos.filter(p => p.tipo === 'medicamento').forEach(p => {
+              const nombre = p.medicamento === 'otro' ? (p.descripcion || 'Otro') : (p.medicamento || 'Sin nombre')
+              if (!meds[nombre]) meds[nombre] = { total: 0, pacientes: new Set() }
+              meds[nombre].total++
+              if (p.pacienteId) meds[nombre].pacientes.add(p.pacienteId)
+            })
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                {Object.entries(meds).map(([nombre, data]) => (
+                  <div key={nombre} className="bg-white rounded-xl border border-indigo-100 p-4">
+                    <p className="text-sm font-semibold text-gray-800 mb-1">💊 {nombre}</p>
+                    <p className="text-2xl font-bold text-indigo-600">{data.total}</p>
+                    <p className="text-xs text-gray-400">aplicaciones · {data.pacientes.size} pacientes únicos</p>
+                  </div>
+                ))}
+                {Object.keys(meds).length === 0 && (
+                  <div className="col-span-3 text-center py-8 text-gray-400 text-sm">
+                    Sin procedimientos de medicamento en los últimos 90 días
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Tabla completa */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Fecha','Tipo','Medicamento / Detalle','Dosis','Lote','Precio'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {procedimientos.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {p.fecha?.toDate?.().toLocaleDateString('es-MX') ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">
+                        {p.tipo === 'medicamento' ? '💊' : p.tipo === 'biopsia' ? '🔬' : '📡'} {p.tipo}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-800">
+                      {p.medicamento === 'otro' ? p.descripcion : (p.medicamento || p.descripcion || '—')}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{p.dosis || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">{p.lote || '—'}</td>
+                    <td className="px-4 py-3 text-xs font-semibold text-gray-700">
+                      {p.precio > 0 ? `$${Number(p.precio).toLocaleString('es-MX')}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {procedimientos.length === 0 && (
+                  <tr><td colSpan="6" className="py-8 text-center text-gray-400 text-sm">
+                    Sin procedimientos registrados
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-const TABS = ['Pagos y facturas', 'Consultas', 'Corte diario', 'Seguimiento pacientes', 'Resumen KPIs']
+const TABS = ['Pagos y facturas', 'Consultas', 'Corte diario', 'Seguimiento pacientes', 'Resumen KPIs', '💊 Medicamentos']
 
 function imprimirCorte() {
   const el = document.getElementById('corte-diario-print')
@@ -114,6 +210,22 @@ const BadgeTipoPersonaRep = ({ tipo }) => {
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
   const [tab, setTab] = useState('Pagos y facturas')
+  // T-04: Dashboard de medicamentos
+  const [procedimientos, setProcedimientos] = useState([])
+  useEffect(() => {
+    if (!tenantId) return
+    import('firebase/firestore').then(({ collection: col, getDocs: gd, query: q, where: w, orderBy: ob, Timestamp: TS }) => {
+      import('../firebase').then(({ db: fdb }) => {
+        const hace90 = new Date(); hace90.setDate(hace90.getDate() - 90)
+        gd(q(col(fdb, `tenants/${tenantId}/consultas`),
+          w('tipo', '==', 'procedimiento'),
+          w('fecha', '>=', TS.fromDate(hace90))
+        )).then(snap => {
+          setProcedimientos(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        }).catch(() => {})
+      })
+    }).catch(() => {})
+  }, [tenantId])
 
   // ── Estado tab Seguimiento ───────────────────────────
   const [filtroMinDias, setFiltroMinDias] = useState(30)

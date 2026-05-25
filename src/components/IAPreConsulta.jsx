@@ -103,7 +103,7 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   const sinCreditos = creditosPct >= 100
   const pocosCreditos = creditosPct >= 80 && !sinCreditos
 
-  const padecimiento = cita?.padecimientoPaciente
+  const padecimiento = cita?.padecimientoPaciente || cita?.motivo  // fallback a motivo
 
   useEffect(() => {
     // Si ya hay análisis guardado en la cita — usar ese, NO llamar a la API
@@ -143,7 +143,8 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   // Guards after hooks (React rules: no hooks after conditional returns)
   if (!iaActivo) return null
   if (!padecimiento) return null
-  if (!ANTHROPIC_KEY()) return null
+  // NO ocultamos si no hay API key — mostramos el panel con botón deshabilitado
+  const sinApiKey = !ANTHROPIC_KEY()
 
   // T-01: Banner de estado de créditos IA
   const bannerCreditos = sinCreditos ? (
@@ -314,14 +315,18 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
           {!analisis && !loading && (
             <button
-              onClick={() => !sinCreditos && generarAnalisis()}
-              disabled={sinCreditos}
+              onClick={() => !sinCreditos && !sinApiKey && generarAnalisis()}
+              disabled={sinCreditos || sinApiKey}
               className={`w-full py-2 text-sm rounded-lg transition-colors ${
-                sinCreditos
+                sinCreditos || sinApiKey
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}>
-              {sinCreditos ? '⚠️ Sin créditos IA disponibles' : '🤖 Generar análisis IA'}
+              {sinApiKey
+                ? '🔑 Configura VITE_ANTHROPIC_API_KEY para activar IA'
+                : sinCreditos
+                  ? '⚠️ Sin créditos IA disponibles'
+                  : '🤖 Generar análisis IA'}
             </button>
           )}
         </div>

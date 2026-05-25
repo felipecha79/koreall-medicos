@@ -36,6 +36,9 @@ export default function MiCuenta() {
   const montoBase = planInfo.precio
   const montoIVA  = Math.round(montoBase * 1.16)
   const activa    = tenant?.suscripcionActiva !== false
+  const [showTransf, setShowTransf] = useState(false)  // T-06
+  const [comprobante, setComprobante] = useState(null)   // T-06
+  const [subiendoComp, setSubiendo]  = useState(false)  // T-06
 
   // Cargar usuarios del consultorio
   useEffect(() => {
@@ -54,7 +57,34 @@ export default function MiCuenta() {
       .catch(() => {})
   }, [])
 
-  const pagarSuscripcion = () => {
+  // T-06: Subir comprobante de transferencia
+const subirComprobante = async (archivo) => {
+  if (!archivo) return
+  setSubiendo(true)
+  try {
+    // Guardar referencia en Firestore (sin Storage por ahora — nombre del archivo)
+    const { addDoc, collection: col, Timestamp: TS } = await import('firebase/firestore')
+    const { db: fdb } = await import('../firebase')
+    const mes = new Date().toISOString().slice(0,7)
+    await addDoc(col(fdb, `tenants/${tenantId}/pagos_transferencia`), {
+      tipo: 'transferencia',
+      monto: montoBase,
+      mesAplicar: mes,
+      nombreArchivo: archivo.name,
+      tamaño: archivo.size,
+      estatus: 'pendiente',
+      creadoEn: TS.now(),
+      concepto: `NovMed-${tenantId}-${mes}`,
+    })
+    setComprobante(archivo.name)
+    toast.success('Comprobante registrado. El equipo lo revisará en 24h ✓')
+    setShowTransf(false)
+  } catch(e) {
+    toast.error('Error al registrar comprobante')
+  } finally { setSubiendo(false) }
+}
+
+const pagarSuscripcion = () => {
     const planData = planesConf.find(p => p.id === plan)
     const link = planData?.paymentLink || null
     if (!link) {
@@ -156,17 +186,69 @@ export default function MiCuenta() {
           </div>
         </div>
 
-        {/* Botón pagar */}
+        {/* Botón pagar — Stripe o Transferencia */}
         <div className="flex gap-3 pt-4 border-t border-gray-100">
           <button onClick={pagarSuscripcion}
             className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-semibold
                        hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
-            💳 Pagar suscripción mensual
+            💳 Pagar con tarjeta
+          </button>
+          <button onClick={() => setShowTransf(v => !v)}
+            className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold
+                       hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+            🏦 Transferencia bancaria
           </button>
         </div>
 
+        {/* T-06: Panel de transferencia bancaria */}
+        {showTransf && (
+          <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+            <p className="text-sm font-semibold text-indigo-800 mb-3">📲 Datos para transferencia</p>
+            <div className="space-y-2 text-sm text-gray-700 mb-4">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Beneficiario</span>
+                <span className="font-medium">Novaryk Technology Group</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">CLABE</span>
+                <span className="font-mono font-medium text-sm">014580655321456780</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Banco</span>
+                <span className="font-medium">BBVA Bancomer</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Monto</span>
+                <span className="font-semibold text-teal-700">${montoBase.toLocaleString('es-MX')} MXN</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Concepto</span>
+                <span className="font-mono text-xs bg-white px-2 py-0.5 rounded border">
+                  NovMed-{tenantId?.slice(-6)}-{new Date().toISOString().slice(0,7)}
+                </span>
+              </div>
+            </div>
+            <div className="border-t border-indigo-200 pt-3">
+              <p className="text-xs text-gray-500 mb-2">Sube tu comprobante de pago (JPG, PNG o PDF):</p>
+              <input type="file" accept="image/*,.pdf"
+                onChange={e => subirComprobante(e.target.files?.[0])}
+                disabled={subiendoComp}
+                className="w-full text-sm text-gray-600
+                  file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                  file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700
+                  file:cursor-pointer" />
+              {comprobante && (
+                <p className="text-xs text-green-600 mt-1">✓ Registrado: {comprobante}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-2">
+                El equipo Novaryk confirmará tu pago en menos de 24 horas hábiles.
+              </p>
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-gray-400 text-center mt-2">
-          Sin guardar tarjeta · Pago seguro via Stripe · Ingresa tu tarjeta cada mes
+          Pago seguro · Sin guardar tarjeta · Soporte: soporte@novaryk.mx
         </p>
       </div>
 

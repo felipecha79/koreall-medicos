@@ -254,20 +254,17 @@ export default function Pacientes() {
     setTabForm('personal')
   }
 
-  // T-FIX: normalizar tipoPaciente — pacientes sin el campo o con citas > 1 son subsecuentes
-  const esPrimeraVez = (p) => {
-    if (p.tipoPaciente === 'primera_vez') return true
-    if (p.tipoPaciente === 'subsecuente') return false
-    // Si no tiene campo tipoPaciente: asumir primera vez (default)
-    if (!p.tipoPaciente) return true
-    return true
-  }
-  const esSubsecuente = (p) => !esPrimeraVez(p)
-
+  // FIX subsecuentes: comparación directa, sin helper roto
   const pacientesFiltrados = pacientes
     .filter(p => {
-      if (filtroTipo === 'primera_vez'  && !esPrimeraVez(p))  return false
-      if (filtroTipo === 'subsecuente'  && !esSubsecuente(p)) return false
+      if (filtroTipo === 'primera_vez') {
+        // primera_vez: el campo dice primera_vez O está vacío/null (default)
+        if (p.tipoPaciente === 'subsecuente') return false
+      }
+      if (filtroTipo === 'subsecuente') {
+        // subsecuente: SOLO los que tienen el campo explícitamente en 'subsecuente'
+        if (p.tipoPaciente !== 'subsecuente') return false
+      }
       if (!busqueda) return true
       const q = busqueda.toLowerCase()
       return `${p.nombre} ${p.apellidos} ${p.pacienteId ?? ''} ${p.email ?? ''} ${p.telefono ?? ''}`
@@ -370,10 +367,10 @@ export default function Pacientes() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                    ${esPrimeraVez(p)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-green-50 text-green-700'}`}>
-                    {esPrimeraVez(p) ? 'Primera vez' : 'Subsecuente'}
+                    ${p.tipoPaciente === 'subsecuente'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-blue-50 text-blue-700'}`}>
+                    {p.tipoPaciente === 'subsecuente' ? 'Subsecuente' : 'Primera vez'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 capitalize">

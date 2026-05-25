@@ -104,6 +104,7 @@ const FORM_INICIAL = {
   padecimientoPaciente: '',
   pacienteId: '', pacienteNombre: '', pacienteTel: '', pacienteIdLegible: '',
   fechaHora: '', motivo: '', duracionMin: 30,
+  tipoConsulta: 'normal', empresaConvenio: '',  // T-05
 }
 
 export default function Agenda() {
@@ -208,6 +209,8 @@ export default function Agenda() {
         motivo:              form.motivo,
         padecimientoPaciente: form.padecimientoPaciente || '',
         duracionMin:         form.duracionMin,
+        tipoConsulta:        form.tipoConsulta || 'normal',     // T-05
+        empresaConvenio:     form.empresaConvenio || null,      // T-05
         tenantId,
         estatus:             'programada',
         recordatorioEnviado: false,
@@ -582,6 +585,29 @@ export default function Agenda() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400" />
               </div>
+              {/* T-05: Tipo de consulta */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Tipo de consulta</label>
+                <select value={form.tipoConsulta}
+                  onChange={e => setForm(f => ({ ...f, tipoConsulta: e.target.value, empresaConvenio: '' }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-400">
+                  <option value="normal">🩺 Normal — costo regular</option>
+                  <option value="resultados">📋 Entrega de resultados — $0</option>
+                  <option value="cortesia">🎁 Cortesía — $0</option>
+                  <option value="convenio">🏢 Convenio empresarial — $0 paciente</option>
+                </select>
+              </div>
+              {form.tipoConsulta === 'convenio' && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Empresa del convenio</label>
+                  <input type="text" value={form.empresaConvenio}
+                    onChange={e => setForm(f => ({ ...f, empresaConvenio: e.target.value }))}
+                    placeholder="Nombre de la empresa..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                </div>
+              )}
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={guardarCita} disabled={saving}
