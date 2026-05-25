@@ -207,15 +207,15 @@ const pagarSuscripcion = () => {
             <div className="space-y-2 text-sm text-gray-700 mb-4">
               <div className="flex justify-between">
                 <span className="text-gray-500">Beneficiario</span>
-                <span className="font-medium">Novaryk Technology Group</span>
+                <span className="font-medium">Juan Felipe Chavez Bezares</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">CLABE</span>
-                <span className="font-mono font-medium text-sm">014580655321456780</span>
+                <span className="font-mono font-medium text-sm">072420011785155521</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Banco</span>
-                <span className="font-medium">BBVA Bancomer</span>
+                <span className="font-medium">Banorte</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Monto</span>
