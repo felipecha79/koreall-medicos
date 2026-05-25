@@ -136,3 +136,42 @@ export const PUNTOS_NOTIFICACION = [
   { id:'te_extranamos',    automatico:false, desc:'Manual desde Reportes → Seguimiento pacientes' },
   { id:'pago_recibido',    automatico:true,  desc:'Al marcar un cobro como pagado' },
 ]
+
+// ── T-08: SIGUIENTE PACIENTE EN COLA ─────────────────────────────────────
+// Se llama desde Agenda.jsx cuando un paciente pasa a "en_consulta"
+export async function notifSiguientePaciente(tenantId, citaActualFecha, tenant) {
+  try {
+    const { collection, getDocs, query, where, orderBy, Timestamp } = await import('firebase/firestore')
+    const { db } = await import('../firebase')
+    const hoy = new Date(citaActualFecha instanceof Date ? citaActualFecha : citaActualFecha?.toDate?.() ?? new Date())
+    hoy.setHours(0,0,0,0)
+    const manana = new Date(hoy); manana.setDate(hoy.getDate()+1)
+    const snap = await getDocs(query(
+      collection(db, `tenants/${tenantId}/citas`),
+      where('fecha', '>=', Timestamp.fromDate(hoy)),
+      where('fecha', '<',  Timestamp.fromDate(manana)),
+      where('estatus', 'in', ['programada','confirmada']),
+      orderBy('fecha')
+    ))
+    const ahora = new Date()
+    const siguiente = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .find(cita => {
+        if (cita.notificado_preparacion) return false
+        const f = cita.fecha?.toDate?.() ?? new Date(cita.fecha)
+        return f >= ahora
+      })
+    if (!siguiente) return
+    const { doc, updateDoc } = await import('firebase/firestore')
+    const { db: fdb } = await import('../firebase')
+    await updateDoc(doc(fdb, `tenants/${tenantId}/citas`, siguiente.id),
+      { notificado_preparacion: true }).catch(()=>{})
+    const telefono = siguiente.pacienteTelefono ?? siguiente.telefono
+    if (!telefono) return
+    const dr = tenant?.nombreDoctor ?? tenant?.nombre ?? 'su médico'
+    const hora = siguiente.fecha?.toDate ? siguiente.fecha.toDate().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : ''
+    return enviarWA(telefono,
+      `👋 Hola *${siguiente.pacienteNombre ?? 'paciente'}*, el ${dr} está atendiendo al paciente anterior.\n\n` +
+      `⏳ Será tu turno muy pronto${hora ? ` (cita: ${hora})` : ''}. Por favor *preséntate en recepción*. 🏥`
+    )
+  } catch(e) { console.warn('[T-08] notifSiguientePaciente:', e.message) }
+}

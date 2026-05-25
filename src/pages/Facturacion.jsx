@@ -42,6 +42,22 @@ function fmtFecha(val) {
   try { return format(d, 'd MMM yyyy', { locale: es }) } catch { return '—' }
 }
 
+
+// T-03: Badge tipo persona fiscal
+const BadgeTipoPersona = ({ tipo }) => {
+  if (!tipo) return null
+  const esFisica = tipo === 'F' || tipo === 'fisica' || tipo === 'Física'
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+      esFisica
+        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+        : 'bg-purple-50 text-purple-700 border border-purple-200'
+    }`}>
+      {esFisica ? 'Física' : 'Moral'}
+    </span>
+  )
+}
+
 export default function Facturacion() {
   const { tenantId, tenant } = useTenant()
   const [cobros,    setCobros]    = useState([])
@@ -291,7 +307,7 @@ export default function Facturacion() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Fecha','ID','Paciente','RFC','Concepto','Monto','Acción'].map(h => (
+                    {['Fecha','ID','Paciente','RFC','Tipo','Concepto','Monto','Acción'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                     ))}
                   </tr>
@@ -312,6 +328,9 @@ export default function Facturacion() {
                         <td className="px-4 py-3 font-medium text-gray-800">{c.pacienteNombre}</td>
                         <td className="px-4 py-3 font-mono text-xs text-gray-500">
                           {pac?.rfc ?? <span className="text-red-400">Sin RFC</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <BadgeTipoPersona tipo={pac?.tipoPersonaFiscal ?? (pac?.regimenFiscal ? 'F' : null)} />
                         </td>
                         <td className="px-4 py-3 text-gray-600">{c.concepto}</td>
                         <td className="px-4 py-3 font-semibold text-gray-800">
@@ -348,7 +367,7 @@ export default function Facturacion() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Folio','Paciente','Fecha','Concepto','Total','Estatus','Acciones'].map(h => (
+                    {['Folio','Paciente','Tipo','Fecha','Concepto','Total','Estatus','Acciones'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                     ))}
                   </tr>
@@ -362,6 +381,9 @@ export default function Facturacion() {
                       <td className="px-4 py-3 font-medium text-gray-800">
                         <div>{f.pacienteNombre ?? '—'}</div>
                         <div className="text-xs text-gray-400">{f.pacienteIdLegible ?? ''}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <BadgeTipoPersona tipo={f.receptor?.tipo_persona ?? f.tipoPersona ?? null} />
                       </td>
                       {/* fmtFecha es seguro aunque fecha sea null/undefined */}
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">

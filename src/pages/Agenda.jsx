@@ -7,7 +7,7 @@ import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { notificarCambioEstatus } from '../services/notificaciones'
+import { notificarCambioEstatus, notifSiguientePaciente } from '../services/notificaciones'
 import toast from 'react-hot-toast'
 import IAPreConsulta, { CampoPadecimientoCita } from '../components/IAPreConsulta'
 
@@ -128,11 +128,13 @@ export default function Agenda() {
 
   useEffect(() => {
     if (!tenantId) return
-    const fin = addDays(lunes, 6)
+    // Fix domingo: addDays(lunes,6) = sábado 00:00 → excluye el domingo completo
+    // Usamos el inicio del lunes siguiente (exclusivo) como fin para incluir todo el domingo
+    const finDomingo = addDays(lunes, 7)  // lunes siguiente a las 00:00 — incluye todo el domingo
     const q = query(
       collection(db, `tenants/${tenantId}/citas`),
       where('fecha', '>=', Timestamp.fromDate(lunes)),
-      where('fecha', '<=', Timestamp.fromDate(fin)),
+      where('fecha', '<',  Timestamp.fromDate(finDomingo)),  // < en lugar de <= con el lunes siguiente
       orderBy('fecha')
     )
     return onSnapshot(q, snap =>
@@ -170,6 +172,12 @@ export default function Agenda() {
       notificarCambioEstatus({ cita, nuevoEstatus: estatus, tenant })
         .then(r => { if (r.ok) toast('📱 WA enviado al paciente', { icon: '✓', duration: 2000 }) })
         .catch(() => {}) // No romper si WA falla
+
+      // T-08: Si el paciente entra a consulta, avisar al siguiente en la cola
+      if (estatus === 'en_consulta') {
+        notifSiguientePaciente(tenantId, cita.fecha, tenant)
+          .catch(() => {}) // No romper si falla
+      }
     }
 
     setModal(null); setModoDetalle('ver')

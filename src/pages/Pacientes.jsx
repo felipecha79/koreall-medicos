@@ -254,9 +254,20 @@ export default function Pacientes() {
     setTabForm('personal')
   }
 
+  // T-FIX: normalizar tipoPaciente — pacientes sin el campo o con citas > 1 son subsecuentes
+  const esPrimeraVez = (p) => {
+    if (p.tipoPaciente === 'primera_vez') return true
+    if (p.tipoPaciente === 'subsecuente') return false
+    // Si no tiene campo tipoPaciente: asumir primera vez (default)
+    if (!p.tipoPaciente) return true
+    return true
+  }
+  const esSubsecuente = (p) => !esPrimeraVez(p)
+
   const pacientesFiltrados = pacientes
     .filter(p => {
-      if (filtroTipo !== 'todos' && p.tipoPaciente !== filtroTipo) return false
+      if (filtroTipo === 'primera_vez'  && !esPrimeraVez(p))  return false
+      if (filtroTipo === 'subsecuente'  && !esSubsecuente(p)) return false
       if (!busqueda) return true
       const q = busqueda.toLowerCase()
       return `${p.nombre} ${p.apellidos} ${p.pacienteId ?? ''} ${p.email ?? ''} ${p.telefono ?? ''}`
@@ -359,10 +370,10 @@ export default function Pacientes() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                    ${p.tipoPaciente==='primera_vez'
+                    ${esPrimeraVez(p)
                       ? 'bg-blue-50 text-blue-700'
                       : 'bg-green-50 text-green-700'}`}>
-                    {p.tipoPaciente==='primera_vez' ? 'Primera vez' : 'Subsecuente'}
+                    {esPrimeraVez(p) ? 'Primera vez' : 'Subsecuente'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 capitalize">

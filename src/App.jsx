@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
-import { auth } from './firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { auth, db } from './firebase'
 import { useTenant } from './hooks/useTenant'
 import { puedeVer, MODULO_RUTA } from './services/permisos'
 import Login              from './pages/Login'
@@ -64,6 +65,19 @@ function navDeRol(rol, isSuperAdmin) {
 
 function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, allOrgs, orgTenants, switchTenant, switchOrg, onClose, role }) {
   const navItems = navDeRol(role, isSuperAdmin)
+
+  // T-01: Monitor créditos IA
+  const [iaStatus, setIaStatus] = useState(null)
+  useEffect(() => {
+    const ref = doc(db, 'configuracion', 'ia_status')
+    const unsub = onSnapshot(ref, snap => {
+      if (snap.exists()) setIaStatus(snap.data())
+    }, () => {})
+    return unsub
+  }, [])
+  const iaPct = iaStatus
+    ? Math.round((iaStatus.creditosUsadosMes / (iaStatus.creditosLimiteMes || 500000)) * 100)
+    : 0
 
   // Colores del tema del doctor — leídos de tenant.sitioWeb
   const colorPrimario = tenant?.sitioWeb?.colorPrimario ?? '#0D9488'  // Novaryk.Med Teal
@@ -185,6 +199,24 @@ function Sidebar({ tenant, org, isSuperAdmin, suscripcionActiva, allTenants, all
           </>
         )}
       </nav>
+
+      {/* T-01: Banner créditos IA */}
+      {iaPct >= 80 && (
+        <div className="mx-2 mb-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2"
+          style={{
+            background: iaPct >= 100 ? '#FEE2E2' : '#FEF3C7',
+            border: `1px solid ${iaPct >= 100 ? '#FECACA' : '#FDE68A'}`,
+            color: iaPct >= 100 ? '#991B1B' : '#92400E',
+          }}>
+          <span style={{flexShrink:0}}>{iaPct >= 100 ? '⚠️' : '🔋'}</span>
+          <span>
+            {iaPct >= 100
+              ? <><strong>IA sin créditos.</strong> Contacta al admin.</>
+              : <><strong>Créditos IA: {iaPct}%</strong> del límite mensual.</>
+            }
+          </span>
+        </div>
+      )}
 
       <div className="px-2 py-3 flex-shrink-0" style={{ borderTop: '1px solid ' + sidebarBorde }}>
         <NavLink to="/portal-paciente"

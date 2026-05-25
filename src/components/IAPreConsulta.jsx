@@ -41,6 +41,38 @@ Responde SOLO este JSON completo:
 
   if (!response.ok) throw new Error(`API ${response.status}`)
   const data = await response.json()
+
+  // ── T-01: Registrar uso de tokens en Firestore para monitor de créditos ─────
+  try {
+    const tokensUsados = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0)
+    if (tokensUsados > 0) {
+      const { doc: fDoc, getDoc: fGet, updateDoc: fUp, setDoc: fSet, serverTimestamp } = await import('firebase/firestore')
+      const { db: fdb } = await import('../firebase')
+      const ref = fDoc(fdb, 'configuracion', 'ia_status')
+      const snap = await fGet(ref)
+      const mesActual = new Date().toISOString().slice(0,7) // "2026-05"
+      if (snap.exists()) {
+        const prev = snap.data()
+        const mismoMes = prev.mesActual === mesActual
+        await fUp(ref, {
+          creditosUsadosMes: mismoMes ? (prev.creditosUsadosMes ?? 0) + tokensUsados : tokensUsados,
+          mesActual,
+          ultimaLlamada: serverTimestamp(),
+          alertaEnviada: mismoMes ? (prev.alertaEnviada ?? false) : false,
+        })
+      } else {
+        await fSet(ref, {
+          creditosUsadosMes: tokensUsados,
+          creditosLimiteMes: 500000,
+          mesActual,
+          ultimaLlamada: serverTimestamp(),
+          alertaEnviada: false,
+        })
+      }
+    }
+  } catch(e) { console.warn('[IA] No se pudo registrar tokens:', e.message) }
+  // ── fin T-01 ──────────────────────────────────────────────────────────────
+
   const texto_resp = data.content?.[0]?.text ?? '{}'
   return JSON.parse(texto_resp.replace(/```json|```/g, '').trim())
 }
@@ -51,6 +83,25 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   const [loading,    setLoading]    = useState(false)
   const [revisado,   setRevisado]   = useState(false)
   const [expandido,  setExpandido]  = useState(true)
+  const [iaStatus,   setIaStatus]   = useState(null)  // T-01: estado créditos
+
+  // T-01: Leer estado de créditos IA al montar
+  useEffect(() => {
+    import('firebase/firestore').then(({ doc: fDoc, onSnapshot: fSnap }) => {
+      import('../firebase').then(({ db: fdb }) => {
+        const ref = fDoc(fdb, 'configuracion', 'ia_status')
+        return fSnap(ref, snap => {
+          if (snap.exists()) setIaStatus(snap.data())
+        })
+      })
+    }).catch(() => {})
+  }, [])
+
+  const creditosPct = iaStatus
+    ? Math.round((iaStatus.creditosUsadosMes / (iaStatus.creditosLimiteMes || 500000)) * 100)
+    : 0
+  const sinCreditos = creditosPct >= 100
+  const pocosCreditos = creditosPct >= 80 && !sinCreditos
 
   const padecimiento = cita?.padecimientoPaciente
 
@@ -94,6 +145,19 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   if (!padecimiento) return null
   if (!ANTHROPIC_KEY()) return null
 
+  // T-01: Banner de estado de créditos IA
+  const bannerCreditos = sinCreditos ? (
+    <div className="mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 flex items-center gap-2">
+      <span>⚠️</span>
+      <span><strong>Créditos IA agotados este mes.</strong> La IA pre-consulta no está disponible. Contacta al administrador.</span>
+    </div>
+  ) : pocosCreditos ? (
+    <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
+      <span>🔋</span>
+      <span>Créditos IA al <strong>{creditosPct}%</strong> del límite mensual.</span>
+    </div>
+  ) : null
+
   const PROB_COLOR = {
     alta:  { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-200' },
     media: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
@@ -106,6 +170,8 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-teal-50 rounded-xl border border-blue-200 overflow-hidden mb-4">
+      {/* T-01: Banner de créditos */}
+      {bannerCreditos}
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-100/50 transition-colors"
@@ -248,9 +314,14 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
           {!analisis && !loading && (
             <button
-              onClick={generarAnalisis}
-              className="w-full py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
-              🤖 Generar análisis IA
+              onClick={() => !sinCreditos && generarAnalisis()}
+              disabled={sinCreditos}
+              className={`w-full py-2 text-sm rounded-lg transition-colors ${
+                sinCreditos
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}>
+              {sinCreditos ? '⚠️ Sin créditos IA disponibles' : '🤖 Generar análisis IA'}
             </button>
           )}
         </div>

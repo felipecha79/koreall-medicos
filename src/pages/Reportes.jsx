@@ -97,6 +97,20 @@ function imprimirCorte() {
   setTimeout(function() { win.print(); win.close() }, 400)
 }
 
+
+// T-03: Badge tipo persona fiscal
+const BadgeTipoPersonaRep = ({ tipo }) => {
+  if (!tipo) return <span className="text-xs text-gray-300">—</span>
+  const f = tipo === 'F' || tipo === 'fisica'
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+      f ? 'bg-blue-50 text-blue-700 border border-blue-200'
+        : 'bg-purple-50 text-purple-700 border border-purple-200'}`}>
+      {f ? 'Física' : 'Moral'}
+    </span>
+  )
+}
+
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
   const [tab, setTab] = useState('Pagos y facturas')
@@ -378,7 +392,7 @@ export default function Reportes() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Fecha','Paciente','Concepto','Monto','Método','Estado','Facturado','Factura'].map(h => (
+                    {['Fecha','Paciente','Tipo','Concepto','Monto','Método','Estado','Facturado','Factura'].map(h => (
                       <th key={h} className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         {h}
                       </th>
@@ -394,6 +408,9 @@ export default function Reportes() {
                       <td className="px-3 py-2.5">
                         <p className="text-xs font-medium text-gray-800">{c.pacienteNombre ?? '—'}</p>
                         <p className="text-xs text-gray-400 font-mono">{c.pacienteIdLegible}</p>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <BadgeTipoPersonaRep tipo={c.tipoPersona ?? c.factura?.receptor?.tipo_persona ?? null} />
                       </td>
                       <td className="px-3 py-2.5 text-xs text-gray-600">{c.concepto ?? 'Consulta'}</td>
                       <td className="px-3 py-2.5 text-xs font-semibold text-gray-800 whitespace-nowrap">
