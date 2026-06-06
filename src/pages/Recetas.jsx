@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  collection, query, orderBy, onSnapshot,
+  collection, query, orderBy, onSnapshot, updateDoc, doc,
   addDoc, Timestamp, getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -262,7 +262,38 @@ const MED_VACIO = {
 export default function Recetas() {
   const { tenantId, tenant } = useTenant()
   const [recetas,  setRecetas]  = useState([])
-  const [modal,    setModal]    = useState(false)
+  const [modal,        setModal]        = useState(false)
+  // P4: modal de configuración de plantilla (un solo formulario, se prellenan datos del tenant)
+  const [modalPlantilla, setModalPlantilla] = useState(false)
+  const [formPlantilla,  setFormPlantilla]  = useState({
+    nombreDoctor:        '',
+    especialidad:        '',
+    cedulaProfesional:   '',
+    direccionConsultorio:'',
+    telefonoConsultorio: '',
+    logoUrl:             '',
+  })
+  // Cargar datos actuales cuando se abre el modal
+  const abrirPlantilla = () => {
+    setFormPlantilla({
+      nombreDoctor:         tenant?.plantillaReceta?.nombreDoctor         ?? tenant?.nombreDoctor ?? '',
+      especialidad:         tenant?.plantillaReceta?.especialidad         ?? tenant?.especialidad ?? '',
+      cedulaProfesional:    tenant?.plantillaReceta?.cedulaProfesional    ?? tenant?.cedula ?? '',
+      direccionConsultorio: tenant?.plantillaReceta?.direccionConsultorio ?? tenant?.direccion ?? '',
+      telefonoConsultorio:  tenant?.plantillaReceta?.telefonoConsultorio  ?? tenant?.telefono ?? '',
+      logoUrl:              tenant?.plantillaReceta?.logoUrl              ?? '',
+    })
+    setModalPlantilla(true)
+  }
+  const guardarPlantilla = async () => {
+    try {
+      await updateDoc(doc(db, 'tenants', String(tenantId)), {
+        plantillaReceta: { ...formPlantilla }
+      })
+      toast.success('Plantilla actualizada ✓')
+      setModalPlantilla(false)
+    } catch { toast.error('Error al guardar plantilla') }
+  }
   const [preview,  setPreview]  = useState(null)
   const [saving,   setSaving]   = useState(false)
 
@@ -356,11 +387,18 @@ export default function Recetas() {
           <h2 className="text-xl font-semibold text-gray-800">Recetas médicas</h2>
           <p className="text-sm text-gray-400">{recetas.length} emitidas</p>
         </div>
-        <button onClick={() => setModal(true)}
-          className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
-                     rounded-lg hover:bg-teal-700 transition-colors">
-          + Nueva receta
-        </button>
+        <div className="flex gap-2">
+          <button onClick={abrirPlantilla}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium
+                       rounded-lg hover:bg-gray-50 transition-colors">
+            ⚙️ Plantilla del consultorio
+          </button>
+          <button onClick={() => setModal(true)}
+            className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
+                       rounded-lg hover:bg-teal-700 transition-colors">
+            + Nueva receta
+          </button>
+        </div>
       </div>
 
       {/* Lista de recetas */}
@@ -434,6 +472,57 @@ export default function Recetas() {
             </div>
           </div>
           <RecetaPreview receta={preview} tenant={tenant} />
+        </div>
+      )}
+
+      {/* P4: Modal configurar plantilla del consultorio */}
+      {modalPlantilla && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setModalPlantilla(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-gray-800">Plantilla del consultorio</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Estos datos aparecen en el membrete de todas las recetas
+                </p>
+              </div>
+              <button onClick={() => setModalPlantilla(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {[
+                { key: 'nombreDoctor',         label: 'Nombre del doctor',    placeholder: 'Dr. Juan Pérez' },
+                { key: 'especialidad',          label: 'Especialidad',         placeholder: 'Médico General' },
+                { key: 'cedulaProfesional',     label: 'Cédula Profesional',   placeholder: '1234567' },
+                { key: 'direccionConsultorio',  label: 'Dirección del consultorio', placeholder: 'Av. Hidalgo 123, Tampico' },
+                { key: 'telefonoConsultorio',   label: 'Teléfono',             placeholder: '833 123 4567' },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 font-medium mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={formPlantilla[key]}
+                    onChange={e => setFormPlantilla(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                </div>
+              ))}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button onClick={guardarPlantilla}
+                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-semibold
+                           hover:bg-teal-700 transition-colors">
+                💾 Guardar plantilla
+              </button>
+              <button onClick={() => setModalPlantilla(false)}
+                className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm hover:bg-gray-200">
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

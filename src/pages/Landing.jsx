@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { signInWithEmailAndPassword, getIdTokenResult } from 'firebase/auth'
+import { signInWithEmailAndPassword, getIdTokenResult, sendPasswordResetEmail } from 'firebase/auth'
 import { auth, db } from '../firebase'
 import { collection, getDocs, query, limit, onSnapshot, doc, where } from 'firebase/firestore'
 
@@ -774,6 +774,18 @@ export default function Landing() {
   // ── Login con Firebase ────────────────────────────────
   const closeModal = () => { setModal(false); setLoginErr(''); setEmail(''); setPassword(''); setShowPass(false) }
 
+  const handleResetPaciente = async () => {
+    if (!email) { setLoginErr('Escribe tu email para recuperar tu contraseña'); return }
+    try {
+      await sendPasswordResetEmail(auth, email)
+      setLoginErr('')
+      // Mostrar mensaje de éxito en el mismo lugar del error
+      alert('✓ Revisa tu correo — te enviamos un link para restablecer tu contraseña')
+    } catch {
+      setLoginErr('No encontramos una cuenta con ese email')
+    }
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!email || !password) { setLoginErr('Ingresa tu email y contraseña'); return }
@@ -1127,7 +1139,14 @@ export default function Landing() {
               {logging ? 'Entrando...' : 'Entrar al sistema'}
             </button>
           </form>
-          <p style={{textAlign:'center',fontSize:12,color:'#6B7A8D',marginTop:12}}>
+          <button onClick={handleResetPaciente}
+            style={{width:'100%',marginTop:8,fontSize:12,color:'#6B7A8D',
+                    background:'none',border:'none',cursor:'pointer',padding:'4px 0'}}
+            onMouseEnter={e => e.target.style.color='var(--ld-teal)'}
+            onMouseLeave={e => e.target.style.color='#6B7A8D'}>
+            ¿Olvidaste tu contraseña? Recupérala aquí
+          </button>
+          <p style={{textAlign:'center',fontSize:12,color:'#6B7A8D',marginTop:8}}>
             ¿Paciente nuevo?{' '}
             <a href="/registro" style={{color:'var(--ld-teal)'}}
               onClick={e => { e.preventDefault(); closeModal(); navigate('/registro') }}>

@@ -105,12 +105,33 @@ const FORM_INICIAL = {
   pacienteId: '', pacienteNombre: '', pacienteTel: '', pacienteIdLegible: '',
   fechaHora: '', motivo: '', duracionMin: 30,
   tipoConsulta: 'normal', empresaConvenio: '',  // T-05
+  calendario: 'consultas',  // P1: 'consultas' | 'especiales'
 }
 
 export default function Agenda() {
-  const { tenantId, tenant } = useTenant()
+  const { tenantId, tenant, role, isSuperAdmin } = useTenant()
   const iaActivo = tenant?.iaPreConsultaActivo !== false // default true
-  const [semanaBase, setSemanaBase] = useState(new Date())
+  const [semanaBase, setSemanaBase]       = useState(new Date())
+  // P1 & P2: calendarios
+  const calEspActivo = tenant?.calendarioEspecialActivo !== false
+  // verCalEsp: viene del toggle de Mi Cuenta — sin botón local en Agenda
+  // Usamos null como estado inicial para no asumir true antes de leer localStorage
+  const [verCalEsp, setVerCalEsp] = useState(null)
+
+  useEffect(() => {
+    if (!tenantId) return
+    // Leer el valor real del localStorage al conocer el tenantId
+    const val = localStorage.getItem(`verCalEsp_${tenantId}`)
+    setVerCalEsp(val !== 'false')  // null o 'true' → true; 'false' → false
+    const handler = (e) => {
+      if (e.key === `verCalEsp_${tenantId}`) setVerCalEsp(e.newValue !== 'false')
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [tenantId])
+
+  // Mientras no tengamos el valor real, asumir true (mostrar todo) — no filtrar
+  const verCalEspActual = verCalEsp === null ? true : verCalEsp
   const [citas, setCitas]           = useState([])
   const [modal, setModal]           = useState(null)
   const [form, setForm]             = useState(FORM_INICIAL)
@@ -211,6 +232,7 @@ export default function Agenda() {
         duracionMin:         form.duracionMin,
         tipoConsulta:        form.tipoConsulta || 'normal',     // T-05
         empresaConvenio:     form.empresaConvenio || null,      // T-05
+        calendario:          'consultas',  // P1: por defecto en Consultas
         tenantId,
         estatus:             'programada',
         recordatorioEnviado: false,
@@ -285,8 +307,13 @@ export default function Agenda() {
   }
 
   // Citas de un día y slot específico
+  // Citas visibles según toggle de calendarios especiales
+  const citasVisibles = verCalEspActual
+    ? citas
+    : citas.filter(c => c.calendario !== 'especiales')
+
   const citasDeDiaSlot = (dia, h, m) =>
-    citas.filter(c => {
+    citasVisibles.filter(c => {
       const d = c.fecha.toDate()
       return isSameDay(d, dia) && d.getHours() === h && d.getMinutes() === m
     })
@@ -305,28 +332,32 @@ export default function Agenda() {
     <div className="h-screen flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <button onClick={() => vista==='dia'
-            ? setDiaActivo(d => addDays(d, -1))
-            : setSemanaBase(d => addDays(d, -7))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">‹</button>
-          <h2 className="text-sm font-semibold text-gray-800 w-52 text-center">
-            {vista==='dia'
-              ? format(diaActivo, "EEEE d 'de' MMMM yyyy", { locale: es })
-              : format(lunes, "d 'de' MMMM yyyy", { locale: es })}
-          </h2>
-          <button onClick={() => vista==='dia'
-            ? setDiaActivo(d => addDays(d, 1))
-            : setSemanaBase(d => addDays(d, 7))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">›</button>
-          <button onClick={() => { setSemanaBase(new Date()); setDiaActivo(new Date()) }}
-            className="ml-1 text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
-            Hoy
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:flex gap-2 flex-wrap">
+      {/* Header Agenda — 2 filas para no apretar */}
+      <div className="bg-white border-b border-gray-200 flex-shrink-0">
+        {/* Fila 1: navegación + botón especiales + vista */}
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => vista==='dia'
+              ? setDiaActivo(d => addDays(d, -1))
+              : setSemanaBase(d => addDays(d, -7))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">‹</button>
+            <h2 className="text-sm font-semibold text-gray-800 w-52 text-center">
+              {vista==='dia'
+                ? format(diaActivo, "EEEE d 'de' MMMM yyyy", { locale: es })
+                : format(lunes, "d 'de' MMMM yyyy", { locale: es })}
+            </h2>
+            <button onClick={() => vista==='dia'
+              ? setDiaActivo(d => addDays(d, 1))
+              : setSemanaBase(d => addDays(d, 7))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 font-bold">›</button>
+            <button onClick={() => { setSemanaBase(new Date()); setDiaActivo(new Date()) }}
+              className="ml-1 text-xs px-2.5 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+              Hoy
+            </button>
+
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:flex gap-2 flex-wrap">
             {Object.entries(ESTATUS_COLOR).slice(0,6).map(([k, v]) => (
               <span key={k} className={`text-xs px-2 py-0.5 rounded border ${v}`}>
                 {ESTATUS_LABEL[k]}
@@ -350,7 +381,8 @@ export default function Agenda() {
             + Nueva cita
           </button>
         </div>
-      </div>
+        </div>  {/* fin Fila 1 */}
+      </div>  {/* fin Header Agenda */}
 
       {/* Vista día */}
       {vista === 'dia' && (
@@ -377,7 +409,11 @@ export default function Agenda() {
                   </div>
                   <div className="space-y-2">
                     {HORAS.map(({h, m, label}) => {
-                      const slotCitas = citasDelDia.filter(c => {
+                      // P2: ocultar especiales según toggle
+                      const citasDelDiaFiltradas = verCalEspActual
+                        ? citasDelDia
+                        : citasDelDia.filter(c => c.calendario !== 'especiales')
+                      const slotCitas = citasDelDiaFiltradas.filter(c => {
                         const d = c.fecha.toDate()
                         return d.getHours()===h && d.getMinutes()===m
                       })
@@ -407,11 +443,23 @@ export default function Agenda() {
                             {slotCitas.map(c => (
                               <div key={c.id}
                                 onClick={() => { setModal(c); setModoDetalle('ver') }}
-                                className={`rounded-xl border p-3 cursor-pointer hover:shadow-md
-                                  transition-all ${ESTATUS_COLOR[c.estatus]}`}>
+                                title={[c.motivo, c.tipoConsulta ? 'Tipo: '+c.tipoConsulta : null, c.metodoPago ? 'Pago: '+c.metodoPago : null, c.calendario==='especiales' ? 'Especial' : null].filter(Boolean).join(' | ') || undefined}
+                                className={`rounded-xl p-3 cursor-pointer hover:shadow-md
+                                  transition-all ${ESTATUS_COLOR[c.estatus]} ${
+                                    c.calendario === 'especiales'
+                                      ? 'border-2 border-purple-500 ring-1 ring-purple-300'
+                                      : 'border'
+                                  }`}>
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-sm truncate">{c.pacienteNombre}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="font-semibold text-sm truncate">{c.pacienteNombre}</p>
+                                      {c.calendario === 'especiales' && (
+                                        <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
+                                          💜 Especial
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-xs opacity-70 font-mono">{c.pacienteIdLegible}</p>
                                     {c.motivo && <p className="text-xs opacity-70 mt-0.5 truncate">{c.motivo}</p>}
                                   </div>
@@ -515,9 +563,13 @@ export default function Agenda() {
                     {celCitas.map(c => (
                       <div key={c.id}
                         onClick={e => { e.stopPropagation(); setModal(c); setModoDetalle('ver') }}
-                        className={`text-xs rounded border px-1 py-0.5 mb-0.5 cursor-pointer
-                                    hover:opacity-80 leading-tight truncate
-                                    ${ESTATUS_COLOR[c.estatus]}`}>
+                        title={[c.motivo, c.tipoConsulta ? 'Tipo: ' + c.tipoConsulta : null, c.metodoPago ? 'Pago: ' + c.metodoPago : null, c.calendario === 'especiales' ? 'Especial' : null].filter(Boolean).join(' | ') || undefined}
+                        className={`text-xs rounded px-1 py-0.5 mb-0.5 cursor-pointer
+                                    hover:opacity-80 leading-tight truncate ${ESTATUS_COLOR[c.estatus]} ${
+                                      c.calendario === 'especiales'
+                                        ? 'border-2 border-purple-500'
+                                        : 'border'
+                                    }`}>
                         <span className="font-mono opacity-60 mr-0.5" style={{fontSize:9}}>
                           {c.pacienteIdLegible}
                         </span>
@@ -705,6 +757,39 @@ export default function Agenda() {
                     Cancelar cita
                   </button>
                 </div>
+
+                {/* P1: Mover a calendario — solo doctor */}
+                {(role === 'doctor' || role === 'admin' || isSuperAdmin) && calEspActivo && modal?.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 font-medium mb-2">📅 Calendario de esta cita</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          await updateDoc(doc(db, `tenants/${tenantId}/citas`, modal.id), { calendario: 'consultas' })
+                          toast.success('Movida a Consultas ✓')
+                          setModal(prev => ({ ...prev, calendario: 'consultas' }))
+                        }}
+                        className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                          modal.calendario !== 'especiales'
+                            ? 'bg-teal-600 text-white border-teal-600'
+                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                        🩺 Consultas
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await updateDoc(doc(db, `tenants/${tenantId}/citas`, modal.id), { calendario: 'especiales' })
+                          toast.success('Movida a Especiales ✓')
+                          setModal(prev => ({ ...prev, calendario: 'especiales' }))
+                        }}
+                        className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                          modal.calendario === 'especiales'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                        💜 Consultas Especiales
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Historial */}
                 {modal.historial?.length > 0 && (

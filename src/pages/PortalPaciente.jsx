@@ -568,33 +568,85 @@ export default function PortalPaciente() {
   const cobrosPendientes = cobros.filter(c => c.estadoPago !== 'paid')
 
   return (
-    <div className="min-h-screen bg-gray-50 max-w-2xl mx-auto">
-
-      {/* Header — sticky */}
-      <div className="bg-slate-900 text-white px-4 py-3 sticky top-0 z-30">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-sm font-bold leading-tight">Novaryk.Med</h1>
-            <p className="text-xs text-slate-400 leading-tight truncate max-w-[140px]">
-              {tenant?.nombre ?? 'Portal del paciente'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <p className="text-xs font-medium leading-tight">
-                {paciente.nombre} {paciente.apellidos}
-              </p>
-              <p className="text-xs text-slate-400 font-mono leading-tight">
-                {paciente.pacienteId}
-              </p>
-            </div>
-            <button onClick={() => signOut(auth)}
-              className="text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded-lg">
-              Salir
-            </button>
-          </div>
-        </div>
+    <div className="min-h-screen max-w-2xl mx-auto relative"
+      style={{background: '#F8F9FA'}}>
+      {/* Patrón geométrico de fondo — sutil */}
+      <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',opacity:0.35}}>
+        {(() => {
+          const cp = tenant?.sitioWeb?.colorPrimario ?? tenant?.colorPrimario ?? '#0D9488'
+          return (
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="bg-geo" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+                  <circle cx="15" cy="15" r="4" fill={cp} opacity="0.12"/>
+                  <rect x="35" y="8" width="10" height="10" rx="2" fill={cp} opacity="0.08"/>
+                  <polygon points="52,50 58,40 46,40" fill={cp} opacity="0.10"/>
+                  <circle cx="5" cy="45" r="2.5" fill={cp} opacity="0.08"/>
+                  <line x1="25" y1="35" x2="35" y2="25" stroke={cp} strokeWidth="1" opacity="0.08"/>
+                  <line x1="0" y1="55" x2="10" y2="45" stroke={cp} strokeWidth="1" opacity="0.08"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#bg-geo)"/>
+            </svg>
+          )
+        })()}
       </div>
+      <div className="relative z-10">
+
+      {/* Header — sticky con color del doctor */}
+      {(() => {
+        const cp = tenant?.sitioWeb?.colorPrimario ?? tenant?.colorPrimario ?? '#0D9488'
+        const isLight = (hex) => {
+          const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
+          return (r*299 + g*587 + b*114) / 1000 > 128
+        }
+        const textCol = isLight(cp) ? '#1C1C1E' : '#FFFFFF'
+        const textMuted = isLight(cp) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'
+        return (
+          <div style={{ background: cp, position: 'sticky', top: 0, zIndex: 30 }}
+            className="px-4 py-3 overflow-hidden relative">
+            {/* Patrón geométrico sutil */}
+            <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.08,pointerEvents:'none'}}
+              xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="ph-geo" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="10" cy="10" r="3" fill="white"/>
+                  <rect x="22" y="6" width="8" height="8" rx="1" fill="white"/>
+                  <polygon points="35,30 40,20 30,20" fill="white"/>
+                  <line x1="0" y1="30" x2="10" y2="20" stroke="white" strokeWidth="1.5"/>
+                  <line x1="20" y1="35" x2="30" y2="25" stroke="white" strokeWidth="1.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#ph-geo)"/>
+            </svg>
+            <div className="flex items-center justify-between relative">
+              <div>
+                <h1 style={{color: textCol}} className="text-sm font-bold leading-tight">
+                  {tenant?.nombreDoctor ?? 'Novaryk.Med'}
+                </h1>
+                <p style={{color: textMuted}} className="text-xs leading-tight truncate max-w-[160px]">
+                  {tenant?.nombre ?? 'Portal del paciente'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <p style={{color: textCol}} className="text-xs font-medium leading-tight">
+                    {paciente.nombre} {paciente.apellidos}
+                  </p>
+                  <p style={{color: textMuted}} className="text-xs font-mono leading-tight">
+                    {paciente.pacienteId}
+                  </p>
+                </div>
+                <button onClick={() => signOut(auth)}
+                  style={{color: textMuted, borderColor: textMuted}}
+                  className="text-xs border px-2 py-1 rounded-lg hover:opacity-80 transition-opacity">
+                  Salir
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Alerta alergias */}
       {paciente.alergias && paciente.alergias !== 'Ninguna' && paciente.alergias !== '' && (
@@ -800,19 +852,9 @@ export default function PortalPaciente() {
                           💳 Pagar ${ Number(c.monto ?? 0).toLocaleString('es-MX') } MXN con tarjeta
                         </button>
                       )}
-                      {/* Opciones presenciales */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {[['efectivo','💵','Efectivo'],['tarjeta','💳','TPV'],['transferencia','🏦','Transfer']].map(([m,ico,lbl]) => (
-                          <button key={m} onClick={() => pagarCobro(c, m)}
-                            className="py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl
-                                       hover:border-teal-400 hover:bg-teal-50 transition-colors text-center">
-                            <div>{ico}</div><div className="text-gray-600 mt-0.5">{lbl}</div>
-                          </button>
-                        ))}
-                      </div>
                       {!tenant?.stripePaymentLink && (
                         <p className="text-xs text-gray-400 text-center">
-                          Pago en línea no disponible. Paga en el consultorio.
+                          Paga en el consultorio. El médico registrará tu pago.
                         </p>
                       )}
                     </div>
@@ -988,5 +1030,6 @@ export default function PortalPaciente() {
       )}
 
     </div>
+      </div>
   )
 }

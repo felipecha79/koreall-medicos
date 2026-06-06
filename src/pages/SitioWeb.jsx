@@ -541,8 +541,22 @@ export default function SitioWeb() {
           {/* Preview en tiempo real */}
           <div className="bg-gray-900 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-3">Vista previa del hero</p>
-            <div className="rounded-xl overflow-hidden" style={{ background: config.colorSecundario }}>
-              <div className="px-6 py-8">
+            <div className="rounded-xl overflow-hidden relative" style={{ background: config.colorSecundario }}>
+              {/* Patrón geométrico en preview */}
+              <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.07,pointerEvents:'none'}}
+                xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="sw-geo" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <circle cx="10" cy="10" r="3" fill="white"/>
+                    <rect x="24" y="6" width="8" height="8" rx="1" fill="white"/>
+                    <polygon points="35,32 40,22 30,22" fill="white"/>
+                    <line x1="0" y1="30" x2="10" y2="20" stroke="white" strokeWidth="1.5"/>
+                    <line x1="20" y1="38" x2="30" y2="28" stroke="white" strokeWidth="1.5"/>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#sw-geo)"/>
+              </svg>
+              <div className="px-6 py-8 relative">
                 <p className="text-xs mb-2" style={{ color: config.colorPrimario, fontFamily: 'monospace' }}>
                   ● Consultorio activo
                 </p>

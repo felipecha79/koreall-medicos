@@ -114,6 +114,18 @@ const BadgeTipoPersonaRep = ({ tipo }) => {
 export default function Reportes() {
   const { tenantId, tenant } = useTenant()
   const [tab, setTab] = useState('Pagos y facturas')
+  // P2: leer preferencia del doctor para mostrar/ocultar especiales
+  const [verCalEsp, setVerCalEsp] = useState(null)
+  useEffect(() => {
+    if (!tenantId) return
+    setVerCalEsp(localStorage.getItem(`verCalEsp_${tenantId}`) !== 'false')
+    const handler = (e) => {
+      if (e.key === `verCalEsp_${tenantId}`) setVerCalEsp(e.newValue !== 'false')
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [tenantId])
+  const verCalEspActual = verCalEsp === null ? true : verCalEsp
   // T-04: Dashboard de medicamentos
   const [procedimientos, setProcedimientos] = useState([])
   useEffect(() => {
@@ -141,6 +153,7 @@ export default function Reportes() {
   const inicioMes = format(startOfMonth(new Date()), 'yyyy-MM-dd')
   const [rangoPagos,    setRangoPagos]    = useState({ desde: inicioMes, hasta: hoy })
   const [rangoConsultas,setRangoConsultas]= useState({ desde: inicioMes, hasta: hoy })
+  const [rangoKpi,      setRangoKpi]      = useState({ desde: inicioMes, hasta: hoy })
 
   // ── Datos ────────────────────────────────────────────
   const [cobros,   setCobros]   = useState([])
@@ -214,8 +227,30 @@ export default function Reportes() {
     ...c,
     _fechaFiltro: c.fechaPagoConfirmado ?? c.fechaPago,
   }))
-  const cobrosFiltrados = filtrarPorRango(cobrosConFechaReal, '_fechaFiltro', rangoPagos)
-  const consultasFiltradas = filtrarPorRango(consultas, 'fecha', rangoConsultas)
+  // P2: si toggle desactivado → excluir cobros de efectivo y consultas especiales
+  const cobrosBase = verCalEspActual
+    ? cobrosConFechaReal
+    : cobrosConFechaReal.filter(c => c.metodoPago !== 'efectivo')
+  const cobrosFiltrados = filtrarPorRango(cobrosBase, '_fechaFiltro', rangoPagos)
+  const consultasBase = verCalEspActual
+    ? consultas
+    : consultas.filter(c => c.calendario !== 'especiales')
+  const consultasFiltradas = filtrarPorRango(consultasBase, 'fecha', rangoConsultas)
+  // Citas filtradas por calendario Y rango de fechas para KPIs
+  const citasVisiblesKpi = filtrarPorRango(
+    verCalEspActual ? citas : citas.filter(c => c.calendario !== 'especiales'),
+    'fecha', rangoKpi
+  )
+  // Pacientes únicos visibles (excluir los que solo aparecen en especiales)
+  const pacientesIdEspeciales = verCalEspActual
+    ? new Set()
+    : new Set(citas.filter(c => c.calendario === 'especiales').map(c => c.pacienteId))
+  const pacientesIdNormales = verCalEspActual
+    ? null
+    : new Set(citas.filter(c => c.calendario !== 'especiales').map(c => c.pacienteId))
+  const totalPacientesKpi = verCalEspActual
+    ? totalPacientes
+    : (pacientesIdNormales?.size ?? totalPacientes)
 
   // ── Cruzar cobros con facturas ────────────────────────
   const cobrosConFactura = cobrosFiltrados.map(c => {
@@ -836,16 +871,27 @@ export default function Reportes() {
 
       {/* ══ Tab: KPIs ═════════════════════════════════════ */}
       {tab === 'Resumen KPIs' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-4">
+          {/* Selector de rango para KPIs */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <p className="text-sm font-semibold text-gray-700">📊 Resumen de indicadores</p>
+              <SelectorRango
+                desde={rangoKpi.desde}
+                hasta={rangoKpi.hasta}
+                onChange={setRangoKpi} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { titulo:'Total pacientes', valor: totalPacientes, icon:'👥', desc:'Total histórico en el tenant' },
-            { titulo:'Primera vez', valor: kpiTipos.primeraVez, icon:'🆕', desc:'Pacientes nuevos' },
-            { titulo:'Subsecuentes', valor: kpiTipos.subsecuente, icon:'🔄', desc:'Pacientes recurrentes' },
-            { titulo:'Consultas este mes', valor: consultasFiltradas.length, icon:'🩺', desc:'Basado en rango seleccionado' },
-            { titulo:'Ingresos cobrados', valor:`$${totalCobrado.toLocaleString('es-MX')}`, icon:'💰', desc:'Pagos confirmados' },
-            { titulo:'Facturas emitidas', valor: facturas.filter(f=>f.estatus==='valid').length, icon:'🧾', desc:'CFDI vigentes' },
-            { titulo:'Citas completadas', valor: citas.filter(c=>['finalizada','completada'].includes(c.estatus)).length, icon:'✅', desc:'Total histórico' },
-            { titulo:'No-shows', valor: citas.filter(c=>c.estatus==='no_show').length, icon:'⏰', desc:'Total histórico' },
+            { titulo:'Total pacientes', valor: totalPacientesKpi, icon:'👥', desc:'Total histórico en el tenant' },
+            { titulo:'Primera vez', valor: verCalEspActual ? kpiTipos.primeraVez : citasVisiblesKpi.filter(c=>c.tipoPaciente==='primera_vez'||!c.tipoPaciente).map(c=>c.pacienteId).filter((v,i,a)=>a.indexOf(v)===i).length, icon:'🆕', desc:'Pacientes nuevos' },
+            { titulo:'Subsecuentes', valor: verCalEspActual ? kpiTipos.subsecuente : citasVisiblesKpi.filter(c=>c.tipoPaciente==='subsecuente').map(c=>c.pacienteId).filter((v,i,a)=>a.indexOf(v)===i).length, icon:'🔄', desc:'Pacientes recurrentes' },
+            { titulo:'Consultas', valor: citasVisiblesKpi.length, icon:'🩺', desc:`${rangoKpi.desde} al ${rangoKpi.hasta}` },
+            { titulo:'Ingresos cobrados', valor:`$${filtrarPorRango(cobrosBase.filter(c=>c.estadoPago==='paid'),'_fechaFiltro',rangoKpi).reduce((s,c)=>s+Number(c.monto??0),0).toLocaleString('es-MX')}`, icon:'💰', desc:'Pagos confirmados en el rango' },
+            { titulo:'Facturas emitidas', valor: filtrarPorRango(facturas.filter(f=>f.estatus==='valid'),'fecha',rangoKpi).length, icon:'🧾', desc:'CFDI vigentes en el rango' },
+            { titulo:'Citas completadas', valor: citasVisiblesKpi.filter(c=>['finalizada','completada'].includes(c.estatus)).length, icon:'✅', desc:'En el rango seleccionado' },
+            { titulo:'No-shows', valor: citasVisiblesKpi.filter(c=>c.estatus==='no_show').length, icon:'⏰', desc:'En el rango seleccionado' },
           ].map((k,i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center gap-3 mb-2">
@@ -856,6 +902,7 @@ export default function Reportes() {
               <p className="text-xs text-gray-400 mt-1">{k.desc}</p>
             </div>
           ))}
+          </div>
         </div>
       )}
 

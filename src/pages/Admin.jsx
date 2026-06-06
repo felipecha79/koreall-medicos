@@ -517,7 +517,7 @@ function UsuariosPorConsultorio({ tenants }) {
 }
 
 // ── Plantillas de receta controladas ───────────────────────
-function PlantillasReceta({ tenants }) {
+function PlantillasReceta({ tenants, selectedTid }) {
   const CAMPOS = [
     ['especialidad',       'Especialidad',              'Ej: Medicina General, Pediatría...'],
     ['cedulaProfesional',  'Cédula profesional',        'Número de cédula CONAMED'],
@@ -571,7 +571,7 @@ function PlantillasReceta({ tenants }) {
         Los cambios se guardan al presionar el botón Guardar.
       </p>
       <div className="space-y-5">
-        {tenants.map(t => (
+        {tenants.filter(t => !selectedTid || t.id === selectedTid).map(t => (
           <div key={t.id} className="border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -950,9 +950,39 @@ function StripeRow({ tenant }) {
   )
 }
 
+
+// Helper toggle para tablero de módulos
+const ToggleModulo = ({ label, icon, campo, valor, tenantId: tid, desc }) => {
+  const activo = valor !== false
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800">{icon} {label}</p>
+        {desc && <p className="text-xs text-gray-400 mt-0.5">{desc}</p>}
+      </div>
+      <div className="flex items-center gap-3 ml-4">
+        <button
+          onClick={async () => {
+            await updateDoc(doc(db, `tenants/${tid}`), { [campo]: !activo })
+            toast.success(`${label} ${!activo ? 'activado' : 'desactivado'} para este consultorio`)
+          }}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+            ${activo ? 'bg-teal-600' : 'bg-gray-200'}`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+            ${activo ? 'translate-x-6' : 'translate-x-1'}`} />
+        </button>
+        <span className={`text-xs font-medium w-16 ${activo ? 'text-teal-600' : 'text-gray-400'}`}>
+          {activo ? 'Activo' : 'Inactivo'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const { allOrgs, allTenants, isSuperAdmin } = useTenant()
   const [tab, setTab]         = useState('Organizaciones')
+  const [selectedTid, setSelectedTid] = useState(null) // tenant activo en tab Sistema
   const [orgs, setOrgs]       = useState([])
   const [tenants, setTenants] = useState([])
   const [modalOrg,    setModalOrg]    = useState(false)
@@ -985,7 +1015,11 @@ export default function Admin() {
     )
     const unsubTenants = onSnapshot(
       collection(db, 'tenants'),
-      snap => setTenants(snap.docs.map(d => ({ ...d.data(), id: d.id, _docId: d.id })))
+      snap => {
+        const lista = snap.docs.map(d => ({ ...d.data(), id: d.id, _docId: d.id }))
+        setTenants(lista)
+        setSelectedTid(prev => prev ?? lista[0]?.id ?? null)
+      }
     )
     return () => { unsubOrgs(); unsubTenants() }
   }, [])
@@ -1479,45 +1513,80 @@ export default function Admin() {
           <ConfigPlanes />
           <ConfigNovaryk />
 
-          {/* ── 2. Configuración IA por consultorio ── */}
+          {/* ── Selector de consultorio activo ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-1">Configurando consultorio:</p>
+                <select
+                  value={selectedTid ?? ''}
+                  onChange={e => setSelectedTid(e.target.value)}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium
+                             text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400">
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-400 mt-4">
+                Selecciona un consultorio para ver y editar su configuración individual.
+              </p>
+            </div>
+          </div>
+
+
+
+          {/* ── TABLERO DE MÓDULOS por consultorio ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3">
-              🤖 Funciones de Inteligencia Artificial por consultorio
+            <p className="text-sm font-semibold text-gray-700 mb-1">⚙️ Tablero de módulos por consultorio</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Activa o desactiva funcionalidades por consultorio. Al desactivar, el módulo
+              deja de mostrarse al doctor. La telemedicina siempre está activa.
             </p>
-            <div className="space-y-3">
-              {tenants.map(t => (
-                <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{t.nombre}</p>
-                    <p className="text-xs text-gray-400 font-mono">{t.id}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500">IA pre-consulta:</span>
-                    <button
-                      onClick={async () => {
-                        const actual = t.iaPreConsultaActivo !== false
-                        await updateDoc(doc(db, `tenants/${t.id}`), {
-                          iaPreConsultaActivo: !actual
-                        })
-                        toast.success(`IA ${!actual ? 'activada' : 'desactivada'} para ${t.nombre}`)
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${t.iaPreConsultaActivo !== false ? 'bg-teal-600' : 'bg-gray-200'}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
-                        ${t.iaPreConsultaActivo !== false ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <span className={`text-xs font-medium ${t.iaPreConsultaActivo !== false ? 'text-teal-600' : 'text-gray-400'}`}>
-                      {t.iaPreConsultaActivo !== false ? 'Activa' : 'Inactiva'}
-                    </span>
+            <div className="space-y-1">
+              {tenants.filter(t => !selectedTid || t.id === selectedTid).map(t => (
+                <div key={t.id} className="border border-gray-100 rounded-xl p-4 mb-3 last:mb-0">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">
+                    🏥 {t.nombre}
+                    <span className="ml-2 text-xs font-normal text-gray-400 font-mono">{t.id}</span>
+                  </p>
+                  <div className="space-y-0">
+                    <ToggleModulo
+                      label="IA pre-consulta"
+                      icon="🤖"
+                      campo="iaPreConsultaActivo"
+                      valor={t.iaPreConsultaActivo}
+                      tenantId={t.id}
+                      desc="Sugerencias de diagnóstico IA al abrir una cita · ~$0.01 USD por cita"
+                    />
+                    <ToggleModulo
+                      label="Stripe / Pagos con tarjeta"
+                      icon="💳"
+                      campo="stripeActivo"
+                      valor={t.stripeActivo}
+                      tenantId={t.id}
+                      desc="Si se desactiva, no se muestra el botón de pago con tarjeta en cobros"
+                    />
+                    <ToggleModulo
+                      label="Facturación CFDI 4.0"
+                      icon="🧾"
+                      campo="facturacionActiva"
+                      valor={t.facturacionActiva}
+                      tenantId={t.id}
+                      desc="Si se desactiva, el módulo de Facturación desaparece del menú"
+                    />
+                    <ToggleModulo
+                      label="Calendarios especiales (efectivo)"
+                      icon="📅"
+                      campo="calendarioEspecialActivo"
+                      valor={t.calendarioEspecialActivo}
+                      tenantId={t.id}
+                      desc="Mueve automáticamente las citas pagadas en efectivo al calendario especial"
+                    />
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              Cuando está activa, el doctor ve sugerencias de diagnóstico IA al abrir una cita.
-              El análisis se guarda en la cita para no repetir consultas.
-              Costo aproximado: $0.01 USD por cita analizada.
-            </p>
           </div>
 
           {/* ── Facturapi por consultorio ── */}
@@ -1532,7 +1601,7 @@ export default function Admin() {
               </div>
             </div>
             <div className="space-y-3">
-              {tenants.map(t => {
+              {tenants.filter(t => !selectedTid || t.id === selectedTid).map(t => {
                 const tieneKey = !!t.facturapiApiKey
                 const estado   = fpStatus[t.id]
                 return (
@@ -1604,7 +1673,7 @@ export default function Admin() {
               </p>
             </div>
             <div className="space-y-3">
-              {tenants.map(t => (
+              {tenants.filter(t => !selectedTid || t.id === selectedTid).map(t => (
                 <StripeRow key={t._docId ?? t.id} tenant={t} />
               ))}
             </div>
@@ -1619,15 +1688,27 @@ export default function Admin() {
           </div>
 
           {/* Plantillas de receta por consultorio */}
-          <PlantillasReceta tenants={tenants} />
+          <PlantillasReceta tenants={tenants} selectedTid={selectedTid} />
 
           {/* ── Importar pacientes CSV (parte del onboarding) ── */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-sm font-semibold text-gray-700 mb-1">📥 Importar pacientes CSV</p>
             <p className="text-xs text-gray-400 mb-3">
-              Sube el padrón de pacientes durante la configuración inicial del consultorio.
-              Asegúrate de tener seleccionado el consultorio correcto en el menú superior.
+              Sube el padrón de pacientes del consultorio seleccionado.
             </p>
+            {/* Consultorio activo para importación */}
+            {selectedTid && (() => {
+              const t = tenants.find(t => t.id === selectedTid)
+              return t ? (
+                <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
+                  <span className="text-teal-600">🏥</span>
+                  <div>
+                    <p className="text-xs font-semibold text-teal-800">Importando para: {t.nombre}</p>
+                    <p className="text-xs text-teal-600 font-mono">{t.id}</p>
+                  </div>
+                </div>
+              ) : null
+            })()}
             <a href="/importar"
               className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white
                          text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors">

@@ -36,7 +36,29 @@ export default function MiCuenta() {
   const montoBase = planInfo.precio
   const montoIVA  = Math.round(montoBase * 1.16)
   const activa    = tenant?.suscripcionActiva !== false
-  const [showTransf, setShowTransf] = useState(false)  // T-06
+  const [showTransf, setShowTransf]   = useState(false)    // T-06
+  // P2: toggle calendario especial — espera a tenantId para leer localStorage correcto
+  const storageKey = tenantId ? `verCalEsp_${tenantId}` : null
+  const [verCalEspLocal, setVerCalEspLocal] = useState(true) // placeholder hasta que cargue
+
+  // Sincronizar con localStorage cuando tenantId esté disponible
+  useEffect(() => {
+    if (!storageKey) return
+    const val = localStorage.getItem(storageKey)
+    setVerCalEspLocal(val !== 'false')
+  }, [storageKey])
+
+  const toggleCalEsp = () => {
+    if (!storageKey) return
+    const next = !verCalEspLocal
+    setVerCalEspLocal(next)
+    localStorage.setItem(storageKey, String(next))
+    // Notificar a Agenda en la misma pestaña
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: storageKey, newValue: String(next)
+    }))
+  }
+  const calEspActivo = tenant?.calendarioEspecialActivo !== false
   const [comprobante, setComprobante] = useState(null)   // T-06
   const [subiendoComp, setSubiendo]  = useState(false)  // T-06
 
@@ -170,6 +192,7 @@ const pagarSuscripcion = () => {
             </p>
             <p className="text-xs text-gray-400">${montoIVA.toLocaleString('es-MX')} MXN con IVA</p>
           </div>
+
           <div className="text-right">
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-200 min-w-[140px]">
               <p className="text-xs text-gray-400">Próximo pago</p>
@@ -337,6 +360,39 @@ const pagarSuscripcion = () => {
           </div>
         )}
       </div>
+
+      {/* ── Preferencias de vista ── */}
+      {calEspActivo && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-semibold text-gray-700">⚙️ Preferencias de vista</p>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            Controla qué consultas y pagos se muestran en la agenda y reportes.
+          </p>
+          <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">💜 Consultas especiales</p>
+                <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                  {verCalEspLocal
+                    ? 'Agenda y Reportes muestran todo — incluyendo pagos en efectivo.'
+                    : 'Agenda y Reportes solo muestran Consultas normales. Totales cuadran sin efectivo.'}
+                </p>
+                <p className={`text-xs font-semibold mt-2 ${verCalEspLocal ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {verCalEspLocal ? '● Mostrando todo' : '○ Ocultas las especiales'}
+                </p>
+              </div>
+              <button onClick={toggleCalEsp}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 mt-0.5
+                  ${verCalEspLocal ? 'bg-purple-600' : 'bg-gray-300'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                  ${verCalEspLocal ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal pago confirmado */}
       {modalPago && (

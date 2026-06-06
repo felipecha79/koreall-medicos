@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import {
   collection, query, orderBy, onSnapshot,
-  addDoc, updateDoc, doc, Timestamp, getDocs
+  addDoc, updateDoc, doc, Timestamp, getDocs, where, limit
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
@@ -23,6 +23,7 @@ const METODO_COLOR = {
 const FORM_INICIAL = {
   pacienteId: '', pacienteIdLegible: '', pacienteNombre: '', pacienteEmail: '',
   concepto: 'Consulta general', monto: '', metodoPago: 'efectivo',
+  citaId: '', citaFecha: '',  // Opcional: vincular pago a una cita
 }
 
 function BuscadorPaciente({ tenantId, onSelect }) {
@@ -83,6 +84,9 @@ function BotonStripe({ cobro, tenant, onPagado }) {
   const [cargando, setCargando] = useState(false)
   const tieneStripe = !!(tenant?.stripeAccountId || tenant?.stripePaymentLink)
 
+  // Punto 3: ocultar Stripe si está desactivado por SuperAdmin
+  if (tenant?.stripeActivo === false) return null
+
   if (!tieneStripe) return (
     <span className="text-xs text-gray-300 italic">Sin Stripe</span>
   )
@@ -129,6 +133,30 @@ export default function Cobros() {
   const [cobros,  setCobros]  = useState([])
   const [modal,   setModal]   = useState(false)
   const [form,    setForm]    = useState(FORM_INICIAL)
+  const [citasPac, setCitasPac] = useState([])  // citas del paciente para vincular
+
+  // Cargar citas del paciente cuando se selecciona
+  const cargarCitasPaciente = async (pacienteId) => {
+    if (!pacienteId) { setCitasPac([]); return }
+    try {
+      // Sin orderBy para evitar requerir índice compuesto en Firestore
+      const snap = await getDocs(
+        query(
+          collection(db, 'tenants', String(tenantId), 'citas'),
+          where('pacienteId', '==', pacienteId)
+        )
+      )
+      const lista = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const fa = a.fecha?.toDate?.() ?? new Date(0)
+          const fb = b.fecha?.toDate?.() ?? new Date(0)
+          return fb - fa
+        })
+        .slice(0, 10)
+      setCitasPac(lista)
+    } catch { setCitasPac([]) }
+  }
   const [saving,  setSaving]  = useState(false)
   const [busq,    setBusq]    = useState('')
   const [tab,     setTab]     = useState('pendientes')
@@ -181,6 +209,8 @@ export default function Cobros() {
         facturado: false,
         cfdiUuid: null, cfdiUrl: null,
         fechaPago: Timestamp.now(),
+        citaId:   form.citaId   || null,   // Vínculo opcional con cita
+        citaFecha: form.citaFecha || null,
       })
       toast.success('Cobro registrado ✓')
       setModal(false); setForm(FORM_INICIAL)
@@ -191,11 +221,20 @@ export default function Cobros() {
 
   const marcarPagado = async (cobro, metodo = null) => {
     try {
+      const metodoFinal = metodo ?? cobro.metodoPago ?? 'efectivo'
       await updateDoc(doc(db, 'tenants', String(tenantId), 'cobros', cobro.id), {
         estadoPago:          'paid',
-        metodoPago:          metodo ?? cobro.metodoPago ?? 'efectivo',
+        metodoPago:          metodoFinal,
         fechaPagoConfirmado: Timestamp.now(),
       })
+      // P1: Si pago en efectivo y hay cita asociada → mover al calendario especial
+      if (metodoFinal === 'efectivo' && cobro.citaId && tenant?.calendarioEspecialActivo !== false) {
+        try {
+          await updateDoc(doc(db, 'tenants', String(tenantId), 'citas', cobro.citaId), {
+            calendario: 'especiales'
+          })
+        } catch { /* silencioso si no hay cita */ }
+      }
       toast.success('Marcado como pagado ✓')
     } catch { toast.error('Error') }
   }
@@ -354,18 +393,62 @@ export default function Cobros() {
                 <label className="block text-xs text-gray-500 mb-1">Paciente * — busca por nombre o ID</label>
                 {tenantId && (
                   <BuscadorPaciente tenantId={tenantId}
-                    onSelect={p => setForm(f => ({
-                      ...f,
-                      pacienteId:        p.id,
-                      pacienteIdLegible: p.pacienteId ?? '',
-                      pacienteNombre:    `${p.nombre} ${p.apellidos}`,
-                      pacienteEmail:     p.email ?? '',
-                    }))} />
+                    onSelect={p => {
+                      setForm(f => ({
+                        ...f,
+                        pacienteId:        p.id,
+                        pacienteIdLegible: p.pacienteId ?? '',
+                        pacienteNombre:    `${p.nombre} ${p.apellidos}`,
+                        pacienteEmail:     p.email ?? '',
+                        citaId: '', citaFecha: '',  // reset cita al cambiar paciente
+                      }))
+                      cargarCitasPaciente(p.id)
+                    }} />
                 )}
                 {form.pacienteId && (
                   <p className="text-xs text-teal-600 mt-1">✓ {form.pacienteIdLegible} — {form.pacienteNombre}</p>
                 )}
               </div>
+              {/* Selector de cita — opcional, para vincular pago al calendario */}
+              {citasPac.length > 0 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Vincular a cita <span className="text-gray-300">(opcional)</span>
+                  </label>
+                  <select
+                    value={form.citaId}
+                    onChange={e => {
+                      const cita = citasPac.find(c => c.id === e.target.value)
+                      setForm(f => ({
+                        ...f,
+                        citaId: e.target.value,
+                        citaFecha: cita?.fecha ?? null,
+                        concepto: e.target.value
+                          ? (cita?.motivo || cita?.tipoConsulta || 'Consulta')
+                          : f.concepto,
+                      }))
+                    }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">— Sin vincular a cita —</option>
+                    {citasPac.map(cita => (
+                      <option key={cita.id} value={cita.id}>
+                        {cita.fecha?.toDate
+                          ? cita.fecha.toDate().toLocaleDateString('es-MX',
+                              {day:'2-digit', month:'short', year:'numeric'})
+                          : '—'}
+                        {' · '}{cita.motivo || cita.tipoConsulta || 'Consulta'}
+                        {cita.calendario === 'especiales' ? ' 💜' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {form.citaId && (
+                    <p className="text-xs text-purple-600 mt-1">
+                      💜 Al pagar en efectivo, la cita se moverá al calendario especial
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Concepto</label>
                 <input type="text" value={form.concepto}

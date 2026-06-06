@@ -22,6 +22,7 @@ import Landing            from './pages/Landing'
 import SuscripcionVencida from './pages/SuscripcionVencida'
 import Suscripciones      from './pages/Suscripciones'
 import Encuesta           from './pages/Encuesta'
+import EncuestaPublica    from './pages/EncuestaPublica'
 import RegistroPaciente   from './pages/RegistroPaciente'
 import ImportarPacientes  from './pages/ImportarPacientes'
 import Telemedicina       from './pages/Telemedicina'
@@ -360,7 +361,8 @@ export default function App() {
       <Route path="/"                element={<Landing />} />
       <Route path="/login"           element={<Login />} />
       <Route path="/portal-paciente" element={<PortalPaciente />} />
-      <Route path="/registro" element={<RegistroPaciente />} />
+      <Route path="/registro"        element={<RegistroPaciente />} />
+      <Route path="/kiosco"          element={<EncuestaPublica />} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
           <PrivateRoute><AppLayout>{element}</AppLayout></PrivateRoute>
