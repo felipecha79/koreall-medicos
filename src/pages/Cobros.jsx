@@ -133,6 +133,18 @@ export default function Cobros() {
   const [cobros,  setCobros]  = useState([])
   const [modal,   setModal]   = useState(false)
   const [form,    setForm]    = useState(FORM_INICIAL)
+  // Toggle consultas especiales — mismo patrón que Agenda y Reportes
+  const [verCalEsp, setVerCalEsp] = useState(null)
+  useEffect(() => {
+    if (!tenantId) return
+    setVerCalEsp(localStorage.getItem(`verCalEsp_${tenantId}`) !== 'false')
+    const handler = (e) => {
+      if (e.key === `verCalEsp_${tenantId}`) setVerCalEsp(e.newValue !== 'false')
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [tenantId])
+  const verCalEspActual = verCalEsp === null ? true : verCalEsp
   const [citasPac, setCitasPac] = useState([])  // citas del paciente para vincular
 
   // Cargar citas del paciente cuando se selecciona
@@ -180,7 +192,12 @@ export default function Cobros() {
   const fin    = endOfMonth(ahora)
 
   const totalMes = cobros
-    .filter(c => { const f = c.fechaPago?.toDate?.(); return f && f >= inicio && f <= fin && c.estadoPago === 'paid' })
+    .filter(c => {
+      const f = c.fechaPago?.toDate?.()
+      if (!f || f < inicio || f > fin || c.estadoPago !== 'paid') return false
+      if (!verCalEspActual && c.metodoPago === 'efectivo') return false
+      return true
+    })
     .reduce((s, c) => s + Number(c.monto ?? 0), 0)
 
   const filtrar = (lista) => lista.filter(c =>
@@ -188,7 +205,12 @@ export default function Cobros() {
   )
 
   const pendientes = filtrar(cobros.filter(c => c.estadoPago !== 'paid'))
-  const pagados    = filtrar(cobros.filter(c => c.estadoPago === 'paid'))
+  const pagadosBase = cobros.filter(c => c.estadoPago === 'paid')
+  // Ocultar pagos en efectivo cuando toggle especiales está apagado
+  const pagadosFiltrados = verCalEspActual
+    ? pagadosBase
+    : pagadosBase.filter(c => c.metodoPago !== 'efectivo')
+  const pagados    = filtrar(pagadosFiltrados)
   const lista      = tab === 'pendientes' ? pendientes : pagados
 
   const guardar = async () => {
@@ -302,7 +324,7 @@ export default function Cobros() {
           <button onClick={() => setTab('pagados')}
             className={`px-4 py-2 text-sm font-medium border-l border-gray-200 transition-colors
               ${tab === 'pagados' ? 'bg-green-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-            Pagados ({cobros.filter(c => c.estadoPago === 'paid').length})
+            Pagados ({pagados.length})
           </button>
         </div>
       </div>
