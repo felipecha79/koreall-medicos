@@ -86,16 +86,22 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   const [expandido,  setExpandido]  = useState(true)
   const [iaStatus,   setIaStatus]   = useState(null)
 
-  // Leer estado de créditos IA al montar
+  // Leer estado de créditos IA al montar — con cleanup correcto
   useEffect(() => {
+    let unsub = null
     import('firebase/firestore').then(({ doc: fDoc, onSnapshot: fSnap }) => {
       import('../firebase').then(({ db: fdb }) => {
         const ref = fDoc(fdb, 'configuracion', 'ia_status')
-        return fSnap(ref, snap => {
+        unsub = fSnap(ref, snap => {
           if (snap.exists()) setIaStatus(snap.data())
         })
       })
     }).catch(() => {})
+
+    // ✅ CLEANUP: desinscribir cuando el componente se desmonta
+    return () => {
+      if (unsub) unsub()
+    }
   }, [])
 
   const creditosPct = iaStatus

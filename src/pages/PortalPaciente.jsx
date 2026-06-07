@@ -597,8 +597,9 @@ export default function PortalPaciente() {
       }
     )
 
-    // ✅ NUEVO: Consultas completadas (estatus = 'completada' o 'finalizada')
-    const unsubConsultas = onSnapshot(
+    // ✅ NUEVO: Consultas completadas (estatus = 'completada' o 'finalizada') — CON CLEANUP
+    let unsubConsultasMain, unsubConsultasFallback
+    unsubConsultasMain = onSnapshot(
       query(
         collection(db, `tenants/${tenantId}/consultas`),
         where('pacienteId', '==', paciente.id),
@@ -606,12 +607,11 @@ export default function PortalPaciente() {
       ),
       snap => {
         const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        // Filtrar solo las completadas
         setConsultas(todas.filter(c => ['completada', 'finalizada'].includes(c.estatus)))
       },
       () => {
-        // Fallback sin orderBy
-        onSnapshot(
+        // Fallback sin orderBy — asignado a variable para cleanup
+        unsubConsultasFallback = onSnapshot(
           query(
             collection(db, `tenants/${tenantId}/consultas`),
             where('pacienteId', '==', paciente.id)
@@ -629,8 +629,14 @@ export default function PortalPaciente() {
       }
     )
 
-    // ✅ NUEVO: Recetas digitalmente certificadas SOLO
-    const unsubRecetas = onSnapshot(
+    const unsubConsultas = () => {
+      if (unsubConsultasMain) unsubConsultasMain()
+      if (unsubConsultasFallback) unsubConsultasFallback()
+    }
+
+    // ✅ NUEVO: Recetas digitalmente certificadas SOLO — CON CLEANUP
+    let unsubRecetasMain, unsubRecetasFallback
+    unsubRecetasMain = onSnapshot(
       query(
         collection(db, `tenants/${tenantId}/recetas`),
         where('pacienteId', '==', paciente.id),
@@ -638,12 +644,11 @@ export default function PortalPaciente() {
       ),
       snap => {
         const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        // Filtrar solo certificadas
         setRecetas(todas.filter(r => r.certificacion?.mode === 'CERTIFICADA'))
       },
       () => {
-        // Fallback sin orderBy
-        onSnapshot(
+        // Fallback sin orderBy — asignado a variable para cleanup
+        unsubRecetasFallback = onSnapshot(
           query(
             collection(db, `tenants/${tenantId}/recetas`),
             where('pacienteId', '==', paciente.id)
@@ -661,6 +666,11 @@ export default function PortalPaciente() {
       }
     )
 
+    const unsubRecetas = () => {
+      if (unsubRecetasMain) unsubRecetasMain()
+      if (unsubRecetasFallback) unsubRecetasFallback()
+    }
+
     const unsubDocs = onSnapshot(
       query(collection(db, `tenants/${tenantId}/pacientes/${paciente.id}/documentos`),
             orderBy('fecha','desc')),
@@ -670,13 +680,16 @@ export default function PortalPaciente() {
       collection(db, `tenants/${tenantId}/pacientes/${paciente.id}/medicamentos`),
       snap => setMeds(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-    const unsubCobros = onSnapshot(
+    // ✅ Cobros — CON CLEANUP para fallback
+    let unsubCobrosMain, unsubCoburosFallback
+    unsubCobrosMain = onSnapshot(
       query(collection(db, `tenants/${tenantId}/cobros`),
             where('pacienteId', '==', paciente.id),
             orderBy('fechaPago','desc')),
       snap => setCobros(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {
-        onSnapshot(
+        // Fallback — asignado a variable para cleanup
+        unsubCoburosFallback = onSnapshot(
           query(collection(db, `tenants/${tenantId}/cobros`),
                 where('pacienteId', '==', paciente.id)),
           snap2 => {
@@ -691,6 +704,11 @@ export default function PortalPaciente() {
         )
       }
     )
+
+    const unsubCobros = () => {
+      if (unsubCobrosMain) unsubCobrosMain()
+      if (unsubCoburosFallback) unsubCoburosFallback()
+    }
     const unsubFacturas = onSnapshot(
       query(collection(db, `tenants/${tenantId}/facturas`),
             where('pacienteId', '==', paciente.id),
