@@ -183,14 +183,12 @@ function SelectorCita({ value, onChange, tenantId }) {
             {slots.map(slot => {
               const count = contarSlot(slot)
               const lleno = count >= 2
-              // Mostrar como "disponible" aunque haya 1 cita (no mostrar al paciente el empalme)
               const disponible = count < 2
               const slotDate = new Date(diaSeleccionado)
               const [h,m] = slot.split(':').map(Number)
               slotDate.setHours(h, m, 0, 0)
               const pasado = slotDate <= new Date()
 
-              // Slot seleccionado actualmente
               const seleccionadoActual = value && (() => {
                 const v = new Date(value)
                 return v.getHours() === h && v.getMinutes() === m
@@ -385,12 +383,177 @@ function TarjetaCita({ cita, tenantId }) {
   )
 }
 
-const TABS = ['Mis citas', 'Mis documentos', 'Mis medicamentos', 'Pagos', 'Mis facturas', 'Solicitar cita']
+// ✅ NUEVO: Tarjeta de consulta completada
+function TarjetaConsulta({ consulta }) {
+  const fmtFecha = (f) => {
+    try {
+      const d = f?.toDate ? f.toDate() : f?.seconds ? new Date(f.seconds*1000) : new Date(f)
+      return format(d, "d 'de' MMMM yyyy", { locale: es })
+    } catch { return '—' }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="font-medium text-gray-800 text-sm">
+            {consulta.doctorNombre ? `Dr. ${consulta.doctorNombre}` : 'Médico'}
+          </p>
+          <p className="text-xs text-gray-400">{fmtFecha(consulta.fecha)}</p>
+        </div>
+        <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full border border-teal-200">
+          ✓ Completada
+        </span>
+      </div>
+
+      {/* Motivo y diagnóstico */}
+      <div className="space-y-2 text-sm">
+        {consulta.motivoConsulta && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-0.5">Motivo</p>
+            <p className="text-gray-800">{consulta.motivoConsulta}</p>
+          </div>
+        )}
+        {consulta.diagnostico && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-0.5">Diagnóstico</p>
+            <p className="text-gray-800">{consulta.diagnostico}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Signos vitales */}
+      {(consulta.peso || consulta.fc || consulta.ta || consulta.temperatura) && (
+        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 text-sm">
+          {consulta.peso && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Peso</p>
+              <p className="text-gray-800 font-medium">{consulta.peso} kg</p>
+            </div>
+          )}
+          {consulta.fc && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium">FC</p>
+              <p className="text-gray-800 font-medium">{consulta.fc} bpm</p>
+            </div>
+          )}
+          {consulta.ta && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium">TA</p>
+              <p className="text-gray-800 font-medium">{consulta.ta}</p>
+            </div>
+          )}
+          {consulta.temperatura && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Temp</p>
+              <p className="text-gray-800 font-medium">{consulta.temperatura}°C</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Exploración física y tratamiento */}
+      <div className="space-y-2 mt-3 pt-3 border-t border-gray-100 text-sm">
+        {consulta.exploracionFisica && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-0.5">Exploración física</p>
+            <p className="text-gray-700 italic text-xs">{consulta.exploracionFisica}</p>
+          </div>
+        )}
+        {consulta.tratamiento && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-0.5">Tratamiento</p>
+            <p className="text-gray-700">{consulta.tratamiento}</p>
+          </div>
+        )}
+      </div>
+
+      {consulta.doctorEspecialidad && (
+        <p className="text-xs text-gray-400 mt-3">
+          {consulta.doctorEspecialidad}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ✅ NUEVO: Tarjeta de receta certificada
+function TarjetaRecetaCertificada({ receta }) {
+  const fmtFecha = (f) => {
+    try {
+      const d = f?.toDate ? f.toDate() : f?.seconds ? new Date(f.seconds*1000) : new Date(f)
+      return format(d, "d 'de' MMMM yyyy", { locale: es })
+    } catch { return '—' }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-green-200 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="font-medium text-gray-800 text-sm">
+            {receta.doctorNombre ? `Dr. ${receta.doctorNombre}` : 'Médico'}
+          </p>
+          <p className="text-xs text-gray-400">{fmtFecha(receta.fecha_emision)}</p>
+        </div>
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-medium">
+          ✓ Certificada
+        </span>
+      </div>
+
+      {/* Diagnóstico */}
+      {receta.diagnostico && (
+        <div className="mb-3">
+          <p className="text-xs text-gray-500 font-medium mb-1">Diagnóstico</p>
+          <p className="text-gray-800">{receta.diagnostico}</p>
+        </div>
+      )}
+
+      {/* Medicamentos */}
+      {receta.medicamentos && receta.medicamentos.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs text-gray-500 font-medium mb-1.5">Medicamentos</p>
+          <div className="space-y-1">
+            {receta.medicamentos.map((med, idx) => (
+              <div key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                {med.es_controlado && <span className="text-xs font-semibold text-amber-600 flex-shrink-0">⚠️</span>}
+                <span>
+                  <strong>{med.nombre}</strong> — {med.dosis}, {med.frecuencia}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* QR validable */}
+      {receta.certificacion?.qr_code && (
+        <div className="mt-3 pt-3 border-t border-gray-100 text-center">
+          <p className="text-xs text-gray-400 mb-2">Muestra este código en la farmacia:</p>
+          <div className="bg-gray-50 rounded-lg p-2 inline-block">
+            <svg width="100" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="50" y="50" textAnchor="middle" fontSize="10" fill="#888">
+                QR
+              </text>
+            </svg>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Válida hasta: {fmtFecha(receta.certificacion.qr_code.fecha_expira)}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ✅ ACTUALIZAR TABS
+const TABS = ['Mis citas', 'Mis consultas', 'Mis recetas', 'Mis documentos', 'Mis medicamentos', 'Pagos', 'Mis facturas', 'Solicitar cita']
 
 export default function PortalPaciente() {
   const { user, paciente, tenantId, tenant, loading } = usePacientePortal()
   const [tab, setTab]           = useState('Mis citas')
   const [citas, setCitas]       = useState([])
+  const [consultas, setConsultas] = useState([])  // ✅ NUEVO
+  const [recetas, setRecetas]   = useState([])    // ✅ NUEVO
   const [docs,  setDocs]        = useState([])
   const [meds,  setMeds]        = useState([])
   const [cobros, setCobros]       = useState([])
@@ -415,7 +578,6 @@ export default function PortalPaciente() {
     const unsubCitas = onSnapshot(q,
       snap => {
         const found = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        // Actualizar inmediatamente — sin necesidad de refresh
         setCitas(found)
         if (found.length === 0 && paciente.pacienteId) {
           getDocs(query(
@@ -435,6 +597,70 @@ export default function PortalPaciente() {
       }
     )
 
+    // ✅ NUEVO: Consultas completadas (estatus = 'completada' o 'finalizada')
+    const unsubConsultas = onSnapshot(
+      query(
+        collection(db, `tenants/${tenantId}/consultas`),
+        where('pacienteId', '==', paciente.id),
+        orderBy('fecha', 'desc')
+      ),
+      snap => {
+        const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        // Filtrar solo las completadas
+        setConsultas(todas.filter(c => ['completada', 'finalizada'].includes(c.estatus)))
+      },
+      () => {
+        // Fallback sin orderBy
+        onSnapshot(
+          query(
+            collection(db, `tenants/${tenantId}/consultas`),
+            where('pacienteId', '==', paciente.id)
+          ),
+          snap2 => {
+            const docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }))
+            docs.sort((a, b) => {
+              const ta = a.fecha?.toDate?.()?.getTime?.() ?? 0
+              const tb = b.fecha?.toDate?.()?.getTime?.() ?? 0
+              return tb - ta
+            })
+            setConsultas(docs.filter(c => ['completada', 'finalizada'].includes(c.estatus)))
+          }
+        )
+      }
+    )
+
+    // ✅ NUEVO: Recetas digitalmente certificadas SOLO
+    const unsubRecetas = onSnapshot(
+      query(
+        collection(db, `tenants/${tenantId}/recetas`),
+        where('pacienteId', '==', paciente.id),
+        orderBy('fecha_emision', 'desc')
+      ),
+      snap => {
+        const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        // Filtrar solo certificadas
+        setRecetas(todas.filter(r => r.certificacion?.mode === 'CERTIFICADA'))
+      },
+      () => {
+        // Fallback sin orderBy
+        onSnapshot(
+          query(
+            collection(db, `tenants/${tenantId}/recetas`),
+            where('pacienteId', '==', paciente.id)
+          ),
+          snap2 => {
+            const docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }))
+            docs.sort((a, b) => {
+              const ta = a.fecha_emision?.toDate?.()?.getTime?.() ?? 0
+              const tb = b.fecha_emision?.toDate?.()?.getTime?.() ?? 0
+              return tb - ta
+            })
+            setRecetas(docs.filter(r => r.certificacion?.mode === 'CERTIFICADA'))
+          }
+        )
+      }
+    )
+
     const unsubDocs = onSnapshot(
       query(collection(db, `tenants/${tenantId}/pacientes/${paciente.id}/documentos`),
             orderBy('fecha','desc')),
@@ -450,7 +676,6 @@ export default function PortalPaciente() {
             orderBy('fechaPago','desc')),
       snap => setCobros(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {
-        // Fallback sin orderBy si falla el índice
         onSnapshot(
           query(collection(db, `tenants/${tenantId}/cobros`),
                 where('pacienteId', '==', paciente.id)),
@@ -473,7 +698,15 @@ export default function PortalPaciente() {
       snap => setFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
 
-    return () => { unsubCitas(); unsubDocs(); unsubMeds(); unsubCobros(); unsubFacturas() }
+    return () => {
+      unsubCitas()
+      unsubConsultas()
+      unsubRecetas()
+      unsubDocs()
+      unsubMeds()
+      unsubCobros()
+      unsubFacturas()
+    }
   }, [tenantId, paciente])
 
   const solicitarCita = async () => {
@@ -502,7 +735,6 @@ export default function PortalPaciente() {
       toast.success('✓ Cita solicitada — el consultorio confirmará pronto')
       setFecha('')
       setMotivo('')
-      // Cambiar a tab de citas inmediatamente — ya aparecerá via onSnapshot
       setTab('Mis citas')
     } catch(e) {
       console.error(e)
@@ -681,10 +913,10 @@ export default function PortalPaciente() {
 
           <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100">
             {[
-              { v: proximas.length,             l: 'Citas',        c: 'text-teal-600' },
-              { v: docs.length,                  l: 'Documentos',   c: 'text-gray-700' },
-              { v: meds.filter(m=>m.activo).length, l: 'Medicamentos', c: 'text-green-600' },
-              { v: cobrosPendientes.length,      l: 'Pagos',        c: 'text-amber-500' },
+              { v: proximas.length,              l: 'Citas',       c: 'text-teal-600' },
+              { v: consultas.length,             l: 'Consultas',   c: 'text-blue-600' },
+              { v: recetas.length,               l: 'Recetas',     c: 'text-green-600' },
+              { v: cobrosPendientes.length,      l: 'Pagos',       c: 'text-amber-500' },
             ].map((item, i) => (
               <div key={i} className="text-center">
                 <p className={`text-lg font-bold ${item.c}`}>{item.v}</p>
@@ -723,6 +955,16 @@ export default function PortalPaciente() {
                   ? 'border-teal-500 text-teal-600'
                   : 'border-transparent text-gray-500'}`}>
               {t}
+              {t === 'Mis consultas' && consultas.length > 0 && (
+                <span className="ml-1 bg-blue-500 text-white text-xs rounded-full px-1.5">
+                  {consultas.length}
+                </span>
+              )}
+              {t === 'Mis recetas' && recetas.length > 0 && (
+                <span className="ml-1 bg-green-500 text-white text-xs rounded-full px-1.5">
+                  {recetas.length}
+                </span>
+              )}
               {t === 'Pagos' && cobrosPendientes.length > 0 && (
                 <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">
                   {cobrosPendientes.length}
@@ -746,6 +988,34 @@ export default function PortalPaciente() {
               </div>
             ) : citas.map(c => (
               <TarjetaCita key={c.id} cita={c} tenantId={tenantId} />
+            ))}
+          </div>
+        )}
+
+        {/* ✅ NUEVO: Mis consultas completadas ─────────── */}
+        {tab === 'Mis consultas' && (
+          <div className="space-y-3">
+            {consultas.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-3xl mb-2">📋</p>
+                <p className="text-sm">No hay consultas registradas</p>
+              </div>
+            ) : consultas.map(c => (
+              <TarjetaConsulta key={c.id} consulta={c} />
+            ))}
+          </div>
+        )}
+
+        {/* ✅ NUEVO: Mis recetas certificadas ────────── */}
+        {tab === 'Mis recetas' && (
+          <div className="space-y-3">
+            {recetas.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-3xl mb-2">💊</p>
+                <p className="text-sm">No hay recetas digitalmente certificadas</p>
+              </div>
+            ) : recetas.map(r => (
+              <TarjetaRecetaCertificada key={r.id} receta={r} />
             ))}
           </div>
         )}
@@ -829,7 +1099,6 @@ export default function PortalPaciente() {
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <p className="text-xs text-gray-500 mb-2">Pagar con:</p>
                     <div className="flex flex-col gap-2">
-                      {/* Stripe — pago en línea directo */}
                       {tenant?.stripePaymentLink && (
                         <button
                           onClick={() => {
@@ -921,7 +1190,6 @@ export default function PortalPaciente() {
                 {tenant?.nombre} — El consultorio confirmará tu solicitud.
               </p>
 
-              {/* Selector de cita amigable para móvil */}
               <div className="mb-3">
                 <label className="block text-xs text-gray-500 mb-2 font-medium">
                   Fecha y hora de preferencia *
@@ -1003,7 +1271,7 @@ export default function PortalPaciente() {
             </p>
             <p className="text-xs text-gray-400 mb-5">
               Concepto: <strong>{pagoModalCobro.concepto}</strong> ·{' '}
-              <strong>${'{'}Number(pagoModalCobro.monto).toLocaleString('es-MX'){'}'} MXN</strong>
+              <strong>${Number(pagoModalCobro.monto).toLocaleString('es-MX')} MXN</strong>
             </p>
             <div className="flex gap-3">
               <button

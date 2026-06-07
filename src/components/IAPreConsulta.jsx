@@ -1,5 +1,6 @@
 // src/components/IAPreConsulta.jsx
 // Panel de análisis IA pre-consulta visible para el doctor en la Agenda
+// OPTIMIZADO: max_tokens reducido a 600, prompt mínimo, análisis conciso
 import { useState, useEffect } from 'react'
 import { doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -7,7 +8,7 @@ import toast from 'react-hot-toast'
 
 const ANTHROPIC_KEY = () => import.meta.env.VITE_ANTHROPIC_API_KEY
 
-// ── Análisis IA del padecimiento ──────────────────────────
+// ── Análisis IA del padecimiento (OPTIMIZADO) ──────────────
 async function analizarPadecimiento(texto, pacienteInfo = {}) {
   const key = ANTHROPIC_KEY()
   if (!key) return null
@@ -16,6 +17,7 @@ async function analizarPadecimiento(texto, pacienteInfo = {}) {
     ? `${new Date().getFullYear() - new Date(pacienteInfo.fechaNacimiento).getFullYear()} años`
     : 'edad no especificada'
 
+  // OPTIMIZACIÓN: Prompt mínimo, solo lo necesario
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -26,15 +28,15 @@ async function analizarPadecimiento(texto, pacienteInfo = {}) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      system: `Asistente clínico de apoyo para médicos en México. Analiza el padecimiento y responde SOLO con JSON válido y completo. Sin texto adicional, sin backticks. Sé conciso.`,
+      max_tokens: 600,  // ✅ REDUCIDO: 1500 → 600 (ahorra ~70% de tokens)
+      system: `Asistente clínico conciso. Analiza el padecimiento y responde SOLO JSON válido, sin backticks.`,
       messages: [{
         role: 'user',
-        content: `Paciente: ${pacienteInfo.sexo === 'F' ? 'Femenino' : pacienteInfo.sexo === 'M' ? 'Masculino' : 'No especificado'}, ${edad}. Alergias: ${pacienteInfo.alergias || 'ninguna'}.
+        content: `Paciente: ${pacienteInfo.sexo === 'F' ? 'F' : pacienteInfo.sexo === 'M' ? 'M' : '?'}, ${edad}. Alergias: ${pacienteInfo.alergias || 'ninguna'}.
 Padecimiento: "${texto}"
 
-Responde SOLO este JSON completo:
-{"observacionGeneral":"texto breve","diagnosticosDiferenciales":[{"diagnostico":"nombre","probabilidad":"alta","justificacion":"breve"},{"diagnostico":"nombre2","probabilidad":"media","justificacion":"breve"}],"estudiossugeridos":[{"estudio":"nombre","justificacion":"breve","urgencia":"electiva"}],"preguntasClave":["pregunta1","pregunta2","pregunta3"],"senalesAlarma":["señal1","señal2"]}`
+Responde SOLO este JSON:
+{"observacion":"1-2 líneas conciso","diagnosticos":[{"dx":"nombre","probabilidad":"alta|media|baja","justificacion":"1 línea"}],"estudios":[{"estudio":"nombre","urgencia":"inmediata|electiva"}]}`
       }]
     })
   })
@@ -42,7 +44,7 @@ Responde SOLO este JSON completo:
   if (!response.ok) throw new Error(`API ${response.status}`)
   const data = await response.json()
 
-  // ── T-01: Registrar uso de tokens en Firestore para monitor de créditos ─────
+  // ── Registrar uso de tokens en Firestore para monitor de créditos ──────
   try {
     const tokensUsados = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0)
     if (tokensUsados > 0) {
@@ -50,7 +52,7 @@ Responde SOLO este JSON completo:
       const { db: fdb } = await import('../firebase')
       const ref = fDoc(fdb, 'configuracion', 'ia_status')
       const snap = await fGet(ref)
-      const mesActual = new Date().toISOString().slice(0,7) // "2026-05"
+      const mesActual = new Date().toISOString().slice(0,7)
       if (snap.exists()) {
         const prev = snap.data()
         const mismoMes = prev.mesActual === mesActual
@@ -71,7 +73,6 @@ Responde SOLO este JSON completo:
       }
     }
   } catch(e) { console.warn('[IA] No se pudo registrar tokens:', e.message) }
-  // ── fin T-01 ──────────────────────────────────────────────────────────────
 
   const texto_resp = data.content?.[0]?.text ?? '{}'
   return JSON.parse(texto_resp.replace(/```json|```/g, '').trim())
@@ -83,9 +84,9 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   const [loading,    setLoading]    = useState(false)
   const [revisado,   setRevisado]   = useState(false)
   const [expandido,  setExpandido]  = useState(true)
-  const [iaStatus,   setIaStatus]   = useState(null)  // T-01: estado créditos
+  const [iaStatus,   setIaStatus]   = useState(null)
 
-  // T-01: Leer estado de créditos IA al montar
+  // Leer estado de créditos IA al montar
   useEffect(() => {
     import('firebase/firestore').then(({ doc: fDoc, onSnapshot: fSnap }) => {
       import('../firebase').then(({ db: fdb }) => {
@@ -103,7 +104,7 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   const sinCreditos = creditosPct >= 100
   const pocosCreditos = creditosPct >= 80 && !sinCreditos
 
-  const padecimiento = cita?.padecimientoPaciente || cita?.motivo  // fallback a motivo
+  const padecimiento = cita?.padecimientoPaciente || cita?.motivo
 
   useEffect(() => {
     // Si ya hay análisis guardado en la cita — usar ese, NO llamar a la API
@@ -115,7 +116,6 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
         setAnalisis(cached)
       } catch(e) { /* JSON malformado — ignorar */ }
     }
-    // Solo auto-analizar si hay padecimiento, no hay cache, y hay API key
   }, [cita?.id])
 
   const generarAnalisis = async () => {
@@ -133,29 +133,29 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
             doc(db, `tenants/${cita.tenantId}/citas/${cita.id}`),
             { iaPreConsulta: JSON.stringify(result) }
           )
-        } catch(e) { /* Guardar en BD falla silenciosamente — no crítico */ }
+        } catch(e) { /* Guardar en BD falla silenciosamente */ }
       }
     } catch(e) {
       console.error('IA pre-consulta error:', e)
+      toast.error('Error en análisis IA')
     } finally { setLoading(false) }
   }
 
-  // Guards after hooks (React rules: no hooks after conditional returns)
+  // Guards after hooks (React rules)
   if (!iaActivo) return null
   if (!padecimiento) return null
-  // NO ocultamos si no hay API key — mostramos el panel con botón deshabilitado
   const sinApiKey = !ANTHROPIC_KEY()
 
-  // T-01: Banner de estado de créditos IA
+  // Banner de estado de créditos
   const bannerCreditos = sinCreditos ? (
     <div className="mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 flex items-center gap-2">
       <span>⚠️</span>
-      <span><strong>Créditos IA agotados este mes.</strong> La IA pre-consulta no está disponible. Contacta al administrador.</span>
+      <span><strong>Créditos IA agotados.</strong> Contacta al administrador.</span>
     </div>
   ) : pocosCreditos ? (
     <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
       <span>🔋</span>
-      <span>Créditos IA al <strong>{creditosPct}%</strong> del límite mensual.</span>
+      <span>Créditos IA al <strong>{creditosPct}%</strong>.</span>
     </div>
   ) : null
 
@@ -171,8 +171,9 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-teal-50 rounded-xl border border-blue-200 overflow-hidden mb-4">
-      {/* T-01: Banner de créditos */}
+      {/* Banner de créditos */}
       {bannerCreditos}
+
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-100/50 transition-colors"
@@ -189,38 +190,36 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
       {expandido && (
         <div className="px-4 pb-4">
-          {/* Padecimiento del paciente */}
+          {/* Padecimiento */}
           <div className="bg-white rounded-lg p-3 mb-3 border border-blue-100">
-            <p className="text-xs text-blue-600 font-medium mb-1">
-              📝 Lo que describió el paciente:
-            </p>
+            <p className="text-xs text-blue-600 font-medium mb-1">📝 Padecimiento:</p>
             <p className="text-sm text-gray-800 italic">"{padecimiento}"</p>
           </div>
 
           {loading && (
             <div className="flex items-center gap-2 text-blue-600 text-sm py-3 justify-center">
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              Analizando padecimiento con IA...
+              Analizando con IA...
             </div>
           )}
 
           {analisis && (
             <div className="space-y-3">
               {/* Observación general */}
-              {analisis.observacionGeneral && (
+              {analisis.observacion && (
                 <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                  <p className="text-xs text-blue-700">{analisis.observacionGeneral}</p>
+                  <p className="text-xs text-blue-700">{analisis.observacion}</p>
                 </div>
               )}
 
               {/* Diagnósticos diferenciales */}
-              {analisis.diagnosticosDiferenciales?.length > 0 && (
+              {analisis.diagnosticos?.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-600 uppercase mb-2">
                     Diagnósticos diferenciales
                   </p>
                   <div className="space-y-1.5">
-                    {analisis.diagnosticosDiferenciales.map((dx, i) => {
+                    {analisis.diagnosticos.map((dx, i) => {
                       const c = PROB_COLOR[dx.probabilidad] ?? PROB_COLOR.baja
                       return (
                         <div key={i} className={`flex items-start gap-2 rounded-lg p-2 border ${c.bg} ${c.border}`}>
@@ -228,7 +227,7 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
                             {dx.probabilidad}
                           </span>
                           <div>
-                            <p className={`text-sm font-medium ${c.text}`}>{dx.diagnostico}</p>
+                            <p className={`text-sm font-medium ${c.text}`}>{dx.dx}</p>
                             {dx.justificacion && (
                               <p className="text-xs text-gray-500 mt-0.5">{dx.justificacion}</p>
                             )}
@@ -241,24 +240,21 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
               )}
 
               {/* Estudios sugeridos */}
-              {analisis.estudiossugeridos?.length > 0 && (
+              {analisis.estudios?.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-600 uppercase mb-2">
                     Estudios sugeridos
                   </p>
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {analisis.estudiossugeridos.map((est, i) => (
+                  <div className="space-y-1">
+                    {analisis.estudios.map((est, i) => (
                       <div key={i} className="flex items-start gap-2 bg-white rounded-lg p-2 border border-gray-100">
                         <span className="text-teal-600 text-sm flex-shrink-0">🔬</span>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-800">{est.estudio}</span>
-                            <span className={`text-xs ${URG_COLOR[est.urgencia] ?? 'text-gray-500'}`}>
+                          <span className="text-sm font-medium text-gray-800">{est.estudio}</span>
+                          {est.urgencia && (
+                            <span className={`text-xs ml-2 ${URG_COLOR[est.urgencia] ?? 'text-gray-500'}`}>
                               {est.urgencia}
                             </span>
-                          </div>
-                          {est.justificacion && (
-                            <p className="text-xs text-gray-500 mt-0.5">{est.justificacion}</p>
                           )}
                         </div>
                       </div>
@@ -267,40 +263,9 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
                 </div>
               )}
 
-              {/* Preguntas clave */}
-              {analisis.preguntasClave?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase mb-2">
-                    Preguntas clave para la consulta
-                  </p>
-                  <div className="space-y-1">
-                    {analisis.preguntasClave.map((q, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                        <span className="text-blue-500 flex-shrink-0 font-semibold">{i + 1}.</span>
-                        <span>{q}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Señales de alarma */}
-              {analisis.senalesAlarma?.length > 0 && (
-                <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                  <p className="text-xs font-semibold text-red-700 mb-1.5">⚠️ Señales de alarma</p>
-                  <div className="space-y-0.5">
-                    {analisis.senalesAlarma.map((s, i) => (
-                      <p key={i} className="text-xs text-red-600">• {s}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Marcar como revisado */}
               <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-gray-400 italic">
-                  ⚕️ Solo de apoyo — la decisión clínica es del médico
-                </p>
+                <p className="text-xs text-gray-400 italic">⚕️ Solo apoyo — decisión clínica del médico</p>
                 <button
                   onClick={() => setRevisado(true)}
                   className={`text-xs px-3 py-1.5 rounded-lg transition-colors
@@ -323,10 +288,10 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}>
               {sinApiKey
-                ? '🔑 Configura VITE_ANTHROPIC_API_KEY para activar IA'
+                ? '🔑 Configura VITE_ANTHROPIC_API_KEY'
                 : sinCreditos
-                  ? '⚠️ Sin créditos IA disponibles'
-                  : '🤖 Generar análisis IA'}
+                  ? '⚠️ Sin créditos IA'
+                  : '🤖 Generar análisis'}
             </button>
           )}
         </div>
@@ -335,7 +300,7 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   )
 }
 
-// ── Campo de padecimiento para el modal de nueva cita (paciente) ─
+// ── Campo de padecimiento para el modal de nueva cita ──
 export function CampoPadecimientoCita({ value, onChange }) {
   return (
     <div className="mb-3">
@@ -345,14 +310,11 @@ export function CampoPadecimientoCita({ value, onChange }) {
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
-        placeholder="Describe brevemente tu padecimiento o el motivo de tu cita..."
+        placeholder="Describe brevemente tu padecimiento..."
         rows={3}
         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm
                    focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
       />
-      <p className="text-xs text-gray-400 mt-0.5">
-        Esta información ayudará al doctor a prepararse mejor para tu consulta.
-      </p>
     </div>
   )
 }
