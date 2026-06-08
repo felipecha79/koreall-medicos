@@ -8,6 +8,7 @@ import { useTenant } from '../hooks/useTenant'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import RecetaCertificacion from '../components/RecetaCertificacion'
 
 // Buscador de pacientes
 function BuscadorPaciente({ tenantId, onSelect }) {
@@ -296,6 +297,7 @@ export default function Recetas() {
   }
   const [preview,  setPreview]  = useState(null)
   const [saving,   setSaving]   = useState(false)
+  const [modalCertificacion, setModalCertificacion] = useState(false)
 
   const [form, setForm] = useState({
     pacienteId: '', pacienteIdLegible: '', pacienteNombre: '',
@@ -459,6 +461,11 @@ export default function Recetas() {
               Vista previa  {preview.numero}
             </h3>
             <div className="flex gap-2">
+              <button onClick={() => setModalCertificacion(true)}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium
+                           rounded-lg hover:bg-green-700 transition-colors">
+                🔐 Certificar digitalmente
+              </button>
               <button onClick={imprimir}
                 className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
                            rounded-lg hover:bg-teal-700 transition-colors">
@@ -472,6 +479,40 @@ export default function Recetas() {
             </div>
           </div>
           <RecetaPreview receta={preview} tenant={tenant} />
+
+          {/* Modal de certificación */}
+          {modalCertificacion && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-blue-900">Certificación Digital NOM-151</h4>
+                <button onClick={() => setModalCertificacion(false)}
+                  className="text-blue-600 hover:text-blue-800">✕</button>
+              </div>
+              <RecetaCertificacion
+                receta={{...preview, id: preview.id}}
+                tenant={tenant}
+                tenantId={tenantId}
+                onCertificar={async (datosSeguridad) => {
+                  try {
+                    await updateDoc(doc(db, `tenants/${tenantId}/recetas`, preview.id), {
+                      certificacion: {
+                        mode: 'CERTIFICADA',
+                        fecha: new Date().toISOString(),
+                        ...datosSeguridad,
+                        cedulaProfesional: tenant?.cedula || tenant?.plantillaReceta?.cedulaProfesional
+                      }
+                    })
+                    toast.success('Receta certificada ✓')
+                    setModalCertificacion(false)
+                    setPreview(null)
+                  } catch (err) {
+                    console.error(err)
+                    toast.error('Error al certificar')
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
