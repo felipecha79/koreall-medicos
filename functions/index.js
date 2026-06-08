@@ -33,7 +33,12 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
   try {
     // Extraer recetaId del path: /validarReceta/ID?token=...
     let recetaId = req.params.recetaId || req.query.recetaId
-    const token = req.query.token
+    let token = req.query.token
+
+    // Decodificar URL-encoded token
+    if (token) {
+      token = decodeURIComponent(token)
+    }
 
     // Si viene del rewrite de Vercel: /ID?token=...
     if (!recetaId && req.path) {
