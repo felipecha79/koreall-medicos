@@ -33,7 +33,7 @@
   "rewrites": [
     {
       "source": "/api/validar-receta/(.*)",
-      "destination": "https://validarreceta-bvfomwh7da-uc.a.run.app"
+      "destination": "https://validarreceta-bvfomwh7da-uc.a.run.app/$1"
     },
     {
       "source": "/((?!api/).*)",
