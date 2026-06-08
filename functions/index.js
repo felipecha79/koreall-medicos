@@ -83,8 +83,6 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
 
       const receta = recetasSnapshot[0].data()
 
-      const receta = recetasSnapshot.docs[0].data()
-
       // Verificar que el JWT corresponda a esta receta y paciente
       if (payload.recetaId !== recetaId || payload.pacienteId !== receta.pacienteId) {
         res.status(401).json({ valido: false, error: 'Token no corresponde a esta receta' })
