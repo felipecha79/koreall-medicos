@@ -60,10 +60,10 @@ export function generarJWTReceta(recetaId, pacienteId, sha256Hash, expirationHou
 
 /**
  * Genera QR code apuntando a endpoint de validación pública
- * URL: /validar-receta/{recetaId}?token={jwtToken}
+ * URL: /api/validar-receta/{recetaId}?token={jwtToken}
  */
-export async function generarQRReceta(recetaId, jwtToken, baseUrl = 'https://koreall-medicos.vercel.app') {
-  const validationUrl = `${baseUrl}/validar-receta/${recetaId}?token=${jwtToken}`
+export async function generarQRReceta(recetaId, jwtToken, baseUrl = window.location.origin) {
+  const validationUrl = `${baseUrl}/api/validar-receta/${recetaId}?token=${jwtToken}`
 
   try {
     const qrDataUrl = await QRCode.toDataURL(validationUrl, {

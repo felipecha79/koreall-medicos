@@ -28,10 +28,15 @@ export default function ValidarReceta() {
       }
 
       try {
-        // Llamar a la Cloud Function
+        // Llamar a la Cloud Function (el rewrite en vercel.json la redirige)
         const response = await fetch(
           `/api/validar-receta/${recetaId}?token=${encodeURIComponent(token)}`,
-          { method: 'GET' }
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
         )
 
         const data = await response.json()
