@@ -31,11 +31,18 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    const { recetaId } = req.params
+    // Extraer recetaId del path: /validarReceta/ID?token=...
+    let recetaId = req.params.recetaId || req.query.recetaId
     const token = req.query.token
 
+    // Si viene del rewrite de Vercel: /ID?token=...
+    if (!recetaId && req.path) {
+      const pathMatch = req.path.match(/^\/([^/?]+)/)
+      if (pathMatch) recetaId = pathMatch[1]
+    }
+
     if (!recetaId || !token) {
-      res.status(400).json({ error: 'Falta recetaId o token' })
+      res.status(400).json({ error: 'Falta recetaId o token. Path: ' + req.path })
       return
     }
 
@@ -55,18 +62,26 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
         return
       }
 
-      // Buscar receta en Firestore (sin autenticación, cualquier tenant)
-      // La receta debe estar marcada como certificacion.mode === 'CERTIFICADA'
-      const recetasSnapshot = await db.collectionGroup('recetas')
-        .where('numero', '==', recetaId)
+      // Buscar receta en Firestore por ID o número
+      // Primero intenta por ID del documento (más probable)
+      const allTenants = await db.collectionGroup('recetas')
         .where('certificacion.mode', '==', 'CERTIFICADA')
-        .limit(1)
         .get()
 
-      if (recetasSnapshot.empty) {
+      let recetasSnapshot = []
+      for (const doc of allTenants.docs) {
+        if (doc.id === recetaId || doc.data().numero === recetaId) {
+          recetasSnapshot.push(doc)
+          break
+        }
+      }
+
+      if (recetasSnapshot.length === 0) {
         res.status(404).json({ valido: false, error: 'Receta no encontrada o no certificada' })
         return
       }
+
+      const receta = recetasSnapshot[0].data()
 
       const receta = recetasSnapshot.docs[0].data()
 
