@@ -32,6 +32,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/validar-receta/(.*)",
+      "destination": "https://validarreceta-bvfomwh7da-uc.a.run.app"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
