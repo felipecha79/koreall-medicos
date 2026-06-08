@@ -59,7 +59,9 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
     }
 
     try {
+      console.log('DEBUG: Token válido, parseando payload. Partes:', partes.length)
       const payload = JSON.parse(Buffer.from(partes[1], 'base64').toString())
+      console.log('DEBUG: Payload:', JSON.stringify(payload))
       const ahora = Math.floor(Date.now() / 1000)
 
       if (payload.exp < ahora) {
