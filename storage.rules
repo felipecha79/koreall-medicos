@@ -5,5 +5,10 @@ service firebase.storage {
       allow read, write: if request.auth != null
         && request.auth.token.tenantId == tenantId;
     }
+    match /tenants/{tenantId}/recetas/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.tenantId == tenantId
+        && request.auth.token.role in ['doctor', 'admin'];
+    }
   }
 }

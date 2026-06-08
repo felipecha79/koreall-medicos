@@ -42,10 +42,7 @@ export default function RecetaCertificacion({ receta, tenant, tenantId, onCertif
 
   // Paso 2: Generar cadena digital y certificación
   const generarCertificacion = async () => {
-    if (!keyFile && !cerFile) {
-      toast.error('Carga al menos un archivo (.key o .cer)')
-      return
-    }
+    // Los certificados son opcionales
 
     setCargando(true)
 
@@ -74,23 +71,28 @@ export default function RecetaCertificacion({ receta, tenant, tenantId, onCertif
       const alertas = detectarMedicamentosRestringidos(receta.medicamentos)
       setMedicamentosAlerta(alertas)
 
-      // 5. Subir archivos encriptados a Firebase Storage
-      if (keyFile) {
-        const keyEncriptado = encriptarCertificado(keyFile.contenido, tenantId)
-        const keyRef = ref(
-          storage,
-          `tenants/${tenantId}/recetas/${receta.id || receta.numero}/certificado.key.enc`
-        )
-        await uploadBytes(keyRef, new Blob([keyEncriptado]))
-      }
+      // 5. Subir archivos encriptados a Firebase Storage (si existen)
+      try {
+        if (keyFile) {
+          const keyEncriptado = encriptarCertificado(keyFile.contenido, tenantId)
+          const keyRef = ref(
+            storage,
+            `tenants/${tenantId}/recetas/${receta.id || receta.numero}/certificado.key.enc`
+          )
+          await uploadBytes(keyRef, new Blob([keyEncriptado]))
+        }
 
-      if (cerFile) {
-        const cerEncriptado = encriptarCertificado(cerFile.contenido, tenantId)
-        const cerRef = ref(
-          storage,
-          `tenants/${tenantId}/recetas/${receta.id || receta.numero}/certificado.cer.enc`
-        )
-        await uploadBytes(cerRef, new Blob([cerEncriptado]))
+        if (cerFile) {
+          const cerEncriptado = encriptarCertificado(cerFile.contenido, tenantId)
+          const cerRef = ref(
+            storage,
+            `tenants/${tenantId}/recetas/${receta.id || receta.numero}/certificado.cer.enc`
+          )
+          await uploadBytes(cerRef, new Blob([cerEncriptado]))
+        }
+      } catch (storageErr) {
+        console.warn('Advertencia al subir certificados:', storageErr)
+        // Continuar aunque falle la subida de certificados
       }
 
       toast.success('Certificación generada ✓')
