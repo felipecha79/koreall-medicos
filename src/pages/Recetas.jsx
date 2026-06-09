@@ -493,8 +493,11 @@ export default function Recetas() {
                 tenant={tenant}
                 tenantId={tenantId}
                 onCertificar={async (datosSeguridad) => {
-                  try {
-                    await updateDoc(doc(db, `tenants/${tenantId}/recetas`, preview.id), {
+                try {
+                  console.log('DEBUG: preview.id =', preview.id)
+                  console.log('DEBUG: datosSeguridad =', datosSeguridad)
+                  
+                  await updateDoc(doc(db, `tenants/${tenantId}/recetas`, preview.id), {
                       certificacion: {
                         mode: 'CERTIFICADA',
                         fecha: new Date().toISOString(),
