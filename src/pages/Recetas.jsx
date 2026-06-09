@@ -341,9 +341,9 @@ export default function Recetas() {
     try {
       const numero = `RX-${Date.now().toString().slice(-6)}`
       const receta = { ...form, numero, tenantId, fecha: Timestamp.now() }
-      await addDoc(collection(db, `tenants/${tenantId}/recetas`), receta)
+      const docRef = await addDoc(collection(db, `tenants/${tenantId}/recetas`), receta)
       toast.success('Receta guardada correctamente')
-      setPreview(receta)
+      setPreview({ ...receta, id: docRef.id })
       setModal(false)
       setForm({
         pacienteId:'', pacienteIdLegible:'', pacienteNombre:'',
