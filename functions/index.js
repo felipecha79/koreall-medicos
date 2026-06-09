@@ -69,26 +69,30 @@ exports.validarReceta = functions.https.onRequest(async (req, res) => {
         return
       }
 
-      // Buscar receta en Firestore por ID o número
-      // Primero intenta por ID del documento (más probable)
-      const allTenants = await db.collectionGroup('recetas')
-        .where('certificacion.mode', '==', 'CERTIFICADA')
-        .get()
+      // Buscar receta en Firestore - buscar en todos los tenants
+      const allTenants = await db.collectionGroup('recetas').get()
 
-      let recetasSnapshot = []
+      let recetaEncontrada = null
       for (const doc of allTenants.docs) {
-        if (doc.id === recetaId || doc.data().numero === recetaId) {
-          recetasSnapshot.push(doc)
+        const data = doc.data()
+        if (doc.id === recetaId || data.numero === recetaId) {
+          recetaEncontrada = { id: doc.id, ...data }
           break
         }
       }
 
-      if (recetasSnapshot.length === 0) {
-        res.status(404).json({ valido: false, error: 'Receta no encontrada o no certificada' })
+      if (!recetaEncontrada) {
+        res.status(404).json({ valido: false, error: 'Receta no encontrada' })
         return
       }
 
-      const receta = recetasSnapshot[0].data()
+      // Verificar que tenga certificacion
+      if (!recetaEncontrada.certificacion || recetaEncontrada.certificacion.mode !== 'CERTIFICADA') {
+        res.status(401).json({ valido: false, error: 'Receta no certificada' })
+        return
+      }
+
+      const receta = recetaEncontrada
 
       // Verificar que el JWT corresponda a esta receta y paciente
       if (payload.recetaId !== recetaId || payload.pacienteId !== receta.pacienteId) {
