@@ -2,43 +2,51 @@
 // Todos los puntos de notificación WhatsApp del sistema MediDesk
 // Requiere: VITE_TWILIO_ACCOUNT_SID, VITE_TWILIO_AUTH_TOKEN, VITE_TWILIO_WA_NUMBER
 
-import { enviarWA, formatCitaWA } from './whatsapp'
+import { enviarWA, enviarPlantillaWA, formatCitaWA } from './whatsapp'
 
 const drNombre = (tenant) => tenant?.nombreDoctor ?? tenant?.nombre ?? 'el consultorio'
 
-// 1. CITA CONFIRMADA
+// 1. CITA CONFIRMADA — usa plantilla confirmacion_cita1
 export async function notifCitaConfirmada(cita, tenant) {
   if (!cita?.pacienteTel) return
-  const { fechaFormato, horaFormato } = formatCitaWA(cita)
-  return enviarWA(cita.pacienteTel,
-    `✅ *Cita confirmada*\n\nHola ${cita.pacienteNombre}, tu cita con ${drNombre(tenant)} ha sido confirmada.\n\n` +
-    `📅 *Fecha:* ${fechaFormato}\n🕐 *Hora:* ${horaFormato}\n📍 ${tenant?.direccion ?? ''}\n\n` +
-    `Por favor llega 5 minutos antes. Para cancelar responde este mensaje. 🏥`
-  )
+  const { fechaFormato } = formatCitaWA(cita)
+  // Plantilla: "Hola {{1}}, tu cita quedo confirmada para el día {{2}}. Te esperamos."
+  return enviarPlantillaWA(cita.pacienteTel, 'confirmacion_cita1', [
+    cita.pacienteNombre,
+    fechaFormato
+  ])
 }
 
-// 2. RECORDATORIO 24H ANTES
+// 2. RECORDATORIO 24H ANTES — usa plantilla recordatorio_cita_24h1
 export async function notifRecordatorio24h(cita, tenant) {
   if (!cita?.pacienteTel) return
-  const { fechaFormato, horaFormato } = formatCitaWA(cita)
-  return enviarWA(cita.pacienteTel,
-    `⏰ *Recordatorio — cita mañana*\n\nHola ${cita.pacienteNombre} 👋\n\n` +
-    `Mañana tienes cita con ${drNombre(tenant)}.\n\n` +
-    `📅 *${fechaFormato}* a las *${horaFormato}*\n\n` +
-    `Responde *SÍ* ✅ para confirmar o avísanos si necesitas reprogramar. ¡Te esperamos! 🏥`
-  )
+  const { horaFormato } = formatCitaWA(cita)
+  // Plantilla: "Hola {{1}}, recuerda tu cita para mañana a las {{2}}. Te esperamos!"
+  return enviarPlantillaWA(cita.pacienteTel, 'recordatorio_cita_24h1', [
+    cita.pacienteNombre,
+    horaFormato
+  ])
 }
 
 // 3. CAMBIO DE ESTATUS EN TURNO
 const MSG_ESTATUS = {
   en_sala:      (n, dr) => `🪑 Hola ${n}, ya puedes pasar a la sala de espera de ${dr}. En breve te llamaremos 😊`,
-  por_pasar:    (n, dr) => `🔔 *¡Es tu turno, ${n}!* Por favor pasa al consultorio de ${dr}. ¡Te esperamos! 🏥`,
+  por_pasar:    null, // ← usa plantilla turno_proximo
   en_consulta:  (n, dr) => `🩺 Hola ${n}, el doctor de ${dr} te atenderá ahora. Si tienes estudios, tenlos listos ✅`,
   finalizada:   (n, dr) => `✅ Hola ${n}, tu consulta con ${dr} ha finalizado.\n\nPuedes ver tu receta y solicitar factura desde tu portal de paciente. Que te mejores 💙`,
 }
 
 export async function notifCambioEstatus(cita, nuevoEstatus, tenant) {
   if (!cita?.pacienteTel) return
+
+  // Plantilla: turno_proximo para "por_pasar"
+  if (nuevoEstatus === 'por_pasar') {
+    // Plantilla: "Hola {{1}}, te atenderemos en breve. Por favor preséntate en recepción."
+    return enviarPlantillaWA(cita.pacienteTel, 'turno_proximo', [
+      cita.pacienteNombre
+    ])
+  }
+
   const fn = MSG_ESTATUS[nuevoEstatus]
   if (!fn) return
   return enviarWA(cita.pacienteTel, fn(cita.pacienteNombre, drNombre(tenant)))
