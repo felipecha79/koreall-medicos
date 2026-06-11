@@ -8,7 +8,9 @@
 
 const ACCOUNT_SID = import.meta.env.VITE_TWILIO_ACCOUNT_SID
 const AUTH_TOKEN = import.meta.env.VITE_TWILIO_AUTH_TOKEN
-const FROM_NUMBER = import.meta.env.VITE_TWILIO_WA_NUMBER || '+5218332468305'
+// Normalizar: quitar prefijo whatsapp: si viene en la env var
+const _rawFrom = import.meta.env.VITE_TWILIO_WA_NUMBER || '+5218332468305'
+const FROM_NUMBER = _rawFrom.replace(/^whatsapp:/i, '')
 
 // ── Template SIDs autorizados en Twilio ────────────
 const TEMPLATE_SIDS = {

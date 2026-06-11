@@ -7,7 +7,7 @@ import { db } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { notificarCambioEstatus, notifSiguientePaciente } from '../services/notificaciones'
+import { notificarCambioEstatus, notifSiguientePaciente, notifCitaConfirmada } from '../services/notificaciones'
 import toast from 'react-hot-toast'
 import IAPreConsulta, { CampoPadecimientoCita } from '../components/IAPreConsulta'
 
@@ -244,11 +244,10 @@ export default function Agenda() {
 
       // WA de confirmación
       if (form.pacienteTel) {
-        notificarCambioEstatus({
-          cita: { ...nuevaCita, fecha: { toDate: () => new Date(form.fechaHora) } },
-          nuevoEstatus: 'programada_nueva',
-          tenant,
-        }).catch(() => {})
+        notifCitaConfirmada(
+          { ...nuevaCita, fecha: { toDate: () => new Date(form.fechaHora) } },
+          tenant
+        ).catch(() => {})
       }
 
       setModal(null); setForm(FORM_INICIAL)

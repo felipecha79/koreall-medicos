@@ -154,6 +154,12 @@ service cloud.firestore {
       }
     }
 
+    // ── Configuración global (ia_status, planes, docvias) ──
+    match /configuracion/{docId} {
+      allow read:  if isAuth();        // cualquier usuario autenticado lee
+      allow write: if isSuperAdmin();  // solo superAdmin escribe
+    }
+
     // ── Bloquear todo lo demás ───────────────────────────
     match /{document=**} {
       allow read, write: if false;
