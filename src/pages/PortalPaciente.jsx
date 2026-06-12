@@ -335,6 +335,17 @@ function TarjetaCita({ cita, tenantId }) {
         <div className="mt-3"><BarraTurno estatus={cita.estatus} /></div>
       )}
 
+      {/* Botón videollamada — aparece cuando el doctor activa la sesión */}
+      {cita.urlTelemedicina && cita.estatusTelemedicina === 'activa' && (
+        <div className="mt-3 p-3 bg-teal-50 border border-teal-200 rounded-xl">
+          <p className="text-xs text-teal-700 font-medium mb-2">🎥 Tu doctor inició la videollamada</p>
+          <a href={cita.urlTelemedicina} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 transition-colors animate-pulse">
+            📹 Unirme a la consulta en video
+          </a>
+        </div>
+      )}
+
       {/* Acciones */}
       {(esFutura || esHoy) && !['cancelada','completada','finalizada','no_show'].includes(cita.estatus) && (
         <div className="mt-3 pt-3 border-t border-gray-100">
