@@ -27,6 +27,17 @@ const FORMA_PAGO = {
   credito:       '99',
 }
 
+// CFDI 4.0: mayúsculas + sin acentos + sin régimen societario
+// El SAT compara byte a byte — cualquier tilde o minúscula rechaza el timbrado.
+export function normalizarNombreSAT(nombre = '') {
+  return nombre
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // quita diacríticos (á→a, ñ→n, ü→u…)
+    .toUpperCase()
+    .replace(/\s+/g, ' ')            // espacios múltiples a uno
+    .trim()
+}
+
 async function parseError(res) {
   let msg = `HTTP ${res.status}`
   try { const e = await res.clone().json(); msg = e.message ?? e.error ?? msg } catch {}
@@ -77,15 +88,21 @@ export async function consultarOrganizacionFP(orgFpId) {
 
 // ── Clientes ─────────────────────────────────────────────
 export async function crearCliente(paciente, tenantApiKey) {
+  // CFDI 4.0: prioridad al campo fiscal explícito; fallback: APELLIDOS NOMBRE
+  // (el SAT registra personas físicas como "APELLIDO_PAT APELLIDO_MAT NOMBRE")
+  const rawName = paciente.rfcRazonSocial?.trim()
+    || `${paciente.apellidos ?? ''} ${paciente.nombre ?? ''}`.trim()
+  const legalName = normalizarNombreSAT(rawName)
+
   const res = await fetch(`${FACTURAPI_URL}/customers`, {
     method: 'POST',
     headers: buildHeaders(tenantApiKey),
     body: JSON.stringify({
-      legal_name: `${paciente.nombre} ${paciente.apellidos}`.toUpperCase(),
+      legal_name: legalName,
       tax_id:     paciente.rfc,
       tax_system: paciente.regimenFiscal ?? '616',
       email:      paciente.email ?? undefined,
-      address:    { zip: paciente.cp ?? '89000' },
+      address:    { zip: paciente.cpFiscal ?? paciente.cp ?? '89000' },
     }),
   })
   if (!res.ok) throw new Error(await parseError(res))

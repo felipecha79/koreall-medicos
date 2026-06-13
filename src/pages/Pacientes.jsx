@@ -597,10 +597,18 @@ export default function Pacientes() {
                     <div className="col-span-2">
                       <label className="block text-xs text-gray-500 mb-1">Nombre / Razón social fiscal</label>
                       <input type="text" value={form.rfcRazonSocial}
-                        onChange={e => set('rfcRazonSocial', e.target.value)}
-                        placeholder="Nombre completo como aparece en el SAT"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                        onChange={e => set('rfcRazonSocial', e.target.value.toUpperCase())}
+                        onBlur={e => set('rfcRazonSocial',
+                          e.target.value
+                            .normalize('NFD').replace(/[̀-ͯ]/g,'')
+                            .toUpperCase().replace(/\s+/g,' ').trim()
+                        )}
+                        placeholder="Ej: CHAVEZ GARCIA JUAN PABLO (apellidos primero, sin acentos)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono
                                    focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                      <p className="text-xs text-amber-600 mt-1">
+                        Personas físicas: APELLIDO PATERNO APELLIDO MATERNO NOMBRE — exactamente como en tu Constancia Fiscal (sin acentos).
+                      </p>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">RFC</label>
