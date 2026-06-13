@@ -603,11 +603,11 @@ export default function Pacientes() {
                             .normalize('NFD').replace(/[̀-ͯ]/g,'')
                             .toUpperCase().replace(/\s+/g,' ').trim()
                         )}
-                        placeholder="Ej: CHAVEZ GARCIA JUAN PABLO (apellidos primero, sin acentos)"
+                        placeholder="Ej: JUAN PABLO GARCIA LOPEZ (exactamente como en tu Constancia Fiscal)"
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono
                                    focus:outline-none focus:ring-2 focus:ring-teal-400" />
                       <p className="text-xs text-amber-600 mt-1">
-                        Personas físicas: APELLIDO PATERNO APELLIDO MATERNO NOMBRE — exactamente como en tu Constancia Fiscal (sin acentos).
+                        Copia exactamente como aparece en tu Constancia de Situación Fiscal, en mayúsculas y sin acentos.
                       </p>
                     </div>
                     <div>
