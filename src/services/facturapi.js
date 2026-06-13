@@ -118,6 +118,29 @@ export async function buscarCliente(rfc, tenantApiKey) {
   return data.data?.[0] ?? null
 }
 
+// Actualiza el nombre y datos fiscales de un cliente existente en Facturapi.
+// CFDI 4.0 exige que el nombre coincida exactamente con el SAT — si el paciente
+// corrigió su rfcRazonSocial, hay que sincronizarlo antes de timbrar.
+export async function actualizarCliente(clienteId, paciente, tenantApiKey) {
+  const rawName = paciente.rfcRazonSocial?.trim()
+    || `${paciente.apellidos ?? ''} ${paciente.nombre ?? ''}`.trim()
+  const legalName = normalizarNombreSAT(rawName)
+
+  const res = await fetch(`${FACTURAPI_URL}/customers/${clienteId}`, {
+    method: 'PUT',
+    headers: buildHeaders(tenantApiKey),
+    body: JSON.stringify({
+      legal_name: legalName,
+      tax_id:     paciente.rfc,
+      tax_system: paciente.regimenFiscal ?? '616',
+      email:      paciente.email ?? undefined,
+      address:    { zip: paciente.cpFiscal ?? paciente.cp ?? '89000' },
+    }),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json()
+}
+
 // ── Emisión de CFDI ──────────────────────────────────────
 // tenant debe tener tenant.facturapiApiKey para timbrar con su propio RFC.
 // Si no tiene key propia, timbra con la cuenta maestra (útil en pruebas).
@@ -130,6 +153,10 @@ export async function emitirFactura({ cobro, paciente, tenant }) {
     clienteId = existente
       ? existente.id
       : (await crearCliente(paciente, tenantApiKey)).id
+  } else {
+    // Siempre sincronizar el nombre fiscal antes de timbrar.
+    // El cliente pudo haberse creado antes de que el usuario corrigiera rfcRazonSocial.
+    await actualizarCliente(clienteId, paciente, tenantApiKey).catch(() => {})
   }
 
   const body = {
