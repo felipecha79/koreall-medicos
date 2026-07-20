@@ -243,6 +243,31 @@ function RecetaPreview({ receta, tenant }) {
         </div>
       </div>
 
+      {/* Certificación digital NOM-151 — solo si la receta fue certificada */}
+      {receta.certificacion?.mode === 'CERTIFICADA' && receta.certificacion?.qrDataUrl && (
+        <div style={{
+          borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 12,
+          display: 'flex', alignItems: 'center', gap: 14
+        }}>
+          <img src={receta.certificacion.qrDataUrl} alt="QR de validación NOM-151"
+            style={{ width: 84, height: 84, flexShrink: 0 }} />
+          <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontWeight: 700, color: '#028090' }}>
+              Receta certificada digitalmente — NOM-151
+            </p>
+            <p style={{ margin: '2px 0 0', wordBreak: 'break-all' }}>
+              SHA-256: {receta.certificacion.sha256}
+            </p>
+            <p style={{ margin: '2px 0 0' }}>
+              Verifica esta receta escaneando el código QR o visitando:
+            </p>
+            <p style={{ margin: '1px 0 0', wordBreak: 'break-all', color: '#028090' }}>
+              {receta.certificacion.validationUrl}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div style={{
         borderTop: '1px solid #e5e7eb', marginTop: 16, paddingTop: 8,
@@ -415,7 +440,7 @@ export default function Recetas() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['No. Receta','Paciente','Fecha','Medicamentos','Acciones'].map(h => (
+                  {['No. Receta','Paciente','Fecha','Medicamentos','Certificación','Acciones'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-medium
                                            text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
@@ -436,6 +461,17 @@ export default function Recetas() {
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">
                       {r.medicamentos?.map(m => m.medicamento).filter(Boolean).join(', ')}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.certificacion?.mode === 'CERTIFICADA' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                                          bg-green-50 text-green-700 text-[11px] font-semibold
+                                          border border-green-200">
+                          ✓ NOM-151
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-gray-400">Sin certificar</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -460,12 +496,19 @@ export default function Recetas() {
             <h3 className="text-sm font-semibold text-gray-700">
               Vista previa  {preview.numero}
             </h3>
-            <div className="flex gap-2">
-              <button onClick={() => setModalCertificacion(true)}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium
-                           rounded-lg hover:bg-green-700 transition-colors">
-                🔐 Certificar digitalmente
-              </button>
+            <div className="flex gap-2 items-center">
+              {preview.certificacion?.mode === 'CERTIFICADA' ? (
+                <span className="px-3 py-2 bg-green-50 text-green-700 text-xs font-semibold
+                                  rounded-lg border border-green-200 flex items-center gap-1">
+                  ✓ Certificada NOM-151
+                </span>
+              ) : (
+                <button onClick={() => setModalCertificacion(true)}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium
+                             rounded-lg hover:bg-green-700 transition-colors">
+                  🔐 Certificar digitalmente
+                </button>
+              )}
               <button onClick={imprimir}
                 className="px-4 py-2 bg-teal-600 text-white text-sm font-medium
                            rounded-lg hover:bg-teal-700 transition-colors">
@@ -494,20 +537,23 @@ export default function Recetas() {
                 tenantId={tenantId}
                 onCertificar={async (datosSeguridad) => {
                 try {
-                  console.log('DEBUG: preview.id =', preview.id)
-                  console.log('DEBUG: datosSeguridad =', datosSeguridad)
-                  
+                  const certificacion = {
+                      mode: 'CERTIFICADA',
+                      fecha: new Date().toISOString(),
+                      ...datosSeguridad,
+                      cedulaProfesional: tenant?.cedula || tenant?.plantillaReceta?.cedulaProfesional
+                    }
+
                   await updateDoc(doc(db, `tenants/${tenantId}/recetas`, preview.id), {
-                      certificacion: {
-                        mode: 'CERTIFICADA',
-                        fecha: new Date().toISOString(),
-                        ...datosSeguridad,
-                        cedulaProfesional: tenant?.cedula || tenant?.plantillaReceta?.cedulaProfesional
-                      }
+                      certificacion
                     })
                     toast.success('Receta certificada ✓')
                     setModalCertificacion(false)
-                    setPreview(null)
+                    // `preview` es una copia local, no está sincronizada en vivo con
+                    // Firestore, así que mezclamos la certificación aquí para que el
+                    // QR se vea de inmediato en la vista previa sin tener que
+                    // cerrar y reabrir la receta.
+                    setPreview(prev => prev ? { ...prev, certificacion } : prev)
                   } catch (err) {
                     console.error(err)
                     toast.error('Error al certificar')
