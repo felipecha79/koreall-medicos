@@ -15,68 +15,18 @@ import OCRConstanciaSAT from '../components/OCRConstanciaSAT'
 // ── Paleta del consultorio (carga dinámica) ──────────────
 const TEAL = '#0A8076'
 
-// ── OCR de INE via Claude Vision ──────────────────────────
-// Usamos el endpoint de Anthropic directamente desde el cliente
-// Solo extrae nombre, apellidos, fecha de nacimiento, sexo y CURP
-// NO almacenamos la imagen de la INE — solo los datos extraídos
+// ── OCR de INE vía endpoint server-side (/api/ocr-ine) ────
+// La API key vive solo en el servidor — nunca en este bundle público.
+// NO almacenamos la imagen de la INE — solo los datos extraídos.
 async function extraerDatosINE(imagenBase64, mimeType) {
-  const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
-
-  // Si no hay API key configurada, saltar OCR y llenar manualmente
-  if (!ANTHROPIC_KEY) {
-    console.warn('[OCR] VITE_ANTHROPIC_API_KEY no configurada — llenado manual')
-    throw new Error('OCR_NO_KEY')
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/ocr-ine', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 600,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mimeType, data: imagenBase64 }
-          },
-          {
-            type: 'text',
-            text: `Esta es una INE/credencial de elector mexicana. 
-Extrae exactamente los siguientes campos y devuelve SOLO un JSON válido sin explicaciones:
-{
-  "nombre": "solo el nombre(s), sin apellidos",
-  "apellidoPaterno": "primer apellido",
-  "apellidoMaterno": "segundo apellido",
-  "fechaNacimiento": "YYYY-MM-DD",
-  "sexo": "M o F",
-  "curp": "CURP completa si es visible",
-  "calle": "calle y número si aparece en el domicilio",
-  "colonia": "colonia si aparece",
-  "municipio": "municipio o ciudad",
-  "estado": "estado de la república",
-  "cp": "código postal si aparece"
-}
-Si algún campo no es legible devuelve cadena vacía "". 
-No incluyas nada más en tu respuesta, solo el JSON.`
-          }
-        ]
-      }]
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imagenBase64, mimeType }),
   })
-
   if (!response.ok) throw new Error('Error en la API de OCR')
   const data = await response.json()
-  const texto = data.content?.[0]?.text ?? '{}'
-  // Limpiar posibles backticks de markdown
-  const limpio = texto.replace(/```json|```/g, '').trim()
-  return JSON.parse(limpio)
+  return data.datos ?? {}
 }
 
 // ── Generar ID de paciente ────────────────────────────────
@@ -179,11 +129,7 @@ export default function RegistroPaciente() {
       setPaso(1)
     } catch(e) {
       console.error('OCR error:', e)
-      if (e.message === 'OCR_NO_KEY') {
-        toast('Sin OCR configurado — ingresa tus datos manualmente', { icon: 'ℹ️' })
-      } else {
-        toast.error('No se pudo leer la INE. Ingresa tus datos manualmente.')
-      }
+      toast.error('No se pudo leer la INE. Ingresa tus datos manualmente.')
       setPaso(1) // Avanzar de todas formas al formulario manual
     } finally { setEsc(false) }
   }

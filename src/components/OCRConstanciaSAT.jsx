@@ -3,53 +3,15 @@
 import { useState, useRef } from 'react'
 import toast from 'react-hot-toast'
 
-const ANTHROPIC_KEY = () => import.meta.env.VITE_ANTHROPIC_API_KEY
-
 async function extraerDatosSAT(base64, mimeType) {
-  const key = ANTHROPIC_KEY()
-  if (!key) throw new Error('NO_KEY')
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/ocr-constancia-sat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          {
-            type: 'text',
-            text: `Esta es una Constancia de Situación Fiscal del SAT de México.
-Extrae los siguientes datos y devuelve SOLO un JSON válido, sin explicaciones ni backticks:
-{
-  "rfc": "RFC completo (13 caracteres personas físicas, 12 morales)",
-  "razonSocial": "Nombre completo o razón social exactamente como aparece",
-  "regimenFiscal": "código numérico del régimen (ej: 616, 605, 612)",
-  "regimenFiscalNombre": "nombre del régimen fiscal",
-  "calle": "calle y número del domicilio fiscal",
-  "colonia": "colonia del domicilio fiscal",
-  "municipio": "municipio o alcaldía",
-  "estado": "estado de la república",
-  "cp": "código postal fiscal de 5 dígitos"
-}
-Si algún campo no es legible devuelve cadena vacía "". Solo JSON.`
-          }
-        ]
-      }]
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, mimeType }),
   })
-
   if (!response.ok) throw new Error(`API error ${response.status}`)
   const data = await response.json()
-  const texto = data.content?.[0]?.text ?? '{}'
-  return JSON.parse(texto.replace(/```json|```/g, '').trim())
+  return data.datos ?? {}
 }
 
 // ── Componente ────────────────────────────────────────────
@@ -91,11 +53,7 @@ export default function OCRConstanciaSAT({ onDatosCargados }) {
       onDatosCargados(datos)
       toast.success(`✓ Constancia SAT leída — RFC: ${datos.rfc}`)
     } catch(e) {
-      if (e.message === 'NO_KEY') {
-        toast.error('Configura VITE_ANTHROPIC_API_KEY para usar el OCR')
-      } else {
-        toast.error('No se pudo leer el documento. Ingresa los datos manualmente.')
-      }
+      toast.error('No se pudo leer el documento. Ingresa los datos manualmente.')
     } finally { setEsc(false) }
   }
 

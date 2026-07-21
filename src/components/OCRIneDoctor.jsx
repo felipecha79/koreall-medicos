@@ -5,50 +5,14 @@ import { useState, useRef } from 'react'
 import toast from 'react-hot-toast'
 
 async function extraerDatosINE(base64, mimeType) {
-  const key = import.meta.env.VITE_ANTHROPIC_API_KEY
-  if (!key) throw new Error('NO_KEY')
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/ocr-ine', {
     method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'x-api-key':     key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          {
-            type: 'text',
-            text: `Esta es una INE/credencial de elector mexicana. 
-Extrae exactamente los siguientes campos y devuelve SOLO un JSON válido sin explicaciones:
-{
-  "nombre": "solo el nombre(s), sin apellidos",
-  "apellidoPaterno": "primer apellido",
-  "apellidoMaterno": "segundo apellido",
-  "fechaNacimiento": "YYYY-MM-DD",
-  "sexo": "M o F",
-  "curp": "CURP completa si es visible",
-  "calle": "calle y número si aparece",
-  "colonia": "colonia si aparece",
-  "municipio": "municipio o ciudad",
-  "estado": "estado de la república",
-  "cp": "código postal si aparece"
-}
-Si algún campo no es legible devuelve cadena vacía "". Solo JSON.`
-          }
-        ]
-      }]
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imagenBase64: base64, mimeType }),
   })
   if (!res.ok) throw new Error(`API ${res.status}`)
   const data = await res.json()
-  return JSON.parse((data.content?.[0]?.text ?? '{}').replace(/```json|```/g, '').trim())
+  return data.datos ?? {}
 }
 
 export default function OCRIneDoctor({ onDatosCargados, compact = false }) {
@@ -82,11 +46,7 @@ export default function OCRIneDoctor({ onDatosCargados, compact = false }) {
       setListo(true)
       toast.success(`✓ INE leída — ${datos.nombre} ${datos.apellidoPaterno}`)
     } catch(e) {
-      if (e.message === 'NO_KEY') {
-        toast('VITE_ANTHROPIC_API_KEY no configurada', { icon: 'ℹ️' })
-      } else {
-        toast.error('No se pudo leer la INE')
-      }
+      toast.error('No se pudo leer la INE')
     } finally { setEsc(false) }
   }
 

@@ -6,76 +6,17 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import toast from 'react-hot-toast'
 
-const ANTHROPIC_KEY = () => import.meta.env.VITE_ANTHROPIC_API_KEY
-
-// ── Análisis IA del padecimiento (OPTIMIZADO) ──────────────
+// ── Análisis IA del padecimiento (vía endpoint server-side) ──
 async function analizarPadecimiento(texto, pacienteInfo = {}) {
-  const key = ANTHROPIC_KEY()
-  if (!key) return null
-
-  const edad = pacienteInfo.fechaNacimiento
-    ? `${new Date().getFullYear() - new Date(pacienteInfo.fechaNacimiento).getFullYear()} años`
-    : 'edad no especificada'
-
-  // OPTIMIZACIÓN: Prompt mínimo, solo lo necesario
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/ia-prediagnostico', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,  // ✅ REDUCIDO: 1500 → 600 (ahorra ~70% de tokens)
-      system: `Asistente clínico conciso. Analiza el padecimiento y responde SOLO JSON válido, sin backticks.`,
-      messages: [{
-        role: 'user',
-        content: `Paciente: ${pacienteInfo.sexo === 'F' ? 'F' : pacienteInfo.sexo === 'M' ? 'M' : '?'}, ${edad}. Alergias: ${pacienteInfo.alergias || 'ninguna'}.
-Padecimiento: "${texto}"
-
-Responde SOLO este JSON:
-{"observacion":"1-2 líneas conciso","diagnosticos":[{"dx":"nombre","probabilidad":"alta|media|baja","justificacion":"1 línea"}],"estudios":[{"estudio":"nombre","urgencia":"inmediata|electiva"}]}`
-      }]
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ texto, pacienteInfo }),
   })
 
   if (!response.ok) throw new Error(`API ${response.status}`)
   const data = await response.json()
-
-  // ── Registrar uso de tokens en Firestore para monitor de créditos ──────
-  try {
-    const tokensUsados = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0)
-    if (tokensUsados > 0) {
-      const { doc: fDoc, getDoc: fGet, updateDoc: fUp, setDoc: fSet, serverTimestamp } = await import('firebase/firestore')
-      const { db: fdb } = await import('../firebase')
-      const ref = fDoc(fdb, 'configuracion', 'ia_status')
-      const snap = await fGet(ref)
-      const mesActual = new Date().toISOString().slice(0,7)
-      if (snap.exists()) {
-        const prev = snap.data()
-        const mismoMes = prev.mesActual === mesActual
-        await fUp(ref, {
-          creditosUsadosMes: mismoMes ? (prev.creditosUsadosMes ?? 0) + tokensUsados : tokensUsados,
-          mesActual,
-          ultimaLlamada: serverTimestamp(),
-          alertaEnviada: mismoMes ? (prev.alertaEnviada ?? false) : false,
-        })
-      } else {
-        await fSet(ref, {
-          creditosUsadosMes: tokensUsados,
-          creditosLimiteMes: 500000,
-          mesActual,
-          ultimaLlamada: serverTimestamp(),
-          alertaEnviada: false,
-        })
-      }
-    }
-  } catch(e) { console.warn('[IA] No se pudo registrar tokens:', e.message) }
-
-  const texto_resp = data.content?.[0]?.text ?? '{}'
-  return JSON.parse(texto_resp.replace(/```json|```/g, '').trim())
+  return data.resultado ?? {}
 }
 
 // ── Componente panel del doctor ───────────────────────────
@@ -126,7 +67,6 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
   const generarAnalisis = async () => {
     if (!padecimiento) return
-    if (!ANTHROPIC_KEY()) return
     setLoading(true)
     try {
       const result = await analizarPadecimiento(padecimiento, paciente ?? {})
@@ -150,7 +90,6 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
   // Guards after hooks (React rules)
   if (!iaActivo) return null
   if (!padecimiento) return null
-  const sinApiKey = !ANTHROPIC_KEY()
 
   // Banner de estado de créditos
   const bannerCreditos = sinCreditos ? (
@@ -286,18 +225,14 @@ export default function IAPreConsulta({ cita, paciente, iaActivo = true }) {
 
           {!analisis && !loading && (
             <button
-              onClick={() => !sinCreditos && !sinApiKey && generarAnalisis()}
-              disabled={sinCreditos || sinApiKey}
+              onClick={() => !sinCreditos && generarAnalisis()}
+              disabled={sinCreditos}
               className={`w-full py-2 text-sm rounded-lg transition-colors ${
-                sinCreditos || sinApiKey
+                sinCreditos
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}>
-              {sinApiKey
-                ? '🔑 Configura VITE_ANTHROPIC_API_KEY'
-                : sinCreditos
-                  ? '⚠️ Sin créditos IA'
-                  : '🤖 Generar análisis'}
+              {sinCreditos ? '⚠️ Sin créditos IA' : '🤖 Generar análisis'}
             </button>
           )}
         </div>
