@@ -714,12 +714,13 @@ export default function Reportes() {
               </div>
 
               {/* KPIs rápidos */}
-              <div className="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-200">
+              <div className="grid grid-cols-5 divide-x divide-gray-100 border-b border-gray-200">
                 {[
                   { l: 'Total general', v: `$${totalGeneral.toLocaleString('es-MX')}`, c: 'text-gray-800' },
                   { l: 'TPV / Tarjeta',   v: `$${totalTPV.toLocaleString('es-MX')}`,      c: 'text-purple-700' },
                   { l: 'Transferencia',  v: `$${totalTransf.toLocaleString('es-MX')}`,    c: 'text-blue-700' },
                   { l: 'Efectivo',       v: `$${totalEfectivo.toLocaleString('es-MX')}`, c: 'text-green-700' },
+                  { l: 'Stripe',         v: `$${totalStripe.toLocaleString('es-MX')}`,   c: 'text-indigo-700' },
                 ].map((k,i) => (
                   <div key={i} className="px-4 py-3 text-center">
                     <p className="text-xs text-gray-400 mb-0.5">{k.l}</p>
@@ -733,7 +734,7 @@ export default function Reportes() {
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      {['No.','Fecha','Hora','Paciente','Servicio','Débito','Crédito','Efectivo','Transf.','Total','Factura','Elaboró','Método'].map(h => (
+                      {['No.','Fecha','Hora','Paciente','Servicio','Débito','Crédito','Efectivo','Transf.','Total','Factura','Elaboró','Método','Pagado Stripe'].map(h => (
                         <th key={h} className="text-center px-2 py-2 font-semibold text-gray-600 uppercase whitespace-nowrap border-r border-gray-100 last:border-0">
                           {h}
                         </th>
@@ -789,14 +790,27 @@ export default function Reportes() {
                           <td className="px-2 py-1.5 border-r border-gray-100 text-gray-500">
                             {c.elaboradoPor ?? 'Recepción'}
                           </td>
-                          <td className="px-2 py-1.5 capitalize text-gray-600">
-                            {metodo === 'tarjeta' ? 'Tarjeta' : metodo === 'transferencia' ? 'Transferencia' : metodo === 'efectivo' ? 'Efectivo' : '—'}
+                          <td className="px-2 py-1.5 border-r border-gray-100 capitalize text-gray-600">
+                            {metodo === 'tarjeta' ? 'Tarjeta'
+                              : metodo === 'transferencia' ? 'Transferencia'
+                              : metodo === 'efectivo' ? 'Efectivo'
+                              : metodo === 'stripe' ? 'Stripe'
+                              : '—'}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            {metodo === 'stripe'
+                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                                                  bg-indigo-50 text-indigo-700 text-[11px] font-semibold
+                                                  border border-indigo-200">
+                                  ✓ Stripe
+                                </span>
+                              : <span className="text-gray-300">—</span>}
                           </td>
                         </tr>
                       )
                     })}
                     {cobrosCorte.length === 0 && (
-                      <tr><td colSpan={13} className="text-center py-8 text-gray-400">Sin cobros en el período</td></tr>
+                      <tr><td colSpan={14} className="text-center py-8 text-gray-400">Sin cobros en el período</td></tr>
                     )}
                   </tbody>
                   {/* Totales finales estilo Dr. Salas */}
@@ -818,7 +832,7 @@ export default function Reportes() {
                       <td className="px-2 py-2 text-right text-gray-800 text-sm">
                         ${totalGeneral.toLocaleString('es-MX')}
                       </td>
-                      <td colSpan={3} className="px-2 py-2 text-center text-gray-500 text-xs">
+                      <td colSpan={4} className="px-2 py-2 text-center text-gray-500 text-xs">
                         {cobrosCorte.length} registros
                         {sinPaciente > 0 && <span className="ml-2 text-red-500">⚠️ {sinPaciente} sin paciente</span>}
                       </td>
@@ -835,9 +849,13 @@ export default function Reportes() {
                         <span className="text-blue-300">TOTAL TRANSF:</span>
                         <span className="ml-1 font-bold">${totalTransf.toLocaleString('es-MX')}</span>
                       </td>
-                      <td colSpan={4} className="px-3 py-2 text-center">
+                      <td colSpan={3} className="px-3 py-2 text-center">
                         <span className="text-green-300">TOTAL EFECTIVO:</span>
                         <span className="ml-1 font-bold">${totalEfectivo.toLocaleString('es-MX')}</span>
+                      </td>
+                      <td colSpan={2} className="px-3 py-2 text-center">
+                        <span className="text-indigo-300">TOTAL STRIPE:</span>
+                        <span className="ml-1 font-bold">${totalStripe.toLocaleString('es-MX')}</span>
                       </td>
                     </tr>
                   </tfoot>
