@@ -327,8 +327,11 @@ export default function Recetas() {
   const [form, setForm] = useState({
     pacienteId: '', pacienteIdLegible: '', pacienteNombre: '',
     diagnostico: '', indicacionesGenerales: '', proximaCita: '',
+    consultaId: '',
     medicamentos: [{ ...MED_VACIO }],
   })
+  const [consultasPaciente, setConsultasPaciente] = useState([])
+  const [cargandoConsultas, setCargandoConsultas]  = useState(false)
 
   useEffect(() => {
     if (!tenantId) return
@@ -362,10 +365,14 @@ export default function Recetas() {
     if (!form.medicamentos[0]?.medicamento) {
       toast.error('Agrega al menos un medicamento'); return
     }
+    if (!form.consultaId && !form.diagnostico.trim()) {
+      toast.error('Agrega un motivo o diagnóstico clínico — es obligatorio en recetas independientes (sin consulta ligada)')
+      return
+    }
     setSaving(true)
     try {
       const numero = `RX-${Date.now().toString().slice(-6)}`
-      const receta = { ...form, numero, tenantId, fecha: Timestamp.now() }
+      const receta = { ...form, consultaId: form.consultaId || null, numero, tenantId, fecha: Timestamp.now() }
       const docRef = await addDoc(collection(db, `tenants/${tenantId}/recetas`), receta)
       toast.success('Receta guardada correctamente')
       setPreview({ ...receta, id: docRef.id })
@@ -373,8 +380,10 @@ export default function Recetas() {
       setForm({
         pacienteId:'', pacienteIdLegible:'', pacienteNombre:'',
         diagnostico:'', indicacionesGenerales:'', proximaCita:'',
+        consultaId:'',
         medicamentos:[{ ...MED_VACIO }],
       })
+      setConsultasPaciente([])
     } catch(e) {
       console.error(e); toast.error('Error al guardar')
     } finally { setSaving(false) }
@@ -633,12 +642,30 @@ export default function Recetas() {
                 </label>
                 {tenantId && (
                   <BuscadorPaciente tenantId={tenantId}
-                    onSelect={p => setForm(f => ({
-                      ...f,
-                      pacienteId:        p.id,
-                      pacienteIdLegible: p.pacienteId ?? '',
-                      pacienteNombre:    `${p.nombre} ${p.apellidos}`,
-                    }))} />
+                    onSelect={async p => {
+                      setForm(f => ({
+                        ...f,
+                        pacienteId:        p.id,
+                        pacienteIdLegible: p.pacienteId ?? '',
+                        pacienteNombre:    `${p.nombre} ${p.apellidos}`,
+                        consultaId:        '',
+                      }))
+                      setConsultasPaciente([])
+                      setCargandoConsultas(true)
+                      try {
+                        const snap = await getDocs(query(
+                          collection(db, `tenants/${tenantId}/consultas`),
+                          orderBy('fecha', 'desc')
+                        ))
+                        setConsultasPaciente(
+                          snap.docs
+                            .map(d => ({ id: d.id, ...d.data() }))
+                            .filter(c => c.pacienteId === p.id)
+                            .slice(0, 8)
+                        )
+                      } catch(e) { console.error(e) }
+                      finally { setCargandoConsultas(false) }
+                    }} />
                 )}
                 {form.pacienteId && (
                   <p className="text-xs text-teal-600 mt-1">
@@ -647,15 +674,66 @@ export default function Recetas() {
                 )}
               </div>
 
-              {/* Diagnóstico */}
+              {/* Consulta relacionada — Nivel 1: vínculo estructural */}
+              {form.pacienteId && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Consulta relacionada
+                  </label>
+                  <select
+                    value={form.consultaId}
+                    onChange={e => {
+                      const consultaId = e.target.value
+                      const consulta = consultasPaciente.find(c => c.id === consultaId)
+                      setForm(f => ({
+                        ...f,
+                        consultaId,
+                        // Autocompleta el diagnóstico desde la consulta si aún no se ha escrito nada
+                        diagnostico: consulta && !f.diagnostico ? consulta.diagnostico : f.diagnostico,
+                      }))
+                    }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="">— Receta independiente (sin consulta) —</option>
+                    {consultasPaciente.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.fecha?.toDate
+                          ? format(c.fecha.toDate(), "d MMM yyyy", { locale: es })
+                          : ''}
+                        {'  ·  '}
+                        {c.tipoNotaLabel || 'Consulta'}
+                        {c.diagnostico ? `  ·  ${c.diagnostico}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {cargandoConsultas && (
+                    <p className="text-xs text-gray-400 mt-1">Buscando consultas del paciente...</p>
+                  )}
+                  {!cargandoConsultas && consultasPaciente.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Este paciente no tiene consultas registradas — la receta quedará como independiente.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Diagnóstico / motivo — Nivel 3: obligatorio si es independiente */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Diagnóstico (opcional cómo  aparece en la receta)
+                  {form.consultaId
+                    ? 'Diagnóstico (tomado de la consulta — puedes editarlo)'
+                    : 'Motivo / diagnóstico clínico * (obligatorio en receta independiente)'}
                 </label>
                 <input type="text" value={form.diagnostico}
                   onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))}
+                  placeholder={form.consultaId ? '' : 'Ej. Resurtimiento por hipertensión controlada'}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                {!form.consultaId && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ Sin consulta ligada, este campo documenta la justificación clínica de la receta — es obligatorio.
+                  </p>
+                )}
               </div>
 
               {/* Medicamentos */}
