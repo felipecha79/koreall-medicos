@@ -3,7 +3,7 @@
 // La API key de OpenAI vive SOLO aquí, nunca en el bundle del navegador.
 // Usado por: IAPreConsulta.jsx (panel del doctor en Agenda).
 
-const admin = require('firebase-admin')
+import admin from 'firebase-admin'
 
 function getDb() {
   if (!admin.apps.length) {
@@ -55,7 +55,7 @@ async function registrarUso(tokensUsados) {
   }
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json')
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' })
 
