@@ -20,6 +20,54 @@ const METODO_COLOR = {
   stripe:        'bg-indigo-100 text-indigo-700',
 }
 
+// Badge de método de pago, editable con un clic.
+// Corrige el caso de un cobro mal etiquetado (ej. Stripe capturado como
+// "efectivo" por default) sin tener que tocar Firestore a mano.
+function EditorMetodoPago({ cobro, tenantId }) {
+  const [editando, setEditando] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const metodo = cobro.metodoPago ?? cobro.metodo ?? ''
+
+  const guardar = async (nuevoMetodo) => {
+    if (nuevoMetodo === metodo) { setEditando(false); return }
+    setGuardando(true)
+    try {
+      await updateDoc(doc(db, 'tenants', String(tenantId), 'cobros', cobro.id), {
+        metodoPago: nuevoMetodo,
+      })
+      toast.success('Método de pago corregido ✓')
+    } catch (e) {
+      console.error(e); toast.error('No se pudo actualizar')
+    } finally { setGuardando(false); setEditando(false) }
+  }
+
+  if (editando) {
+    return (
+      <select
+        autoFocus
+        defaultValue={metodo || 'efectivo'}
+        disabled={guardando}
+        onBlur={e => guardar(e.target.value)}
+        onChange={e => guardar(e.target.value)}
+        className="text-xs border border-gray-300 rounded px-1.5 py-0.5">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta (TPV físico)</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="stripe">💳 Stripe</option>
+      </select>
+    )
+  }
+
+  return (
+    <button onClick={() => setEditando(true)}
+      title="Clic para corregir el método de pago"
+      className={`text-xs px-2 py-0.5 rounded font-medium hover:ring-1 hover:ring-gray-300
+        ${METODO_COLOR[metodo] ?? 'bg-gray-100 text-gray-500'}`}>
+      {metodo === 'stripe' ? '💳 Stripe' : (metodo || '—')} ✏️
+    </button>
+  )
+}
+
 const FORM_INICIAL = {
   pacienteId: '', pacienteIdLegible: '', pacienteNombre: '', pacienteEmail: '',
   concepto: 'Consulta general', monto: '', metodoPago: 'efectivo',
@@ -301,9 +349,9 @@ export default function Cobros() {
         <div className="bg-green-50 rounded-xl border border-green-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Pagados hoy</p>
           <p className="text-2xl font-bold text-green-600">
-            {cobros.filter(c => {
+            {pagadosFiltrados.filter(c => {
               const f = c.fechaPagoConfirmado?.toDate?.() ?? c.fechaPago?.toDate?.()
-              return c.estadoPago === 'paid' && f && f >= new Date(new Date().setHours(0,0,0,0))
+              return f && f >= new Date(new Date().setHours(0,0,0,0))
             }).length}
           </p>
         </div>
@@ -324,10 +372,19 @@ export default function Cobros() {
           <button onClick={() => setTab('pagados')}
             className={`px-4 py-2 text-sm font-medium border-l border-gray-200 transition-colors
               ${tab === 'pagados' ? 'bg-green-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-            Pagados ({pagados.length})
+            Pagados ({pagadosFiltrados.length})
           </button>
         </div>
       </div>
+
+      {!verCalEspActual && (pagadosBase.length - pagadosFiltrados.length) > 0 && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200
+                       rounded-lg px-3 py-2 mb-4">
+          ⚠️ {pagadosBase.length - pagadosFiltrados.length} cobro(s) en efectivo ocultos por el filtro
+          "Ver consultas especiales" (apagado). Actívalo en Mi cuenta si necesitas verlos o facturarlos —
+          o corrige el método de pago con el ✏️ si fueron mal etiquetados.
+        </p>
+      )}
 
       {/* Tabla */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -357,10 +414,7 @@ export default function Cobros() {
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-sm">{c.concepto}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium
-                        ${METODO_COLOR[c.metodoPago ?? c.metodo] ?? 'bg-gray-100 text-gray-500'}`}>
-                        {c.metodoPago === 'stripe' ? '💳 Stripe' : (c.metodoPago ?? c.metodo ?? '—')}
-                      </span>
+                      <EditorMetodoPago cobro={c} tenantId={tenantId} />
                     </td>
                     <td className="px-4 py-3 font-semibold text-gray-800">
                       ${Number(c.monto ?? 0).toLocaleString('es-MX')}
