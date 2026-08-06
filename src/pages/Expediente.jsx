@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   doc, getDoc, collection, query, orderBy,
   onSnapshot, addDoc, updateDoc, Timestamp, getDocs
@@ -196,6 +196,8 @@ export default function Expediente() {
   const { id } = useParams()
   const { tenantId, user } = useTenant()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [citaOrigenId, setCitaOrigenId] = useState(null)
 
   const [paciente,   setPaciente]   = useState(null)
   const [consultas,  setConsultas]  = useState([])
@@ -303,6 +305,21 @@ export default function Expediente() {
     })
   }, [tenantId, id])
 
+  // Llegamos aquí desde el botón "Ir a realizar la consulta" en Agenda:
+  // abrimos directo la nota clínica con el motivo de la cita precargado.
+  useEffect(() => {
+    if (location.state?.irAConsulta) {
+      setTab('Consultas')
+      setCitaOrigenId(location.state.citaId ?? null)
+      if (location.state.motivo) {
+        setFormConsulta(f => ({ ...f, motivoConsulta: location.state.motivo }))
+      }
+      setModalConsulta(true)
+      // Limpiamos el state de navegación para que un refresh no reabra el modal solo
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
+
   useEffect(() => {
     if (!tenantId || !id) return
     const base = `tenants/${tenantId}`
@@ -350,6 +367,7 @@ export default function Expediente() {
       const consultaRef = await addDoc(collection(db, `tenants/${tenantId}/consultas`), {
         ...formConsulta, pacienteId: id, tenantId,
         tipoNota, tipoNotaLabel: TIPOS_NOTA[tipoNota]?.label ?? tipoNota,
+        citaId: citaOrigenId || null,
         fecha: Timestamp.now(), subidoPor: user?.uid ?? '',
       })
       if (formConsulta.peso || formConsulta.ta || formConsulta.fc) {
@@ -367,6 +385,9 @@ export default function Expediente() {
         cie10:'',tratamiento:'',indicaciones:'',peso:'',talla:'',
         ta:'',fc:'',fr:'',temperatura:'',spo2:'',
       })
+      setCitaOrigenId(null)
+      // Directo a recetar, ligado a la consulta que se acaba de guardar
+      setModalReceta(consultaRef.id)
     } catch(e) { console.error(e); toast.error('Error al guardar') }
   }
 

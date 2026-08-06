@@ -722,9 +722,17 @@ export default function PortalPaciente() {
     }
     const unsubFacturas = onSnapshot(
       query(collection(db, `tenants/${tenantId}/facturas`),
-            where('pacienteId', '==', paciente.id),
-            orderBy('fecha','desc')),
-      snap => setFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+            where('pacienteId', '==', paciente.id)),
+      snap => {
+        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        lista.sort((a, b) => {
+          const fa = a.fecha?.toDate?.() ?? new Date(0)
+          const fb = b.fecha?.toDate?.() ?? new Date(0)
+          return fb - fa
+        })
+        setFacturas(lista)
+      },
+      err => console.error('[PortalPaciente] Error cargando facturas:', err)
     )
 
     return () => {

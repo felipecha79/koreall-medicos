@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   collection, query, where, orderBy, onSnapshot,
   addDoc, updateDoc, doc, Timestamp, getDocs, arrayUnion
@@ -109,6 +110,7 @@ const FORM_INICIAL = {
 }
 
 export default function Agenda() {
+  const navigate = useNavigate()
   const { tenantId, tenant, role, isSuperAdmin } = useTenant()
   const iaActivo = tenant?.iaPreConsultaActivo !== false // default true
   const [semanaBase, setSemanaBase]       = useState(new Date())
@@ -743,6 +745,22 @@ export default function Agenda() {
                     ))}
                   </div>
                 </div>
+
+                <button
+                  onClick={() => {
+                    cambiarEstatus(modal.id, 'completada', modal)
+                    navigate(`/pacientes/${modal.pacienteId}`, {
+                      state: {
+                        irAConsulta: true,
+                        citaId: modal.id,
+                        motivo: modal.padecimientoPaciente || modal.motivo || '',
+                      },
+                    })
+                  }}
+                  className="w-full mt-3 py-2.5 rounded-lg bg-teal-600 text-white text-sm
+                             font-semibold hover:bg-teal-700 flex items-center justify-center gap-1.5">
+                  🩺 Ir a realizar la consulta
+                </button>
 
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   <button onClick={() => setModoDetalle('reagendar')}
