@@ -6,6 +6,7 @@ import {
 } from 'firebase/firestore'
 import { signOut, onAuthStateChanged, getIdTokenResult } from 'firebase/auth'
 import { auth, db } from '../firebase'
+import { descargarFactura } from '../services/facturapi'
 import { format, isFuture, differenceInHours, addMinutes } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
@@ -251,16 +252,52 @@ function BarraTurno({ estatus }) {
 // ── Tarjeta de cita ───────────────────────────────────────
 function TarjetaCita({ cita, tenantId }) {
   const [expanded, setExpanded] = useState(false)
+  const [reagendando, setReagendando] = useState(false)
+  const [nuevaFechaReag, setNuevaFechaReag] = useState('')
+  const [savingReag, setSavingReag] = useState(false)
   const estado = getEstado(cita.estatus)
+
+  const fechaCitaObj = (() => {
+    try {
+      return cita.fecha?.toDate ? cita.fecha.toDate()
+        : cita.fecha?.seconds ? new Date(cita.fecha.seconds*1000) : null
+    } catch { return null }
+  })()
 
   const fechaStr = (() => {
     try {
-      const f = cita.fecha?.toDate ? cita.fecha.toDate()
-        : cita.fecha?.seconds ? new Date(cita.fecha.seconds*1000) : null
-      if (!f) return '—'
-      return format(f, "EEEE d 'de' MMMM · HH:mm", { locale: es })
+      if (!fechaCitaObj) return '—'
+      return format(fechaCitaObj, "EEEE d 'de' MMMM · HH:mm", { locale: es })
     } catch { return '—' }
   })()
+
+  // Regla del consultorio: reagendar en línea solo hasta 3 horas antes de la cita
+  const puedeReagendarOnline = (() => {
+    if (!fechaCitaObj) return false
+    try { return differenceInHours(fechaCitaObj, new Date()) >= 3 }
+    catch { return false }
+  })()
+
+  const confirmarReagendo = async () => {
+    if (!nuevaFechaReag) { toast.error('Selecciona la nueva fecha y hora'); return }
+    setSavingReag(true)
+    try {
+      await updateDoc(doc(db, `tenants/${tenantId}/citas/${cita.id}`), {
+        fecha: Timestamp.fromDate(new Date(nuevaFechaReag)),
+        estatus: 'programada',
+        historial: arrayUnion({
+          accion: 'reagendada',
+          fecha: Timestamp.now(),
+          nota: `Reagendada por el paciente — de ${fechaStr} a nueva fecha`,
+        }),
+      })
+      toast.success('✓ Cita reagendada')
+      setReagendando(false)
+      setNuevaFechaReag('')
+    } catch (e) {
+      console.error(e); toast.error('Error al reagendar')
+    } finally { setSavingReag(false) }
+  }
 
   const esFutura = (() => {
     try {
@@ -372,7 +409,34 @@ function TarjetaCita({ cita, tenantId }) {
               className="py-2 px-3 bg-red-50 text-red-500 text-xs rounded-xl hover:bg-red-100 border border-red-100">
               Cancelar
             </button>
+            {puedeReagendarOnline ? (
+              <button onClick={() => { setReagendando(!reagendando); setExpanded(false) }}
+                className="py-2 px-3 bg-purple-50 text-purple-600 text-xs font-medium rounded-xl hover:bg-purple-100 border border-purple-200">
+                🗓️ Reagendar
+              </button>
+            ) : (
+              <span title="Ya no se puede reagendar en línea — faltan menos de 3 horas para tu cita. Llama al consultorio."
+                className="py-2 px-3 bg-gray-50 text-gray-400 text-xs rounded-xl border border-gray-200 cursor-not-allowed">
+                🗓️ Reagendar
+              </span>
+            )}
           </div>
+          {reagendando && (
+            <div className="mt-2 p-3 bg-purple-50 rounded-xl border border-purple-100">
+              <p className="text-xs text-purple-700 font-medium mb-2">Elige la nueva fecha y hora:</p>
+              <SelectorCita value={nuevaFechaReag} onChange={setNuevaFechaReag} tenantId={tenantId} />
+              <div className="flex gap-2 mt-2">
+                <button onClick={confirmarReagendo} disabled={savingReag || !nuevaFechaReag}
+                  className="flex-1 py-1.5 bg-purple-600 text-white text-xs rounded-lg font-medium disabled:opacity-50">
+                  {savingReag ? 'Guardando...' : 'Confirmar nueva fecha'}
+                </button>
+                <button onClick={() => { setReagendando(false); setNuevaFechaReag('') }}
+                  className="flex-1 py-1.5 bg-gray-100 text-gray-600 text-xs rounded-lg">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
           {expanded && (
             <div className="mt-2 p-3 bg-red-50 rounded-xl border border-red-100">
               <p className="text-xs text-red-700 mb-2">¿Confirmas que deseas cancelar?</p>
@@ -837,7 +901,7 @@ export default function PortalPaciente() {
   const cobrosPendientes = cobros.filter(c => c.estadoPago !== 'paid')
 
   return (
-    <div className="min-h-screen max-w-2xl mx-auto relative"
+    <div className="min-h-screen relative"
       style={{background: '#F8F9FA'}}>
       {/* Patrón geométrico de fondo — sutil */}
       <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',opacity:0.35}}>
@@ -873,7 +937,7 @@ export default function PortalPaciente() {
         const textMuted = isLight(cp) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'
         return (
           <div style={{ background: cp, position: 'sticky', top: 0, zIndex: 30 }}
-            className="px-4 py-3 overflow-hidden relative">
+            className="px-4 md:px-8 py-3 md:py-4 overflow-hidden relative">
             {/* Patrón geométrico sutil */}
             <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.08,pointerEvents:'none'}}
               xmlns="http://www.w3.org/2000/svg">
@@ -888,18 +952,18 @@ export default function PortalPaciente() {
               </defs>
               <rect width="100%" height="100%" fill="url(#ph-geo)"/>
             </svg>
-            <div className="flex items-center justify-between relative">
+            <div className="flex items-center justify-between relative max-w-5xl mx-auto">
               <div>
-                <h1 style={{color: textCol}} className="text-sm font-bold leading-tight">
+                <h1 style={{color: textCol}} className="text-sm md:text-lg font-bold leading-tight">
                   {tenant?.nombreDoctor ?? 'Novaryk.Med'}
                 </h1>
-                <p style={{color: textMuted}} className="text-xs leading-tight truncate max-w-[160px]">
+                <p style={{color: textMuted}} className="text-xs md:text-sm leading-tight truncate max-w-[160px] md:max-w-xs">
                   {tenant?.nombre ?? 'Portal del paciente'}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 md:gap-4">
                 <div className="text-right">
-                  <p style={{color: textCol}} className="text-xs font-medium leading-tight">
+                  <p style={{color: textCol}} className="text-xs md:text-sm font-medium leading-tight">
                     {paciente.nombre} {paciente.apellidos}
                   </p>
                   <p style={{color: textMuted}} className="text-xs font-mono leading-tight">
@@ -908,7 +972,7 @@ export default function PortalPaciente() {
                 </div>
                 <button onClick={() => signOut(auth)}
                   style={{color: textMuted, borderColor: textMuted}}
-                  className="text-xs border px-2 py-1 rounded-lg hover:opacity-80 transition-opacity">
+                  className="text-xs border px-2 py-1 md:px-3 md:py-1.5 rounded-lg hover:opacity-80 transition-opacity">
                   Salir
                 </button>
               </div>
@@ -919,70 +983,72 @@ export default function PortalPaciente() {
 
       {/* Alerta alergias */}
       {paciente.alergias && paciente.alergias !== 'Ninguna' && paciente.alergias !== '' && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-2">
-          <p className="text-xs text-red-700 text-center">
+        <div className="bg-red-50 border-b border-red-200 px-4 md:px-8 py-2">
+          <p className="text-xs text-red-700 text-center max-w-5xl mx-auto">
             ⚠️ <strong>Alergias:</strong> {paciente.alergias}
           </p>
         </div>
       )}
 
-      <div className="px-4 py-4">
+      <div className="px-4 md:px-8 py-4 md:py-6 max-w-5xl mx-auto">
 
-        {/* Tarjeta resumen */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-teal-100 flex items-center justify-center
-                            text-teal-700 font-bold text-base flex-shrink-0">
-              {paciente.nombre?.[0]}{paciente.apellidos?.[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-gray-800 text-sm truncate">
-                {paciente.nombre} {paciente.apellidos}
-              </h2>
-              <div className="flex flex-wrap gap-2 mt-0.5">
-                {paciente.telefono && <span className="text-xs text-gray-500">📱 {paciente.telefono}</span>}
-                {paciente.grupoSanguineo && (
-                  <span className="text-xs text-red-500 font-semibold">🩸 {paciente.grupoSanguineo}</span>
-                )}
+        <div className="md:flex md:gap-4 md:items-stretch">
+          {/* Tarjeta resumen */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 md:flex-1">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-teal-100 flex items-center justify-center
+                              text-teal-700 font-bold text-base flex-shrink-0">
+                {paciente.nombre?.[0]}{paciente.apellidos?.[0]}
               </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-gray-800 text-sm truncate">
+                  {paciente.nombre} {paciente.apellidos}
+                </h2>
+                <div className="flex flex-wrap gap-2 mt-0.5">
+                  {paciente.telefono && <span className="text-xs text-gray-500">📱 {paciente.telefono}</span>}
+                  {paciente.grupoSanguineo && (
+                    <span className="text-xs text-red-500 font-semibold">🩸 {paciente.grupoSanguineo}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100">
+              {[
+                { v: proximas.length,              l: 'Citas',       c: 'text-teal-600' },
+                { v: consultas.length,             l: 'Consultas',   c: 'text-blue-600' },
+                { v: recetas.length,               l: 'Recetas',     c: 'text-green-600' },
+                { v: cobrosPendientes.length,      l: 'Pagos',       c: 'text-amber-500' },
+              ].map((item, i) => (
+                <div key={i} className="text-center">
+                  <p className={`text-lg font-bold ${item.c}`}>{item.v}</p>
+                  <p className="text-xs text-gray-400 leading-tight">{item.l}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100">
-            {[
-              { v: proximas.length,              l: 'Citas',       c: 'text-teal-600' },
-              { v: consultas.length,             l: 'Consultas',   c: 'text-blue-600' },
-              { v: recetas.length,               l: 'Recetas',     c: 'text-green-600' },
-              { v: cobrosPendientes.length,      l: 'Pagos',       c: 'text-amber-500' },
-            ].map((item, i) => (
-              <div key={i} className="text-center">
-                <p className={`text-lg font-bold ${item.c}`}>{item.v}</p>
-                <p className="text-xs text-gray-400 leading-tight">{item.l}</p>
+          {/* Próxima cita destacada */}
+          {proximas[0] && (() => {
+            const f = proximas[0].fecha?.toDate ? proximas[0].fecha.toDate()
+              : new Date(proximas[0].fecha?.seconds*1000)
+            return (
+              <div className="bg-teal-600 text-white rounded-2xl p-4 mb-4 md:flex-1 md:flex md:flex-col md:justify-center">
+                <p className="text-xs text-teal-200 mb-0.5">Próxima cita</p>
+                <p className="font-semibold text-sm md:text-base">
+                  {format(f, "EEEE d 'de' MMMM", {locale:es})}
+                </p>
+                <p className="text-teal-100 text-xs md:text-sm">
+                  {format(f, 'HH:mm')} hrs
+                  {proximas[0].motivo ? ` — ${proximas[0].motivo}` : ''}
+                </p>
               </div>
-            ))}
-          </div>
+            )
+          })()}
         </div>
 
-        {/* Próxima cita destacada */}
-        {proximas[0] && (() => {
-          const f = proximas[0].fecha?.toDate ? proximas[0].fecha.toDate()
-            : new Date(proximas[0].fecha?.seconds*1000)
-          return (
-            <div className="bg-teal-600 text-white rounded-2xl p-4 mb-4">
-              <p className="text-xs text-teal-200 mb-0.5">Próxima cita</p>
-              <p className="font-semibold text-sm">
-                {format(f, "EEEE d 'de' MMMM", {locale:es})}
-              </p>
-              <p className="text-teal-100 text-xs">
-                {format(f, 'HH:mm')} hrs
-                {proximas[0].motivo ? ` — ${proximas[0].motivo}` : ''}
-              </p>
-            </div>
-          )
-        })()}
-
-        {/* Tabs — scroll horizontal en móvil */}
-        <div className="flex overflow-x-auto gap-0 border-b border-gray-200 mb-4 -mx-4 px-4
+        {/* Tabs — scroll horizontal en móvil, fila completa visible en desktop */}
+        <div className="flex overflow-x-auto md:flex-wrap md:overflow-visible gap-0 border-b border-gray-200 mb-4 -mx-4 px-4 md:mx-0 md:px-0
                         scrollbar-none" style={{scrollbarWidth:'none'}}>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -1013,7 +1079,7 @@ export default function PortalPaciente() {
 
         {/* ── Mis citas ─────────────────────────────────── */}
         {tab === 'Mis citas' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {citas.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">📅</p>
@@ -1031,7 +1097,7 @@ export default function PortalPaciente() {
 
         {/* ✅ NUEVO: Mis consultas completadas ─────────── */}
         {tab === 'Mis consultas' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {consultas.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">📋</p>
@@ -1045,7 +1111,7 @@ export default function PortalPaciente() {
 
         {/* ✅ NUEVO: Mis recetas certificadas ────────── */}
         {tab === 'Mis recetas' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {recetas.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">💊</p>
@@ -1086,7 +1152,7 @@ export default function PortalPaciente() {
 
         {/* ── Mis medicamentos ──────────────────────────── */}
         {tab === 'Mis medicamentos' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {meds.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">💊</p>
@@ -1109,7 +1175,7 @@ export default function PortalPaciente() {
 
         {/* ── Pagos ─────────────────────────────────────── */}
         {tab === 'Pagos' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {cobros.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">💳</p>
@@ -1173,7 +1239,7 @@ export default function PortalPaciente() {
 
         {/* ── Mis facturas ──────────────────────────────── */}
         {tab === 'Mis facturas' && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {facturas.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-3xl mb-2">🧾</p>
@@ -1197,20 +1263,16 @@ export default function PortalPaciente() {
                     </span>
                   </div>
                 </div>
-                {f.estatus === 'valid' && (f.pdfUrl || f.xmlUrl) && (
+                {f.estatus === 'valid' && f.facturapiId && (
                   <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                    {f.pdfUrl && (
-                      <a href={f.pdfUrl} target="_blank" rel="noreferrer"
-                        className="flex-1 py-2 bg-teal-50 text-teal-700 text-xs font-medium rounded-xl hover:bg-teal-100 text-center border border-teal-200">
-                        📄 Descargar PDF
-                      </a>
-                    )}
-                    {f.xmlUrl && (
-                      <a href={f.xmlUrl} target="_blank" rel="noreferrer"
-                        className="flex-1 py-2 bg-blue-50 text-blue-700 text-xs font-medium rounded-xl hover:bg-blue-100 text-center border border-blue-200">
-                        📎 Descargar XML
-                      </a>
-                    )}
+                    <button onClick={() => descargarFactura(f.facturapiId, 'pdf', tenantId).catch(() => toast.error('No se pudo descargar el PDF'))}
+                      className="flex-1 py-2 bg-teal-50 text-teal-700 text-xs font-medium rounded-xl hover:bg-teal-100 text-center border border-teal-200">
+                      📄 Descargar PDF
+                    </button>
+                    <button onClick={() => descargarFactura(f.facturapiId, 'xml', tenantId).catch(() => toast.error('No se pudo descargar el XML'))}
+                      className="flex-1 py-2 bg-blue-50 text-blue-700 text-xs font-medium rounded-xl hover:bg-blue-100 text-center border border-blue-200">
+                      📎 Descargar XML
+                    </button>
                   </div>
                 )}
               </div>
@@ -1221,7 +1283,7 @@ export default function PortalPaciente() {
         {/* ── Solicitar cita ────────────────────────────── */}
         {tab === 'Solicitar cita' && (
           <div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 mb-4 md:max-w-xl">
               <h3 className="font-semibold text-gray-800 mb-1 text-sm">Solicitar nueva cita</h3>
               <p className="text-xs text-gray-400 mb-4">
                 {tenant?.nombre} — El consultorio confirmará tu solicitud.
@@ -1261,9 +1323,9 @@ export default function PortalPaciente() {
 
       {/* Visor de documento */}
       {docViewer && (
-        <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-50 p-0"
+        <div className="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center z-50 p-0 md:p-4"
           onClick={() => setDocViewer(null)}>
-          <div className="bg-white rounded-t-2xl w-full max-h-[90vh] flex flex-col shadow-2xl"
+          <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <p className="font-medium text-gray-800 text-sm truncate">{docViewer.nombre}</p>
@@ -1282,7 +1344,7 @@ export default function PortalPaciente() {
               {['jpg','jpeg','png','webp'].includes(docViewer.ext) ? (
                 <img src={docViewer.url} alt={docViewer.nombre} className="w-full h-full object-contain p-4" />
               ) : docViewer.ext === 'pdf' ? (
-                <iframe src={docViewer.url} className="w-full border-0" title={docViewer.nombre} style={{height:400}} />
+                <iframe src={docViewer.url} className="w-full border-0" title={docViewer.nombre} style={{height:'70vh'}} />
               ) : (
                 <div className="flex items-center justify-center h-40 text-gray-400">
                   <a href={docViewer.url} target="_blank" rel="noreferrer" className="text-teal-600 hover:underline text-sm">

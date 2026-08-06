@@ -142,10 +142,6 @@ export default function Facturacion() {
       toast.error('El paciente no tiene RFC. Agrégalo en su ficha antes de facturar.')
       return
     }
-    if (!import.meta.env.VITE_FACTURAPI_KEY) {
-      toast.error('Configura VITE_FACTURAPI_KEY en tu .env.local')
-      return
-    }
 
     setLoading(true)
     setModal(null)
@@ -159,8 +155,6 @@ export default function Facturacion() {
           uuid:               factura.uuid,
           folio:              factura.folio_number,
           serie:              factura.series,
-          pdfUrl:             factura.pdf_download_url ?? null,
-          xmlUrl:             factura.xml_download_url ?? null,
           total:              factura.total,
           estatus:            factura.status,
           cobroId:            cobro.id,
@@ -177,7 +171,6 @@ export default function Facturacion() {
         facturado:  true,
         facturaId:  facturaRef.id ?? null,
         cfdiUuid:   factura.uuid ?? null,
-        cfdiUrl:    factura.pdf_download_url ?? null,
       })
 
       toast.success(`CFDI timbrado: ${factura.uuid.slice(0, 8)}...`)
@@ -185,7 +178,7 @@ export default function Facturacion() {
       console.error('[Facturacion] Error:', e)
       const msg = e.message ?? 'Error desconocido'
       if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('CORS')) {
-        toast.error('Error de red con Facturapi. Verifica tu API key — la factura puede haberse creado.')
+        toast.error('Error de red con Facturapi. La factura puede haberse creado — revisa antes de reintentar.')
       } else {
         toast.error(`Error al timbrar: ${msg}`)
       }
@@ -197,7 +190,7 @@ export default function Facturacion() {
     if (!window.confirm('¿Seguro que deseas cancelar esta factura ante el SAT? Esta acción no se puede deshacer.')) return
     setLoading(true)
     try {
-      await cancelarFactura(factura.facturapiId, '02', tenant?.facturapiApiKey ?? null)
+      await cancelarFactura(factura.facturapiId, '02', tenant?.id ?? null)
       await updateDoc(doc(db, `tenants/${tenantId}/facturas/${factura.id}`), {
         estatus: 'cancelled'
       })
@@ -216,7 +209,7 @@ export default function Facturacion() {
   const enviarEmail = async () => {
     if (!emailDest) { toast.error('Escribe un email'); return }
     try {
-      await enviarFacturaPorEmail(emailModal.facturapiId, emailDest, tenant?.facturapiApiKey ?? null)
+      await enviarFacturaPorEmail(emailModal.facturapiId, emailDest, tenant?.id ?? null)
       toast.success('Factura enviada por email')
       setEmailModal(null); setEmailDest('')
     } catch {
@@ -239,11 +232,11 @@ export default function Facturacion() {
       </div>
 
       {/* Aviso de configuración Facturapi */}
-      {!tenant?.facturapiApiKey && !import.meta.env.VITE_FACTURAPI_KEY && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
-          <p className="text-sm font-medium text-amber-800">⚠️ Facturapi no configurado para este consultorio</p>
-          <p className="text-xs text-amber-700 mt-1">
-            El SuperAdmin debe configurar la API key de Facturapi en{' '}
+      {!tenant?.facturapiApiKey && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
+          <p className="text-sm font-medium text-blue-800">ℹ️ Este consultorio timbra con la cuenta maestra de Novaryk</p>
+          <p className="text-xs text-blue-700 mt-1">
+            Para timbrar con RFC propio, el SuperAdmin debe configurarlo en{' '}
             <strong>Super Admin → Sistema → Configuración Facturapi</strong>.
           </p>
         </div>
@@ -401,17 +394,17 @@ export default function Facturacion() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
-                          {f.pdfUrl && (
-                            <button onClick={() => descargarFactura(f.facturapiId, 'pdf', tenant?.facturapiApiKey ?? null)}
-                              className="text-xs text-teal-600 hover:underline whitespace-nowrap">
-                              PDF
-                            </button>
-                          )}
-                          {f.xmlUrl && (
-                            <button onClick={() => descargarFactura(f.facturapiId, 'xml', tenant?.facturapiApiKey ?? null)}
-                              className="text-xs text-blue-600 hover:underline whitespace-nowrap">
-                              XML
-                            </button>
+                          {f.facturapiId && f.estatus !== 'cancelled' && (
+                            <>
+                              <button onClick={() => descargarFactura(f.facturapiId, 'pdf', tenant?.id ?? null)}
+                                className="text-xs text-teal-600 hover:underline whitespace-nowrap">
+                                PDF
+                              </button>
+                              <button onClick={() => descargarFactura(f.facturapiId, 'xml', tenant?.id ?? null)}
+                                className="text-xs text-blue-600 hover:underline whitespace-nowrap">
+                                XML
+                              </button>
+                            </>
                           )}
                           <button onClick={() => { setEmailModal(f); setEmailDest('') }}
                             className="text-xs text-gray-500 hover:underline whitespace-nowrap">
