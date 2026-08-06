@@ -1086,6 +1086,10 @@ export default function Admin() {
     try {
       let apiKey = fpForm.apiKeyManual?.trim()
 
+      if (apiKey && !/^sk_(live|test)_/.test(apiKey)) {
+        throw new Error('Eso no parece una API key de Facturapi — deben empezar con "sk_live_" o "sk_test_". Cópiala desde el dashboard de Facturapi, no el slug del consultorio.')
+      }
+
       if (!apiKey) {
         // Crear organización en Facturapi automáticamente
         if (!fpForm.rfc)         throw new Error('El RFC es obligatorio')
