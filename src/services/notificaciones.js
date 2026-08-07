@@ -1,6 +1,7 @@
 // src/services/notificaciones.js
 // Todos los puntos de notificación WhatsApp del sistema MediDesk
-// Requiere: VITE_TWILIO_ACCOUNT_SID, VITE_TWILIO_AUTH_TOKEN, VITE_TWILIO_WA_NUMBER
+// Las credenciales de Twilio viven en el servidor (api/whatsapp.js) —
+// este archivo solo llama a las funciones de src/services/whatsapp.js.
 
 import { enviarWA, enviarPlantillaWA, formatCitaWA } from './whatsapp'
 
