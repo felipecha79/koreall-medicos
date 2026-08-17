@@ -700,6 +700,8 @@ export default function Landing() {
   const [loginErr, setLoginErr] = useState('')
   const [logging, setLogging]   = useState(false)
 
+  const [debugInfo, setDebugInfo] = useState(null)
+
   // ── Cargar config del tenant desde Firestore ──────────
   useEffect(() => {
     // Si hay tenantId en URL (?t=...) cargar ese tenant; sino el primero
@@ -710,6 +712,19 @@ export default function Landing() {
       const themeId = sw.themeId ?? t.themeId ?? null
       const colors = resolverTheme(themeId, sw)
       console.log('[NovMed] tenant:', t.nombre, '| themeId:', themeId, '| colorPrimario resuelto:', colors.colorPrimario)
+      setDebugInfo({
+        docId: t._docId ?? '(sin id)',
+        totalCoincidenciasSlug: t._totalCoincidencias ?? '—',
+        nombre: t.nombre,
+        slugDetectado: tenantParam,
+        themeIdTenant: t.themeId ?? '(vacío)',
+        themeIdSitioWeb: sw.themeId ?? '(vacío)',
+        themeIdUsado: themeId ?? '(ninguno)',
+        colorPrimarioResuelto: colors.colorPrimario,
+        colorPrimarioEnSitioWeb: sw.colorPrimario ?? '(vacío)',
+        colorPrimarioEnTenant: t.colorPrimario ?? '(vacío)',
+        hora: new Date().toLocaleTimeString('es-MX'),
+      })
       setCfg(prev => ({
         ...prev,
         // Datos del doctor/consultorio
@@ -744,18 +759,23 @@ export default function Landing() {
       const slug = tenantParam.replace('__slug__', '')
       console.log('[NovMed] Buscando slug:', slug)
       getDocs(collection(db, 'tenants')).then(snap => {
-        const match = snap.docs.find(d => {
+        const coincidencias = snap.docs.filter(d => {
           const data = d.data()
           const tenantSlug = data.slug ?? data.id ?? d.id
           console.log('[NovMed] Comparando:', tenantSlug, 'vs', slug, '| nombre:', data.nombre)
           return tenantSlug === slug
         })
+        if (coincidencias.length > 1) {
+          console.warn('[NovMed] ⚠️ MÁS DE UN TENANT coincide con el slug:', slug,
+            coincidencias.map(d => d.id))
+        }
+        const match = coincidencias[0]
         if (match) {
-          console.log('[NovMed] ✓ Tenant encontrado:', match.data().nombre)
-          applyTenant(match.data())
+          console.log('[NovMed] ✓ Tenant encontrado:', match.data().nombre, '| docId:', match.id)
+          applyTenant({ ...match.data(), _docId: match.id, _totalCoincidencias: coincidencias.length })
           // Suscribir en tiempo real para cambios
           unsub = onSnapshot(doc(db, 'tenants', match.id),
-            s => { if (s.exists()) applyTenant(s.data()) }, () => {})
+            s => { if (s.exists()) applyTenant({ ...s.data(), _docId: s.id }) }, () => {})
         } else {
           console.warn('[NovMed] ✗ No se encontró tenant con slug:', slug)
         }
@@ -764,12 +784,12 @@ export default function Landing() {
     } else if (tenantParam) {
       // Escuchar en tiempo real el tenant específico por ID
       unsub = onSnapshot(doc(db, 'tenants', tenantParam), snap => {
-        if (snap.exists()) applyTenant(snap.data())
+        if (snap.exists()) applyTenant({ ...snap.data(), _docId: snap.id })
       }, () => {})
     } else {
       // Fallback: primer tenant (med.novaryk.com o localhost)
       unsub = onSnapshot(query(collection(db, 'tenants'), limit(1)), snap => {
-        if (!snap.empty) applyTenant(snap.docs[0].data())
+        if (!snap.empty) applyTenant({ ...snap.docs[0].data(), _docId: snap.docs[0].id })
       }, () => {})
     }
     return unsub
@@ -842,6 +862,28 @@ export default function Landing() {
 
   return (
     <div className="ld">
+
+      {/* Panel de diagnóstico — solo visible con ?debug=1 en la URL */}
+      {searchParams.get('debug') === '1' && debugInfo && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999999,
+          background: '#000', color: '#0f0', fontFamily: 'monospace',
+          fontSize: 11, padding: 10, lineHeight: 1.6, wordBreak: 'break-all',
+        }}>
+          <strong>🔍 DEBUG NovMed — {debugInfo.hora}</strong><br/>
+          hostname: {window.location.hostname}<br/>
+          slugDetectado: {debugInfo.slugDetectado}<br/>
+          docId resuelto: {debugInfo.docId}<br/>
+          coincidencias de slug: {debugInfo.totalCoincidenciasSlug}<br/>
+          nombre tenant: {debugInfo.nombre}<br/>
+          themeId en tenant: {debugInfo.themeIdTenant}<br/>
+          themeId en sitioWeb: {debugInfo.themeIdSitioWeb}<br/>
+          themeId usado: {debugInfo.themeIdUsado}<br/>
+          colorPrimario en tenant: {debugInfo.colorPrimarioEnTenant}<br/>
+          colorPrimario en sitioWeb: {debugInfo.colorPrimarioEnSitioWeb}<br/>
+          colorPrimario RESUELTO: {debugInfo.colorPrimarioResuelto}
+        </div>
+      )}
 
       {/* NAV */}
       <nav className="lnav">
