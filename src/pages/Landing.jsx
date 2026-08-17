@@ -796,14 +796,31 @@ export default function Landing() {
   }, [tenantParam])
 
   // ── Inyectar CSS cuando config está lista ─────────────
+  // Safari/WebKit a veces no recalcula las CSS custom properties (:root vars)
+  // cuando se muta el textContent de un <style> ya montado — hay que destruirlo
+  // y crear uno nuevo cada vez para forzar el reparseo en todos los motores.
   useEffect(() => {
-    let styleEl = document.getElementById('ld-dynamic-css')
-    if (!styleEl) {
-      styleEl = document.createElement('style')
-      styleEl.id = 'ld-dynamic-css'
-      document.head.appendChild(styleEl)
-    }
+    const anterior = document.getElementById('ld-dynamic-css')
+    if (anterior) anterior.remove()
+
+    const styleEl = document.createElement('style')
+    styleEl.id = 'ld-dynamic-css'
     styleEl.textContent = buildCSS(cfg)
+    document.head.appendChild(styleEl)
+
+    // Fuerza un reflow explícito — refuerzo adicional para Safari
+    void document.documentElement.offsetHeight
+
+    // Segunda capa de seguridad: setProperty aplica directo sin depender
+    // de que el navegador reparsee el <style> — funciona incluso si el
+    // truco de arriba no basta en alguna versión de Safari/WebKit.
+    const root = document.documentElement.style
+    root.setProperty('--ld-teal',    cfg.colorPrimario   || '#0D9488')
+    root.setProperty('--ld-navy',    cfg.colorSecundario || '#0D1F35')
+    root.setProperty('--ld-cream',   cfg.colorFondo      || '#F7F4EF')
+    root.setProperty('--ld-gold',    cfg.colorAccento    || '#C4A265')
+    root.setProperty('--ld-teal-lt', (cfg.colorPrimario  || '#0D9488') + 'CC')
+
     setCssReady(true)
   }, [cfg])
 
