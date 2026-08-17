@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { signInWithEmailAndPassword, getIdTokenResult, sendPasswordResetEmail } from 'firebase/auth'
 import { auth, db } from '../firebase'
@@ -213,7 +214,7 @@ const buildCSS = (c) => `
   .ld .map { background:linear-gradient(135deg,#EDE9E1 0%,#C8F0EC 100%);
     border-radius:22px;aspect-ratio:4/3;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:8px;font-size:44px;
-    border:1px solid rgba(0,0,0,.07) }
+    border:1px solid rgba(0,0,0,.07);overflow:hidden }
   .ld .map p { font-size:14px;color:#6B7A8D }
   .ld .addr { margin-top:14px;padding:16px;background:#fff;border-radius:12px;
     border:1px solid rgba(0,0,0,.07);font-size:14px;line-height:1.7;color:var(--ld-navy) }
@@ -868,17 +869,22 @@ export default function Landing() {
             <span /><span /><span />
           </button>
         </div>
-        <div className={`lnav-mobile ${menuMovil ? 'open' : ''}`}>
-          <a href="#servicios" onClick={() => setMenuMovil(false)}>Servicios</a>
-          <a href="#doctor" onClick={() => setMenuMovil(false)}>El doctor</a>
-          <a href="#tecnologia" onClick={() => setMenuMovil(false)}>Tecnología</a>
-          <a href="#ubicacion" onClick={() => setMenuMovil(false)}>Contacto</a>
-          <a style={{cursor:'pointer'}} onClick={() => { setMenuMovil(false); setModal(true) }}>
-            Iniciar sesión
-          </a>
-          <a href="#cita" className="ncta" onClick={() => setMenuMovil(false)}>Agendar cita</a>
-        </div>
       </nav>
+      {menuMovil && createPortal(
+        <div className="ld">
+          <div className="lnav-mobile open">
+            <a href="#servicios" onClick={() => setMenuMovil(false)}>Servicios</a>
+            <a href="#doctor" onClick={() => setMenuMovil(false)}>El doctor</a>
+            <a href="#tecnologia" onClick={() => setMenuMovil(false)}>Tecnología</a>
+            <a href="#ubicacion" onClick={() => setMenuMovil(false)}>Contacto</a>
+            <a style={{cursor:'pointer'}} onClick={() => { setMenuMovil(false); setModal(true) }}>
+              Iniciar sesión
+            </a>
+            <a href="#cita" className="ncta" onClick={() => setMenuMovil(false)}>Agendar cita</a>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* HERO */}
       <section className="hero">
@@ -1066,8 +1072,20 @@ export default function Landing() {
             </div>
             <div className="rev" style={{transitionDelay:'.2s'}}>
               <div className="map">
-                <span>📍</span>
-                <p>{cfg.direccion?.split(',').slice(0,2).join(',')}</p>
+                {cfg.direccion ? (
+                  <iframe
+                    title="Ubicación del consultorio"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(cfg.direccion)}&z=15&output=embed`}
+                    style={{ width:'100%', height:'100%', border:0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <>
+                    <span>📍</span>
+                    <p>Agrega tu dirección para mostrar el mapa</p>
+                  </>
+                )}
               </div>
               <div className="addr">
                 <strong>{cfg.nombreConsultorio}</strong><br/>
