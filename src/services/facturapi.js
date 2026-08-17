@@ -16,10 +16,13 @@ async function llamarProxy(action, params = {}, tenantId = null) {
 
 // CFDI 4.0: mayúsculas + sin acentos + sin régimen societario
 // (se mantiene aquí también por si algún componente la usa solo para mostrar texto)
+// OJO: la Ñ se descompone en NFD como N + tilde combinante (U+0303) — hay que protegerla.
 export function normalizarNombreSAT(nombre = '') {
   return nombre
+    .replace(/Ñ/g, '\u0001').replace(/ñ/g, '\u0002')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0001/g, 'Ñ').replace(/\u0002/g, 'ñ')
     .toUpperCase()
     .replace(/\s+/g, ' ')
     .trim()

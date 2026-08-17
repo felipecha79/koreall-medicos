@@ -10,6 +10,9 @@ export const TEMPLATE_SIDS = {
   confirmacion_cita1:     'HXe302e318c29df90e2d63ecc61b10e631',
   recordatorio_cita_24h1: 'HX7e3fc108179b068462e4880491a8b344',
   turno_proximo:          'HXa96c83e1a0b7290dfb45639d22b267e7',
+  // ⚠️ Reemplaza este SID por el real una vez que Meta apruebe la plantilla
+  // "reactivacion_paciente" (ver instrucciones en PacientesSinCita.jsx)
+  reactivacion_paciente:  'HX_PENDIENTE_DE_APROBACION_META',
 }
 
 export function normalizarTel(tel) {

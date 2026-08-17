@@ -250,6 +250,67 @@ function BarraTurno({ estatus }) {
 }
 
 // ── Tarjeta de cita ───────────────────────────────────────
+// ── Convierte un Timestamp/objeto de fecha de Firestore a Date ────
+function aFecha(f) {
+  try {
+    if (f?.toDate) return f.toDate()
+    if (f?.seconds) return new Date(f.seconds * 1000)
+    if (f) return new Date(f)
+  } catch {}
+  return null
+}
+
+// ── Línea de tiempo agrupada por mes, más reciente arriba ─────────
+// items: array de objetos con un campo de fecha (Timestamp de Firestore)
+// getFecha: función que extrae ese campo de cada item
+// render: función que dibuja cada fila
+function LineaTiempo({ items, getFecha, render, vacioIcono, vacioTexto }) {
+  const grupos = (() => {
+    const ordenados = [...items].sort((a, b) => {
+      const fa = aFecha(getFecha(a))?.getTime() ?? 0
+      const fb = aFecha(getFecha(b))?.getTime() ?? 0
+      return fb - fa
+    })
+    const mapa = new Map()
+    for (const item of ordenados) {
+      const f = aFecha(getFecha(item))
+      const clave = f ? format(f, 'MMMM yyyy', { locale: es }) : 'Sin fecha'
+      if (!mapa.has(clave)) mapa.set(clave, [])
+      mapa.get(clave).push(item)
+    }
+    return Array.from(mapa.entries())
+  })()
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-400">
+        <p className="text-3xl mb-2">{vacioIcono}</p>
+        <p className="text-sm">{vacioTexto}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl">
+      {grupos.map(([mes, itemsDelMes]) => (
+        <div key={mes} className="mb-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 sticky top-0 bg-[#F8F9FA] py-1">
+            {mes}
+          </p>
+          <div className="relative pl-5 border-l-2 border-gray-100 space-y-3">
+            {itemsDelMes.map((item, i) => (
+              <div key={item.id ?? i} className="relative">
+                <span className="absolute -left-[26px] top-3 w-2.5 h-2.5 rounded-full bg-teal-400 border-2 border-white" />
+                {render(item)}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function TarjetaCita({ cita, tenantId }) {
   const [expanded, setExpanded] = useState(false)
   const [reagendando, setReagendando] = useState(false)
@@ -553,7 +614,49 @@ function TarjetaConsulta({ consulta }) {
 }
 
 // ✅ NUEVO: Tarjeta de receta certificada
-function TarjetaRecetaCertificada({ receta }) {
+function imprimirRecetaPortal(receta, tenant) {
+  const fmt = (f) => {
+    try {
+      const d = f?.toDate ? f.toDate() : f?.seconds ? new Date(f.seconds*1000) : new Date(f)
+      return format(d, "d 'de' MMMM yyyy", { locale: es })
+    } catch { return '—' }
+  }
+  const medsHtml = (receta.medicamentos || []).map(m => `
+    <div style="margin-bottom:10px">
+      <strong>${m.medicamento || ''}</strong> — ${m.dosis || ''} · vía ${m.via || 'oral'} · ${m.frecuencia || ''}
+      ${m.duracion ? ` · por ${m.duracion}` : ''}${m.cantidad ? ` · cantidad ${m.cantidad}` : ''}
+      ${m.indicaciones ? `<div style="font-size:12px;color:#666;font-style:italic">${m.indicaciones}</div>` : ''}
+    </div>`).join('')
+
+  const ventana = window.open('', '_blank', 'width=800,height=900')
+  ventana.document.write(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"><title>Receta ${receta.numero || ''}</title>
+    <style>
+      body{margin:0;padding:24px;font-family:Arial,sans-serif;color:#1C1C1E}
+      @media print{body{padding:0}button{display:none!important}}
+      .btn{margin-top:16px;padding:10px 20px;background:#0D9488;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+    </style></head>
+    <body>
+      <h2 style="margin:0 0 4px">${tenant?.nombreDoctor ?? 'Receta médica'}</h2>
+      <p style="color:#666;font-size:13px;margin:0 0 20px">${tenant?.nombre ?? ''} — ${fmt(receta.fecha)}</p>
+      <p style="font-size:13px;color:#888">No. ${receta.numero || receta.id}</p>
+      ${receta.diagnostico ? `<p><strong>Diagnóstico:</strong> ${receta.diagnostico}</p>` : ''}
+      <div style="border-top:1px solid #e5e7eb;margin:16px 0;padding-top:16px">${medsHtml}</div>
+      ${receta.indicacionesGenerales ? `<p><strong>Indicaciones generales:</strong> ${receta.indicacionesGenerales}</p>` : ''}
+      ${receta.certificacion?.qrDataUrl ? `
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center">
+          <img src="${receta.certificacion.qrDataUrl}" style="width:110px;height:110px" />
+          <p style="font-size:11px;color:#888;word-break:break-all;max-width:400px;margin:8px auto">
+            Verifica esta receta: ${receta.certificacion.validationUrl || ''}
+          </p>
+        </div>` : ''}
+      <button class="btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+    </body></html>
+  `)
+  ventana.document.close()
+}
+
+function TarjetaRecetaCertificada({ receta, tenant }) {
   const fmtFecha = (f) => {
     try {
       const d = f?.toDate ? f.toDate() : f?.seconds ? new Date(f.seconds*1000) : new Date(f)
@@ -566,9 +669,9 @@ function TarjetaRecetaCertificada({ receta }) {
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-medium text-gray-800 text-sm">
-            {receta.doctorNombre ? `Dr. ${receta.doctorNombre}` : 'Médico'}
+            {tenant?.nombreDoctor ? `Dr. ${tenant.nombreDoctor}` : 'Médico'}
           </p>
-          <p className="text-xs text-gray-400">{fmtFecha(receta.fecha_emision)}</p>
+          <p className="text-xs text-gray-400">{fmtFecha(receta.fecha)}</p>
         </div>
         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-medium">
           ✓ Certificada
@@ -589,39 +692,34 @@ function TarjetaRecetaCertificada({ receta }) {
           <p className="text-xs text-gray-500 font-medium mb-1.5">Medicamentos</p>
           <div className="space-y-1">
             {receta.medicamentos.map((med, idx) => (
-              <div key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                {med.es_controlado && <span className="text-xs font-semibold text-amber-600 flex-shrink-0">⚠️</span>}
-                <span>
-                  <strong>{med.nombre}</strong> — {med.dosis}, {med.frecuencia}
-                </span>
+              <div key={idx} className="text-sm text-gray-700">
+                <strong>{med.medicamento}</strong> — {med.dosis}, {med.frecuencia}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* QR validable */}
-      {receta.certificacion?.qr_code && (
+      {/* QR real de validación */}
+      {receta.certificacion?.qrDataUrl && (
         <div className="mt-3 pt-3 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-400 mb-2">Muestra este código en la farmacia:</p>
-          <div className="bg-gray-50 rounded-lg p-2 inline-block">
-            <svg width="100" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <text x="50" y="50" textAnchor="middle" fontSize="10" fill="#888">
-                QR
-              </text>
-            </svg>
-          </div>
-          <p className="text-xs text-gray-400 mt-1">
-            Válida hasta: {fmtFecha(receta.certificacion.qr_code.fecha_expira)}
-          </p>
+          <img src={receta.certificacion.qrDataUrl} alt="QR de validación"
+            className="mx-auto" style={{ width: 100, height: 100 }} />
         </div>
       )}
+
+      <button onClick={() => imprimirRecetaPortal(receta, tenant)}
+        className="w-full mt-3 py-2 bg-teal-50 text-teal-700 text-xs font-medium rounded-xl
+                   hover:bg-teal-100 border border-teal-200">
+        📄 Ver / Descargar receta
+      </button>
     </div>
   )
 }
 
 // ✅ ACTUALIZAR TABS
-const TABS = ['Mis citas', 'Mis consultas', 'Mis recetas', 'Mis documentos', 'Mis medicamentos', 'Pagos', 'Mis facturas', 'Solicitar cita']
+const TABS = ['Mis citas', 'Mis consultas', 'Mis recetas', 'Mis documentos', 'Pagos', 'Mis facturas', 'Solicitar cita']
 
 export default function PortalPaciente() {
   const { user, paciente, tenantId, tenant, loading } = usePacientePortal()
@@ -682,7 +780,7 @@ export default function PortalPaciente() {
       ),
       snap => {
         const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        setConsultas(todas.filter(c => ['completada', 'finalizada'].includes(c.estatus)))
+        setConsultas(todas)
       },
       () => {
         // Fallback sin orderBy — asignado a variable para cleanup
@@ -698,7 +796,7 @@ export default function PortalPaciente() {
               const tb = b.fecha?.toDate?.()?.getTime?.() ?? 0
               return tb - ta
             })
-            setConsultas(docs.filter(c => ['completada', 'finalizada'].includes(c.estatus)))
+            setConsultas(docs)
           }
         )
       }
@@ -715,7 +813,7 @@ export default function PortalPaciente() {
       query(
         collection(db, `tenants/${tenantId}/recetas`),
         where('pacienteId', '==', paciente.id),
-        orderBy('fecha_emision', 'desc')
+        orderBy('fecha', 'desc')
       ),
       snap => {
         const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -731,8 +829,8 @@ export default function PortalPaciente() {
           snap2 => {
             const docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }))
             docs.sort((a, b) => {
-              const ta = a.fecha_emision?.toDate?.()?.getTime?.() ?? 0
-              const tb = b.fecha_emision?.toDate?.()?.getTime?.() ?? 0
+              const ta = a.fecha?.toDate?.()?.getTime?.() ?? 0
+              const tb = b.fecha?.toDate?.()?.getTime?.() ?? 0
               return tb - ta
             })
             setRecetas(docs.filter(r => r.certificacion?.mode === 'CERTIFICADA'))
@@ -1079,20 +1177,23 @@ export default function PortalPaciente() {
 
         {/* ── Mis citas ─────────────────────────────────── */}
         {tab === 'Mis citas' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {citas.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">📅</p>
-                <p className="text-sm">Sin citas registradas</p>
-                <button onClick={() => setTab('Solicitar cita')}
-                  className="mt-2 text-teal-600 text-sm hover:underline">
-                  Solicitar una cita →
-                </button>
-              </div>
-            ) : citas.map(c => (
-              <TarjetaCita key={c.id} cita={c} tenantId={tenantId} />
-            ))}
-          </div>
+          citas.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-3xl mb-2">📅</p>
+              <p className="text-sm">Sin citas registradas</p>
+              <button onClick={() => setTab('Solicitar cita')}
+                className="mt-2 text-teal-600 text-sm hover:underline">
+                Solicitar una cita →
+              </button>
+            </div>
+          ) : (
+            <LineaTiempo
+              items={citas}
+              getFecha={c => c.fecha}
+              vacioIcono="📅" vacioTexto="Sin citas registradas"
+              render={c => <TarjetaCita cita={c} tenantId={tenantId} />}
+            />
+          )
         )}
 
         {/* ✅ NUEVO: Mis consultas completadas ─────────── */}
@@ -1118,7 +1219,7 @@ export default function PortalPaciente() {
                 <p className="text-sm">No hay recetas digitalmente certificadas</p>
               </div>
             ) : recetas.map(r => (
-              <TarjetaRecetaCertificada key={r.id} receta={r} />
+              <TarjetaRecetaCertificada key={r.id} receta={r} tenant={tenant} />
             ))}
           </div>
         )}
@@ -1150,39 +1251,20 @@ export default function PortalPaciente() {
           </div>
         )}
 
-        {/* ── Mis medicamentos ──────────────────────────── */}
-        {tab === 'Mis medicamentos' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {meds.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">💊</p>
-                <p className="text-sm">Sin medicamentos registrados</p>
-              </div>
-            ) : meds.filter(m => m.activo).map(m => (
-              <div key={m.id} className="bg-white rounded-xl border border-green-200 p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm">{m.nombre}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{m.dosis} — {m.frecuencia}</p>
-                    {m.indicadoPor && <p className="text-xs text-gray-400 mt-0.5">Dr. {m.indicadoPor}</p>}
-                  </div>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">Activo</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* ── Pagos ─────────────────────────────────────── */}
         {tab === 'Pagos' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {cobros.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">💳</p>
-                <p className="text-sm">Sin cobros registrados</p>
-              </div>
-            ) : cobros.map(c => (
-              <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4">
+          cobros.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-3xl mb-2">💳</p>
+              <p className="text-sm">Sin cobros registrados</p>
+            </div>
+          ) : (
+            <LineaTiempo
+              items={cobros}
+              getFecha={c => c.fechaPago}
+              vacioIcono="💳" vacioTexto="Sin cobros registrados"
+              render={c => (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{c.concepto}</p>
@@ -1233,8 +1315,9 @@ export default function PortalPaciente() {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+              )}
+            />
+          )
         )}
 
         {/* ── Mis facturas ──────────────────────────────── */}

@@ -1,5 +1,20 @@
 // src/components/PacientesSinCita.jsx
 // Reporte de pacientes con última cita pero sin cita futura + envío de WA
+//
+// ⚠️ IMPORTANTE — plantilla pendiente de aprobación en Meta:
+// WhatsApp Business exige que cualquier mensaje que la empresa inicia hacia
+// un paciente fuera de una conversación de las últimas 24h use una plantilla
+// PRE-APROBADA por Meta — un mensaje de texto libre se rechaza en silencio.
+// Por eso este envío usa enviarPlantillaWA (no enviarWA). Pasos para activarlo:
+//   1. En Twilio Console → Messaging → Content Template Builder, crea una
+//      plantilla de categoría "Utility" o "Marketing" con este texto:
+//      "Hola {{1}} 👋. Han pasado {{2}} días desde tu última visita a {{3}}.
+//       Te invitamos a agendar tu próxima consulta cuando gustes. ¡Te esperamos!"
+//   2. Envíala a aprobación de Meta (usualmente toma unas horas a 1-2 días).
+//   3. Copia el Content SID (empieza con "HX...") y reemplaza el valor de
+//      "reactivacion_paciente" en api/_lib/twilio.js.
+// Mientras no esté aprobada, los envíos desde aquí fallarán con
+// "Plantilla reactivacion_paciente no configurada" — es esperado.
 import { useState, useEffect } from 'react'
 import {
   collection, getDocs, query, orderBy, where, Timestamp
@@ -7,40 +22,15 @@ import {
 import { db } from '../firebase'
 import { format, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { enviarWA } from '../services/whatsapp'
+import { enviarPlantillaWA } from '../services/whatsapp'
 import toast from 'react-hot-toast'
 
-// ── Mensajes de WhatsApp predefinidos ─────────────────────
-const PLANTILLAS_WA = [
-  {
-    id: 'te_extranamos',
-    label: '👋 Te extrañamos',
-    texto: (nombre, dias, consultorio) =>
-      `Hola ${nombre} 👋\n\n` +
-      `Han pasado ${dias} días desde tu última visita al ${consultorio}.\n\n` +
-      `¿Cómo te has sentido? Recuerda que la revisión periódica es importante para mantenerte saludable.\n\n` +
-      `Agenda tu cita fácilmente desde nuestro portal o responde este mensaje.\n` +
-      `¡Te esperamos! 🏥`,
-  },
-  {
-    id: 'control_cronico',
-    label: '💊 Control crónico',
-    texto: (nombre, dias, consultorio) =>
-      `Hola ${nombre},\n\n` +
-      `Notamos que han pasado ${dias} días desde tu última consulta en ${consultorio}.\n\n` +
-      `Si tienes un padecimiento crónico como diabetes o hipertensión, es importante mantenerse al día con tus controles.\n\n` +
-      `Por favor agenda tu cita a la brevedad. Puedes hacerlo desde tu portal de paciente o llamándonos directamente.\n` +
-      `Cuídate mucho 💙`,
-  },
-  {
-    id: 'recordatorio_simple',
-    label: '📅 Recordatorio simple',
-    texto: (nombre, _dias, consultorio) =>
-      `Hola ${nombre} 🙂\n\n` +
-      `Te escribimos del ${consultorio} para recordarte que tienes pendiente agendar tu próxima consulta.\n\n` +
-      `Cuando gustes, contáctanos o agenda desde tu portal.\n¡Saludos!`,
-  },
-]
+// Vista previa del mensaje — debe coincidir EXACTO con el texto aprobado en Meta,
+// ya que las plantillas de WhatsApp no permiten variar el texto fijo, solo las variables.
+function vistaPreviaMensaje(nombre, dias, consultorio) {
+  return `Hola ${nombre} 👋. Han pasado ${dias} días desde tu última visita a ${consultorio}. ` +
+    `Te invitamos a agendar tu próxima consulta cuando gustes. ¡Te esperamos!`
+}
 
 // ── Colores por días sin cita ──────────────────────────────
 function badgeDias(dias) {
@@ -56,7 +46,6 @@ export default function PacientesSinCita({
   const [lista,         setLista]         = useState([])
   const [loading,       setLoading]       = useState(false)
   const [seleccionados, setSeleccionados] = useState(new Set())
-  const [plantilla,     setPlantilla]     = useState('te_extranamos')
   const [enviando,      setEnviando]      = useState(false)
   const [consultorio,   setConsultorio]   = useState('el consultorio')
   const [busqueda,      setBusqueda]      = useState('')
@@ -172,16 +161,13 @@ export default function PacientesSinCita({
     const destinos = listaFiltrada.filter(p => seleccionados.has(p.id))
     if (destinos.length === 0) { toast.error('Selecciona al menos un paciente'); return }
 
-    const plantillaObj = PLANTILLAS_WA.find(p => p.id === plantilla)
-    if (!plantillaObj) return
-
     setEnviando(true)
     let ok = 0, fail = 0
 
     for (const pac of destinos) {
       if (!pac.telefono) { fail++; continue }
-      const mensaje = plantillaObj.texto(pac.nombre, pac.diasSinCita, consultorio)
-      const res = await enviarWA(pac.telefono, mensaje)
+      const res = await enviarPlantillaWA(pac.telefono, 'reactivacion_paciente',
+        [pac.nombre, String(pac.diasSinCita), consultorio])
       if (res.ok) ok++
       else fail++
       await new Promise(r => setTimeout(r, 300)) // throttle
@@ -280,13 +266,6 @@ export default function PacientesSinCita({
             <span className="text-sm font-semibold text-teal-800">
               {seleccionados.size} paciente{seleccionados.size !== 1 ? 's' : ''} seleccionado{seleccionados.size !== 1 ? 's' : ''}
             </span>
-            <select value={plantilla} onChange={e => setPlantilla(e.target.value)}
-              className="flex-1 min-w-48 border border-teal-300 rounded-lg px-3 py-1.5 text-sm
-                         bg-white focus:outline-none focus:ring-2 focus:ring-teal-400">
-              {PLANTILLAS_WA.map(p => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-            </select>
             <button onClick={enviarWAMasivo} disabled={enviando}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg
                          hover:bg-green-700 disabled:opacity-50 flex items-center gap-2">
@@ -298,21 +277,19 @@ export default function PacientesSinCita({
             </button>
           </div>
 
-          {/* Preview del mensaje */}
-          {PLANTILLAS_WA.find(p => p.id === plantilla) && (
-            <div className="mt-3 bg-white rounded-lg p-3 border border-teal-200">
-              <p className="text-xs text-gray-400 mb-1">Vista previa del mensaje:</p>
-              <p className="text-xs text-gray-700 whitespace-pre-line font-mono leading-5">
-                {PLANTILLAS_WA.find(p => p.id === plantilla).texto(
-                  seleccionados.size === 1
-                    ? (listaFiltrada.find(p => seleccionados.has(p.id))?.nombre ?? 'Paciente')
-                    : '[Nombre del paciente]',
-                  listaFiltrada.find(p => seleccionados.has(p.id))?.diasSinCita ?? 30,
-                  consultorio
-                )}
-              </p>
-            </div>
-          )}
+          {/* Preview del mensaje — texto fijo, aprobado por Meta como plantilla */}
+          <div className="mt-3 bg-white rounded-lg p-3 border border-teal-200">
+            <p className="text-xs text-gray-400 mb-1">Vista previa del mensaje (plantilla aprobada):</p>
+            <p className="text-xs text-gray-700 whitespace-pre-line font-mono leading-5">
+              {vistaPreviaMensaje(
+                seleccionados.size === 1
+                  ? (listaFiltrada.find(p => seleccionados.has(p.id))?.nombre ?? 'Paciente')
+                  : '[Nombre del paciente]',
+                listaFiltrada.find(p => seleccionados.has(p.id))?.diasSinCita ?? 30,
+                consultorio
+              )}
+            </p>
+          </div>
         </div>
       )}
 
@@ -394,11 +371,10 @@ export default function PacientesSinCita({
                         {pac.telefono ? (
                           <button
                             onClick={async () => {
-                              const pl = PLANTILLAS_WA.find(p => p.id === plantilla) ?? PLANTILLAS_WA[0]
-                              const msg = pl.texto(pac.nombre, pac.diasSinCita, consultorio)
-                              const res = await enviarWA(pac.telefono, msg)
+                              const res = await enviarPlantillaWA(pac.telefono, 'reactivacion_paciente',
+                                [pac.nombre, String(pac.diasSinCita), consultorio])
                               if (res.ok) toast.success(`✓ WA enviado a ${pac.nombre}`)
-                              else toast.error('No se pudo enviar')
+                              else toast.error(res.error || 'No se pudo enviar')
                             }}
                             className="px-3 py-1.5 bg-green-50 text-green-700 border border-green-200
                                        rounded-lg text-xs hover:bg-green-100 transition-colors font-medium">

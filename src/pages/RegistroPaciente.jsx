@@ -41,18 +41,34 @@ const PASOS = ['INE', 'Tus datos', 'Cuenta', 'Listo']
 export default function RegistroPaciente() {
   const navigate       = useNavigate()
   const [params]       = useSearchParams()
-  const tenantParam    = params.get('t') // ?t=consultorio-piloto
   const fileRef        = useRef()
+
+  // Detectar tenant: primero ?t= explícito, luego subdominio (mismo criterio que Landing.jsx)
+  const tenantParam = (() => {
+    const qParam = params.get('t')
+    if (qParam) return qParam
+    const hostname = window.location.hostname
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return null
+    const parts = hostname.split('.')
+    if (parts.length < 3) return null
+    const sub = parts[0].toLowerCase()
+    const RESERVED = ['med', 'www', 'app', 'api', 'admin', 'staging', 'dev']
+    if (RESERVED.includes(sub)) return null
+    return '__slug__' + sub
+  })()
+  const esSubdominioDoctor = typeof tenantParam === 'string' && tenantParam.startsWith('__slug__')
 
   const [paso, setPaso]         = useState(0) // 0=INE, 1=datos, 2=cuenta, 3=listo
   const [escaneando, setEsc]    = useState(false)
   const [saving, setSaving]     = useState(false)
   const [modalPriv, setModalPriv] = useState(false)
   const [preview, setPreview]   = useState(null)
-  const [tenantId, setTenantId] = useState(tenantParam ?? null)
+  const [tenantId, setTenantId] = useState(esSubdominioDoctor ? null : tenantParam)
   const [tenantNombre, setTenantNombre] = useState('')
   const [tenants, setTenants]   = useState([])
-  const [tenantSeleccionado, setTenantSel] = useState(tenantParam ?? '')
+  const [tenantSeleccionado, setTenantSel] = useState(esSubdominioDoctor ? '' : (tenantParam ?? ''))
+  // true cuando el consultorio quedó fijado por el subdominio/URL — nunca se le pregunta al paciente
+  const [tenantBloqueado, setTenantBloqueado] = useState(false)
 
   // Datos del formulario
   const [form, setForm] = useState({
@@ -65,22 +81,51 @@ export default function RegistroPaciente() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  // Cargar lista de tenants (consultorios disponibles)
-  // Fix: useEffect (no useState) para cargar tenants — funciona en iOS Safari
+  // Cargar/resolver el consultorio: por subdominio (bloqueado), por ?t= id directo, o
+  // si no se detecta ninguno, mostrar el selector (caso Hospital con varios consultorios).
   useEffect(() => {
+    if (esSubdominioDoctor) {
+      const slug = tenantParam.replace('__slug__', '')
+      getDocs(collection(db, 'tenants')).then(snap => {
+        const match = snap.docs.find(d => {
+          const data = d.data()
+          const tenantSlug = data.slug ?? data.id ?? d.id
+          return tenantSlug === slug
+        })
+        if (match) {
+          setTenantId(match.id)
+          setTenantSel(match.id)
+          setTenantNombre(match.data().nombre)
+          setTenantBloqueado(true)
+        } else {
+          // Slug no reconocido — no bloqueamos, mostramos selector como respaldo
+          console.warn('[Registro] No se encontró consultorio para el subdominio:', slug)
+        }
+      }).catch(() => {})
+      return
+    }
+
+    if (tenantParam) {
+      // ?t=<tenantId> explícito — se respeta y se bloquea igual
+      setTenantId(tenantParam)
+      setTenantSel(tenantParam)
+      setTenantBloqueado(true)
+    }
+
     getDocs(query(collection(db, 'tenants'), where('activo', '!=', false))).then(snap => {
       const lista = snap.docs
         .map(d => ({ id: d.id, nombre: d.data().nombre }))
         .filter(t => t.nombre)
       setTenants(lista)
-      // Si hay un solo tenant, seleccionarlo automáticamente
-      if (lista.length === 1 && !tenantParam) {
-        setTenantSel(lista[0].id)
-        setTenantNombre(lista[0].nombre)
-      }
       if (tenantParam) {
         const t = lista.find(x => x.id === tenantParam)
         if (t) setTenantNombre(t.nombre)
+      } else if (lista.length === 1) {
+        // Un solo consultorio en todo el sistema: tampoco tiene sentido preguntar
+        setTenantSel(lista[0].id)
+        setTenantId(lista[0].id)
+        setTenantNombre(lista[0].nombre)
+        setTenantBloqueado(true)
       }
     }).catch(() => {})
   }, [])
@@ -306,8 +351,9 @@ export default function RegistroPaciente() {
                 Toma una foto de tu credencial de elector y llenaremos tus datos automáticamente.
               </p>
 
-              {/* Seleccionar consultorio si no viene por URL */}
-              {tenants.length > 0 && !tenantParam && (
+              {/* Seleccionar consultorio — SOLO si no se pudo determinar automáticamente
+                  (caso Hospital con varios consultorios, o slug no reconocido) */}
+              {!tenantBloqueado && tenants.length > 0 && (
                 <div className="mb-4">
                   <label className="block text-xs text-gray-500 mb-1">
                     ¿En qué consultorio quieres registrarte?
@@ -316,6 +362,7 @@ export default function RegistroPaciente() {
                     value={tenantSeleccionado}
                     onChange={e => {
                       setTenantSel(e.target.value)
+                      setTenantId(e.target.value)
                       const t = tenants.find(x => x.id === e.target.value)
                       if (t) setTenantNombre(t.nombre)
                     }}
@@ -332,6 +379,15 @@ export default function RegistroPaciente() {
                     {tenantSeleccionado
                       ? `✓ Consultorio seleccionado: ${tenantNombre}`
                       : 'Toca para seleccionar tu consultorio'}
+                  </p>
+                </div>
+              )}
+
+              {/* Confirmación silenciosa cuando el consultorio ya se detectó solo */}
+              {tenantBloqueado && tenantNombre && (
+                <div className="mb-4 bg-teal-50 border border-teal-200 rounded-xl px-3 py-2">
+                  <p className="text-xs text-teal-700">
+                    Te estás registrando en <strong>{tenantNombre}</strong>
                   </p>
                 </div>
               )}

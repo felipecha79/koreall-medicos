@@ -1006,7 +1006,17 @@ export default function Admin() {
     nombreDoctor: '', cedula: '', telefono: '', email: '',
     rfc: '', cp: '', regimen: '612',
     direccion: '', activo: true, suscripcionActiva: true,
+    redesSociales: { instagram: '', facebook: '', tiktok: '', youtube: '', linkedin: '' },
   })
+
+  // Catálogo de redes sociales soportadas — un doctor puede llenar solo las que use
+  const CATALOGO_REDES = [
+    { id: 'instagram', label: 'Instagram', icon: '📸', placeholder: 'https://instagram.com/tu_usuario' },
+    { id: 'facebook',  label: 'Facebook',  icon: '👍', placeholder: 'https://facebook.com/tu_pagina' },
+    { id: 'tiktok',    label: 'TikTok',    icon: '🎵', placeholder: 'https://tiktok.com/@tu_usuario' },
+    { id: 'youtube',   label: 'YouTube',   icon: '▶️', placeholder: 'https://youtube.com/@tu_canal' },
+    { id: 'linkedin',  label: 'LinkedIn',  icon: '💼', placeholder: 'https://linkedin.com/in/tu_perfil' },
+  ]
 
   useEffect(() => {
     const unsubOrgs = onSnapshot(
@@ -1065,6 +1075,7 @@ export default function Admin() {
       await addDoc(collection(db, 'tenants'), {
         ...formTenant,
         tenantId,
+        slug: tenantId, // ← usado por la detección de subdominio (Landing.jsx, RegistroPaciente.jsx)
         activo: true, suscripcionActiva: true,
         creadoEn: Timestamp.now(),
         actualizadoEn: Timestamp.now(),
@@ -1072,7 +1083,8 @@ export default function Admin() {
       toast.success(`Consultorio creado: ${tenantId}`)
       setModalTenant(false)
       setFormTenant({ nombre:'', orgId:'', especialidad:'', nombreDoctor:'',
-        cedula:'', telefono:'', email:'', rfc:'', cp:'', regimen:'612', direccion:'', activo:true, suscripcionActiva:true })
+        cedula:'', telefono:'', email:'', rfc:'', cp:'', regimen:'612', direccion:'', activo:true, suscripcionActiva:true,
+        redesSociales: { instagram:'', facebook:'', tiktok:'', youtube:'', linkedin:'' } })
     } catch(e) { toast.error('Error al crear consultorio') }
     finally { setSaving(false) }
   }
@@ -2051,6 +2063,27 @@ export default function Admin() {
                                focus:outline-none focus:ring-2 focus:ring-teal-400" />
                 </div>
               ))}
+
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-600 mb-2 mt-2">
+                  Redes sociales (opcional — se muestran en su página pública)
+                </p>
+                <div className="space-y-2">
+                  {CATALOGO_REDES.map(red => (
+                    <div key={red.id} className="flex items-center gap-2">
+                      <span className="text-base w-6 text-center flex-shrink-0">{red.icon}</span>
+                      <input type="url" value={formTenant.redesSociales?.[red.id] ?? ''}
+                        onChange={e => setFormTenant(fo => ({
+                          ...fo,
+                          redesSociales: { ...fo.redesSociales, [red.id]: e.target.value }
+                        }))}
+                        placeholder={red.placeholder}
+                        className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs
+                                   focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={crearTenant} disabled={saving}

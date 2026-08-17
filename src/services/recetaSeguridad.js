@@ -63,7 +63,7 @@ export function generarJWTReceta(recetaId, pacienteId, sha256Hash, expirationHou
  * URL: /api/validar-receta/{recetaId}?token={jwtToken}
  */
 export async function generarQRReceta(recetaId, jwtToken, baseUrl = window.location.origin) {
-  const validationUrl = `${baseUrl}/api/validar-receta/${recetaId}?token=${jwtToken}`
+  const validationUrl = `${baseUrl}/validar-receta/${recetaId}?token=${jwtToken}`
 
   try {
     const qrDataUrl = await QRCode.toDataURL(validationUrl, {

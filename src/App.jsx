@@ -365,7 +365,7 @@ export default function App() {
       <Route path="/registro" element={<RegistroPaciente />} />
       <Route path="/kiosco"   element={<EncuestaPublica />} />
       <Route path="/kiosko"   element={<EncuestaPublica />} />
-      <Route path="/api/validar-receta/:recetaId" element={<ValidarReceta />} />
+      <Route path="/validar-receta/:recetaId" element={<ValidarReceta />} />
       {ROUTES.map(([path, element]) => (
         <Route key={path} path={path} element={
           <PrivateRoute><AppLayout>{element}</AppLayout></PrivateRoute>

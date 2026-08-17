@@ -620,6 +620,7 @@ const DEFAULT_CONFIG = {
   descripcionDoctor: 'Médico general con más de 15 años de experiencia clínica en Tampico. Su enfoque integral combina medicina basada en evidencia con atención personalizada y cálida.',
   descripcionDoctor2: 'Pionero en la adopción de tecnología médica en la región, su consultorio cuenta con expediente electrónico, citas en línea y comunicación directa con los pacientes.',
   cedulaProfesional: '1234567',
+  redesSociales:     {},
   direccion:        'Av. Hidalgo 123, Col. Centro, Tampico, Tamps.',
   telefonoContacto: '833 123 4567',
   emailContacto:    'contacto@drchavetampico.com',
@@ -696,6 +697,9 @@ export default function Landing() {
         telefonoContacto:  t.telefono        ?? sw.telefonoContacto  ?? prev.telefonoContacto,
         emailContacto:     t.email           ?? sw.emailContacto     ?? prev.emailContacto,
         cedulaProfesional: t.cedula          ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
+        cedulaEspecialidad: t.cedulaEspecialidad ?? sw.cedulaEspecialidad ?? prev.cedulaEspecialidad,
+        universidadEgreso: t.universidadEgreso ?? sw.universidadEgreso ?? prev.universidadEgreso,
+        redesSociales:     t.redesSociales     ?? sw.redesSociales     ?? prev.redesSociales,
         direccion:         t.direccion       ?? sw.direccion         ?? prev.direccion,
         nombreConsultorio: t.nombre          ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
         horarios:          sw.horarios       ?? t.horarios           ?? prev.horarios,
@@ -890,6 +894,12 @@ export default function Landing() {
             <h3>{cfg.nombreDoctor}</h3>
             <p className="sub">{cfg.especialidad?.split('·')[0]?.trim()} · Cédula {cfg.cedulaProfesional}</p>
             <div className="cr"><div className="cr-ico">🎓</div><span>Cédula Prof. {cfg.cedulaProfesional} — SSA</span></div>
+            {cfg.cedulaEspecialidad && (
+              <div className="cr"><div className="cr-ico">📜</div><span>Cédula Especialidad {cfg.cedulaEspecialidad} — SSA</span></div>
+            )}
+            {cfg.universidadEgreso && (
+              <div className="cr"><div className="cr-ico">🏛️</div><span>{cfg.universidadEgreso}</span></div>
+            )}
             <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con Novaryk.Med</span></div>
             <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>
             <div className="stats">
@@ -1080,6 +1090,17 @@ export default function Landing() {
             <div className="fb">
               <div className="logo">Consultorio <span>{cfg.nombreConsultorio?.split(' ').pop()}</span></div>
               <p>Atención médica personalizada con tecnología de vanguardia en Tampico, Tamaulipas.</p>
+              {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
+                <div style={{display:'flex',gap:10,marginTop:14}}>
+                  {[
+                    ['instagram','📸'],['facebook','👍'],['tiktok','🎵'],['youtube','▶️'],['linkedin','💼'],
+                  ].map(([id, icon]) => cfg.redesSociales[id] ? (
+                    <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
+                      style={{fontSize:18,opacity:0.85,textDecoration:'none'}}
+                      title={id}>{icon}</a>
+                  ) : null)}
+                </div>
+              )}
             </div>
             <div className="fc">
               <h4>Servicios</h4>

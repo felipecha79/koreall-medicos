@@ -587,6 +587,8 @@ export default function SitioWeb() {
                 ['especialidad',      'Especialidad',             'text'],
                 ['sloganHero',        'Frase principal del hero', 'text'],
                 ['cedulaProfesional', 'Cédula profesional',       'text'],
+                ['cedulaEspecialidad','Cédula de especialidad',   'text'],
+                ['universidadEgreso', 'Institución educativa de egreso', 'text'],
                 ['telefonoContacto',  'Teléfono de contacto',     'tel'],
                 ['emailContacto',     'Email de contacto',        'email'],
                 ['direccion',         'Dirección completa',       'text'],
@@ -607,6 +609,14 @@ export default function SitioWeb() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
               </div>
+            </div>
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                ℹ️ El <strong>Artículo 19 del RLGSMP</strong> exige que toda publicidad médica
+                (incluida tu página web) muestre nombre, cédula profesional e institución de egreso.
+                Estos tres datos ya se muestran automáticamente en tu página pública en cuanto
+                los completes aquí.
+              </p>
             </div>
           </div>
         </div>
@@ -707,7 +717,7 @@ export default function SitioWeb() {
       )}
 
       {/* Botón guardar sticky en móvil */}
-      <div className="sticky bottom-4 mt-6">
+      <div className="sticky bottom-20 md:bottom-4 mt-6 z-50">
         <button onClick={guardar} disabled={saving}
           className="w-full py-3 bg-teal-600 text-white text-sm font-medium rounded-xl
                      hover:bg-teal-700 disabled:opacity-50 transition-colors shadow-lg">
