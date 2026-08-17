@@ -10,5 +10,16 @@ service firebase.storage {
         && request.auth.token.tenantId == tenantId
         && request.auth.token.role in ['doctor', 'admin'];
     }
+    // Imágenes del sitio web público (logo, fotos de servicios, etc.)
+    // Lectura pública porque se muestran en la landing page sin login;
+    // escritura solo para el doctor/admin dueño de ese consultorio.
+    match /tenants/{tenantId}/imagenes/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.tenantId == tenantId
+        && request.auth.token.role in ['doctor', 'admin']
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
   }
 }

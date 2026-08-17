@@ -41,7 +41,26 @@ const buildCSS = (c) => `
     padding:9px 22px;border-radius:100px;font-weight:500!important;
     transition:background .2s,transform .2s!important }
   .ld .ncta:hover { background:var(--ld-teal-lt)!important;transform:translateY(-1px) }
-  @media(max-width:800px){ .ld .lnav-links { display:none } }
+  .ld .lnav-toggle { display:none;flex-direction:column;gap:5px;background:none;border:none;
+    cursor:pointer;padding:8px;z-index:60 }
+  .ld .lnav-toggle span { display:block;width:24px;height:2px;background:#fff;border-radius:2px;
+    transition:transform .2s,opacity .2s }
+  .ld .lnav-toggle.open span:nth-child(1) { transform:translateY(7px) rotate(45deg) }
+  .ld .lnav-toggle.open span:nth-child(2) { opacity:0 }
+  .ld .lnav-toggle.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg) }
+  .ld .lnav-mobile { display:none;position:fixed;top:66px;left:0;right:0;bottom:0;
+    background:#0F1C24;z-index:55;padding:24px;flex-direction:column;gap:2px;
+    overflow-y:auto;animation:lnavFade .18s ease }
+  .ld .lnav-mobile.open { display:flex }
+  .ld .lnav-mobile a { font-size:16px;color:rgba(255,255,255,.85);padding:16px 4px;
+    border-bottom:1px solid rgba(255,255,255,.08) }
+  .ld .lnav-mobile a.ncta { text-align:center;border-radius:12px;border-bottom:none;
+    margin-top:12px;background:var(--ld-teal)!important;color:#fff!important }
+  @keyframes lnavFade { from{opacity:0} to{opacity:1} }
+  @media(max-width:800px){
+    .ld .lnav-links { display:none }
+    .ld .lnav-toggle { display:flex }
+  }
 
   /* HERO */
   .ld .hero { min-height:100vh;background:var(--ld-navy);display:flex;align-items:center;
@@ -672,6 +691,7 @@ export default function Landing() {
   const [cfg, setCfg]           = useState(DEFAULT_CONFIG)
   const [cssReady, setCssReady] = useState(false)
   const [modalOpen, setModal]   = useState(false)
+  const [menuMovil, setMenuMovil] = useState(false)
   const [role, setRole]         = useState('doctor')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -699,6 +719,7 @@ export default function Landing() {
         cedulaProfesional: t.cedula          ?? sw.cedulaProfesional ?? prev.cedulaProfesional,
         cedulaEspecialidad: t.cedulaEspecialidad ?? sw.cedulaEspecialidad ?? prev.cedulaEspecialidad,
         universidadEgreso: t.universidadEgreso ?? sw.universidadEgreso ?? prev.universidadEgreso,
+        cofeprisAviso:     t.cofeprisAviso     ?? sw.cofeprisAviso     ?? prev.cofeprisAviso,
         redesSociales:     t.redesSociales     ?? sw.redesSociales     ?? prev.redesSociales,
         direccion:         t.direccion       ?? sw.direccion         ?? prev.direccion,
         nombreConsultorio: t.nombre          ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
@@ -840,6 +861,22 @@ export default function Landing() {
             </a></li>
             <li><a href="#cita" className="ncta">Agendar cita</a></li>
           </ul>
+          <button
+            className={`lnav-toggle ${menuMovil ? 'open' : ''}`}
+            onClick={() => setMenuMovil(m => !m)}
+            aria-label="Abrir menú">
+            <span /><span /><span />
+          </button>
+        </div>
+        <div className={`lnav-mobile ${menuMovil ? 'open' : ''}`}>
+          <a href="#servicios" onClick={() => setMenuMovil(false)}>Servicios</a>
+          <a href="#doctor" onClick={() => setMenuMovil(false)}>El doctor</a>
+          <a href="#tecnologia" onClick={() => setMenuMovil(false)}>Tecnología</a>
+          <a href="#ubicacion" onClick={() => setMenuMovil(false)}>Contacto</a>
+          <a style={{cursor:'pointer'}} onClick={() => { setMenuMovil(false); setModal(true) }}>
+            Iniciar sesión
+          </a>
+          <a href="#cita" className="ncta" onClick={() => setMenuMovil(false)}>Agendar cita</a>
         </div>
       </nav>
 
@@ -900,6 +937,9 @@ export default function Landing() {
             {cfg.universidadEgreso && (
               <div className="cr"><div className="cr-ico">🏛️</div><span>{cfg.universidadEgreso}</span></div>
             )}
+            {cfg.cofeprisAviso && (
+              <div className="cr"><div className="cr-ico">✅</div><span>Aviso de Publicidad COFEPRIS {cfg.cofeprisAviso}</span></div>
+            )}
             <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con Novaryk.Med</span></div>
             <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>
             <div className="stats">
@@ -922,7 +962,11 @@ export default function Landing() {
           <div className="grid3">
             {svcs.map((svc, i) => (
               <div key={i} className="svc rev" style={{transitionDelay:`${i*.05}s`}}>
-                <span className="svc-ico">{svc.icono}</span>
+                {svc.imagenUrl
+                  ? <img src={svc.imagenUrl} alt={svc.titulo}
+                      style={{width:56,height:56,objectFit:'cover',borderRadius:14,marginBottom:16}} />
+                  : <span className="svc-ico">{svc.icono}</span>
+                }
                 <h3>{svc.titulo}</h3>
                 <p>{svc.descripcion}</p>
               </div>

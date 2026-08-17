@@ -1,8 +1,64 @@
 import { useState, useEffect } from 'react'
 import { doc, updateDoc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase'
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
+import { db, storage } from '../firebase'
 import { useTenant } from '../hooks/useTenant'
 import toast from 'react-hot-toast'
+
+// ── Subidor de imágenes al repositorio del consultorio (Firebase Storage) ──
+// Reemplaza los emojis por fotos/ilustraciones propias del doctor — se ve
+// más profesional en la página pública.
+function SubidorImagen({ tenantId, valorActual, onSubido, alto = 64 }) {
+  const [subiendo, setSubiendo] = useState(false)
+
+  const subir = async (archivo) => {
+    if (!archivo) return
+    if (!archivo.type.startsWith('image/')) { toast.error('Selecciona una imagen'); return }
+    if (archivo.size > 5 * 1024 * 1024) { toast.error('Máximo 5 MB'); return }
+    setSubiendo(true)
+    try {
+      const nombreLimpio = archivo.name.replace(/[^a-zA-Z0-9.]/g, '_')
+      const path = `tenants/${tenantId}/imagenes/${Date.now()}-${nombreLimpio}`
+      const storageRef = ref(storage, path)
+      const task = uploadBytesResumable(storageRef, archivo)
+      await new Promise((resolve, reject) => {
+        task.on('state_changed', null, reject, resolve)
+      })
+      const url = await getDownloadURL(storageRef)
+      onSubido(url)
+      toast.success('Imagen subida ✓')
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al subir la imagen')
+    } finally { setSubiendo(false) }
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      {valorActual ? (
+        <img src={valorActual} alt="" style={{ height: alto, width: alto, objectFit: 'cover' }}
+          className="rounded-lg border border-gray-200" />
+      ) : (
+        <div style={{ height: alto, width: alto }}
+          className="rounded-lg border-2 border-dashed border-gray-200 flex items-center
+                     justify-center text-gray-300 text-xs">Sin foto</div>
+      )}
+      <label className="cursor-pointer">
+        <span className="text-xs px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg border
+                          border-teal-200 hover:bg-teal-100 inline-block">
+          {subiendo ? 'Subiendo...' : valorActual ? 'Cambiar' : 'Subir imagen'}
+        </span>
+        <input type="file" accept="image/*" className="hidden" disabled={subiendo}
+          onChange={e => subir(e.target.files?.[0])} />
+      </label>
+      {valorActual && (
+        <button onClick={() => onSubido('')} className="text-xs text-red-400 hover:text-red-600">
+          Quitar
+        </button>
+      )}
+    </div>
+  )
+}
 
 // ── Themes prediseñados Novaryk.Med ──────────────────────────
 const THEMES = [
@@ -580,6 +636,19 @@ export default function SitioWeb() {
       {tab === 'info' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-700 mb-4">Logo del consultorio</p>
+            <SubidorImagen
+              tenantId={tenantId}
+              valorActual={config.logoUrl}
+              onSubido={url => setConfig(c => ({ ...c, logoUrl: url }))}
+              alto={72}
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              Se muestra en el menú de tu página pública. Recomendado: fondo transparente, PNG.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-sm font-medium text-gray-700 mb-4">Datos del consultorio</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
@@ -589,6 +658,7 @@ export default function SitioWeb() {
                 ['cedulaProfesional', 'Cédula profesional',       'text'],
                 ['cedulaEspecialidad','Cédula de especialidad',   'text'],
                 ['universidadEgreso', 'Institución educativa de egreso', 'text'],
+                ['cofeprisAviso',     'No. de autorización COFEPRIS (Aviso de Publicidad)', 'text'],
                 ['telefonoContacto',  'Teléfono de contacto',     'tel'],
                 ['emailContacto',     'Email de contacto',        'email'],
                 ['direccion',         'Dirección completa',       'text'],
@@ -614,8 +684,9 @@ export default function SitioWeb() {
               <p className="text-xs text-blue-700">
                 ℹ️ El <strong>Artículo 19 del RLGSMP</strong> exige que toda publicidad médica
                 (incluida tu página web) muestre nombre, cédula profesional e institución de egreso.
-                Estos tres datos ya se muestran automáticamente en tu página pública en cuanto
-                los completes aquí.
+                Además, si ya tramitaste tu <strong>Aviso de Publicidad ante COFEPRIS</strong>
+                (trámite gratuito en DIGIPRiS), agrega aquí su número de autorización — se muestra
+                automáticamente en tu página pública en cuanto los completes aquí.
               </p>
             </div>
           </div>
@@ -668,7 +739,7 @@ export default function SitioWeb() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Ícono (emoji)</label>
+                  <label className="block text-xs text-gray-500 mb-1">Ícono (emoji — respaldo si no subes foto)</label>
                   <input type="text" value={svc.icono}
                     onChange={e => setConfig(c => {
                       const svcs = [...c.servicios]
@@ -700,6 +771,21 @@ export default function SitioWeb() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-teal-400" />
                 </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  Foto propia (opcional — reemplaza el emoji, se ve más profesional)
+                </label>
+                <SubidorImagen
+                  tenantId={tenantId}
+                  valorActual={svc.imagenUrl}
+                  onSubido={url => setConfig(c => {
+                    const svcs = [...c.servicios]
+                    svcs[i] = { ...svcs[i], imagenUrl: url }
+                    return { ...c, servicios: svcs }
+                  })}
+                  alto={56}
+                />
               </div>
             </div>
           ))}

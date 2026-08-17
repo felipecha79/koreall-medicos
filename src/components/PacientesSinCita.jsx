@@ -166,7 +166,7 @@ export default function PacientesSinCita({
 
     for (const pac of destinos) {
       if (!pac.telefono) { fail++; continue }
-      const res = await enviarPlantillaWA(pac.telefono, 'reactivacion_paciente',
+      const res = await enviarPlantillaWA(pac.telefono, 'recordatorio_te_extranamos',
         [pac.nombre, String(pac.diasSinCita), consultorio])
       if (res.ok) ok++
       else fail++
@@ -371,7 +371,7 @@ export default function PacientesSinCita({
                         {pac.telefono ? (
                           <button
                             onClick={async () => {
-                              const res = await enviarPlantillaWA(pac.telefono, 'reactivacion_paciente',
+                              const res = await enviarPlantillaWA(pac.telefono, 'recordatorio_te_extranamos',
                                 [pac.nombre, String(pac.diasSinCita), consultorio])
                               if (res.ok) toast.success(`✓ WA enviado a ${pac.nombre}`)
                               else toast.error(res.error || 'No se pudo enviar')

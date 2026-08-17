@@ -665,54 +665,73 @@ function TarjetaRecetaCertificada({ receta, tenant }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-green-200 p-4">
-      <div className="flex items-start justify-between mb-3">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      {/* Encabezado tipo membrete */}
+      <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex items-start justify-between">
         <div>
-          <p className="font-medium text-gray-800 text-sm">
-            {tenant?.nombreDoctor ? `Dr. ${tenant.nombreDoctor}` : 'Médico'}
+          <p className="font-bold text-gray-800 text-sm">
+            {tenant?.nombreDoctor ? `Dr. ${tenant.nombreDoctor}` : (tenant?.nombre ?? 'Médico')}
           </p>
-          <p className="text-xs text-gray-400">{fmtFecha(receta.fecha)}</p>
+          <p className="text-xs text-gray-400">{tenant?.nombre} — {fmtFecha(receta.fecha)}</p>
+          {receta.numero && <p className="text-xs text-gray-400 font-mono mt-0.5">No. {receta.numero}</p>}
         </div>
-        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-medium">
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-medium flex-shrink-0">
           ✓ Certificada
         </span>
       </div>
 
-      {/* Diagnóstico */}
-      {receta.diagnostico && (
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 font-medium mb-1">Diagnóstico</p>
-          <p className="text-gray-800">{receta.diagnostico}</p>
-        </div>
-      )}
+      <div className="px-4 py-3">
+        {/* Diagnóstico */}
+        {receta.diagnostico && (
+          <p className="text-sm text-gray-800 mb-3">
+            <span className="text-gray-500">Dx: </span>{receta.diagnostico}
+          </p>
+        )}
 
-      {/* Medicamentos */}
-      {receta.medicamentos && receta.medicamentos.length > 0 && (
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 font-medium mb-1.5">Medicamentos</p>
-          <div className="space-y-1">
+        {/* Medicamentos — formato de receta (numerados, con vía/duración/cantidad) */}
+        {receta.medicamentos && receta.medicamentos.length > 0 && (
+          <div className="space-y-2.5">
             {receta.medicamentos.map((med, idx) => (
-              <div key={idx} className="text-sm text-gray-700">
-                <strong>{med.medicamento}</strong> — {med.dosis}, {med.frecuencia}
+              <div key={idx} className="text-sm">
+                <p className="text-gray-800">
+                  <span className="text-gray-400 font-mono text-xs mr-1">{idx + 1}.</span>
+                  <strong>{med.medicamento}</strong>
+                </p>
+                <p className="text-xs text-gray-500 ml-4">
+                  {[med.dosis, med.via && `vía ${med.via}`, med.frecuencia,
+                    med.duracion && `por ${med.duracion}`, med.cantidad && `cant. ${med.cantidad}`]
+                    .filter(Boolean).join(' · ')}
+                </p>
+                {med.indicaciones && (
+                  <p className="text-xs text-gray-400 italic ml-4">{med.indicaciones}</p>
+                )}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* QR real de validación */}
+        {receta.indicacionesGenerales && (
+          <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">
+            <span className="font-medium">Indicaciones: </span>{receta.indicacionesGenerales}
+          </p>
+        )}
+      </div>
+
+      {/* QR real de validación — pie tipo receta impresa */}
       {receta.certificacion?.qrDataUrl && (
-        <div className="mt-3 pt-3 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400 mb-2">Muestra este código en la farmacia:</p>
+        <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
           <img src={receta.certificacion.qrDataUrl} alt="QR de validación"
-            className="mx-auto" style={{ width: 100, height: 100 }} />
+            style={{ width: 56, height: 56 }} className="flex-shrink-0" />
+          <p className="text-xs text-gray-400">
+            Válida ante farmacias — NOM-151. Escanea para verificar.
+          </p>
         </div>
       )}
 
       <button onClick={() => imprimirRecetaPortal(receta, tenant)}
-        className="w-full mt-3 py-2 bg-teal-50 text-teal-700 text-xs font-medium rounded-xl
-                   hover:bg-teal-100 border border-teal-200">
-        📄 Ver / Descargar receta
+        className="w-full py-2.5 bg-teal-50 text-teal-700 text-xs font-medium
+                   hover:bg-teal-100 border-t border-teal-200">
+        📄 Ver / Descargar receta completa
       </button>
     </div>
   )
@@ -1198,42 +1217,32 @@ export default function PortalPaciente() {
 
         {/* ✅ NUEVO: Mis consultas completadas ─────────── */}
         {tab === 'Mis consultas' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {consultas.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">📋</p>
-                <p className="text-sm">No hay consultas registradas</p>
-              </div>
-            ) : consultas.map(c => (
-              <TarjetaConsulta key={c.id} consulta={c} />
-            ))}
-          </div>
+          <LineaTiempo
+            items={consultas}
+            getFecha={c => c.fecha}
+            vacioIcono="📋" vacioTexto="No hay consultas registradas"
+            render={c => <TarjetaConsulta consulta={c} />}
+          />
         )}
 
         {/* ✅ NUEVO: Mis recetas certificadas ────────── */}
         {tab === 'Mis recetas' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {recetas.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">💊</p>
-                <p className="text-sm">No hay recetas digitalmente certificadas</p>
-              </div>
-            ) : recetas.map(r => (
-              <TarjetaRecetaCertificada key={r.id} receta={r} tenant={tenant} />
-            ))}
-          </div>
+          <LineaTiempo
+            items={recetas}
+            getFecha={r => r.fecha}
+            vacioIcono="💊" vacioTexto="No hay recetas digitalmente certificadas"
+            render={r => <TarjetaRecetaCertificada receta={r} tenant={tenant} />}
+          />
         )}
 
         {/* ── Mis documentos ────────────────────────────── */}
         {tab === 'Mis documentos' && (
-          <div className="space-y-2">
-            {docs.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">📁</p>
-                <p className="text-sm">Sin documentos disponibles</p>
-              </div>
-            ) : docs.map(d => (
-              <button key={d.id} onClick={() => setDocViewer(d)}
+          <LineaTiempo
+            items={docs}
+            getFecha={d => d.fecha}
+            vacioIcono="📁" vacioTexto="Sin documentos disponibles"
+            render={d => (
+              <button onClick={() => setDocViewer(d)}
                 className="w-full bg-white rounded-xl border border-gray-200 p-3 text-left
                            hover:border-teal-300 transition-colors">
                 <div className="flex items-center gap-3">
@@ -1247,8 +1256,8 @@ export default function PortalPaciente() {
                   <span className="text-teal-500 text-xs flex-shrink-0">Ver →</span>
                 </div>
               </button>
-            ))}
-          </div>
+            )}
+          />
         )}
 
         {/* ── Pagos ─────────────────────────────────────── */}
@@ -1322,14 +1331,12 @@ export default function PortalPaciente() {
 
         {/* ── Mis facturas ──────────────────────────────── */}
         {tab === 'Mis facturas' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {facturas.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-3xl mb-2">🧾</p>
-                <p className="text-sm">Sin facturas emitidas</p>
-              </div>
-            ) : facturas.map(f => (
-              <div key={f.id} className="bg-white rounded-xl border border-gray-200 p-4">
+          <LineaTiempo
+            items={facturas}
+            getFecha={f => f.fecha}
+            vacioIcono="🧾" vacioTexto="Sin facturas emitidas"
+            render={f => (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-mono text-xs text-gray-400">{f.serie}{f.folio}</p>
@@ -1359,8 +1366,8 @@ export default function PortalPaciente() {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
 
         {/* ── Solicitar cita ────────────────────────────── */}

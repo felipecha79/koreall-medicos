@@ -1061,6 +1061,42 @@ export default function Admin() {
     finally { setSaving(false) }
   }
 
+  const [modalEditTenant, setModalEditTenant] = useState(null) // tenant siendo editado, o null
+  const [formEditTenant, setFormEditTenant] = useState({})
+
+  const abrirEditarTenant = (t) => {
+    setFormEditTenant({
+      nombre: t.nombre ?? '', especialidad: t.especialidad ?? '',
+      nombreDoctor: t.nombreDoctor ?? '', cedula: t.cedula ?? '',
+      cedulaEspecialidad: t.cedulaEspecialidad ?? '', universidadEgreso: t.universidadEgreso ?? '',
+      cofeprisAviso: t.cofeprisAviso ?? '',
+      telefono: t.telefono ?? '', email: t.email ?? '', direccion: t.direccion ?? '',
+      redesSociales: {
+        instagram: t.redesSociales?.instagram ?? '',
+        facebook:  t.redesSociales?.facebook  ?? '',
+        tiktok:    t.redesSociales?.tiktok    ?? '',
+        youtube:   t.redesSociales?.youtube   ?? '',
+        linkedin:  t.redesSociales?.linkedin  ?? '',
+      },
+    })
+    setModalEditTenant(t)
+  }
+
+  const guardarEdicionTenant = async () => {
+    if (!modalEditTenant) return
+    setSaving(true)
+    try {
+      await updateDoc(doc(db, 'tenants', String(modalEditTenant._docId ?? modalEditTenant.id)), {
+        ...formEditTenant,
+        actualizadoEn: Timestamp.now(),
+      })
+      toast.success(`Consultorio actualizado: ${formEditTenant.nombre}`)
+      setModalEditTenant(null)
+    } catch(e) {
+      toast.error('Error al actualizar consultorio')
+    } finally { setSaving(false) }
+  }
+
   const crearTenant = async () => {
     if (!formTenant.nombre) { toast.error('El nombre es obligatorio'); return }
     if (!formTenant.orgId)  { toast.error('Selecciona una organización'); return }
@@ -1469,6 +1505,13 @@ export default function Admin() {
                         ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
                         : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'}`}>
                     {activo ? '🔒 Suspender' : '✅ Reactivar'}
+                  </button>
+
+                  <button
+                    onClick={() => abrirEditarTenant(t)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border
+                               bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100">
+                    ✏️ Editar
                   </button>
                 </div>
 
@@ -2092,6 +2135,74 @@ export default function Admin() {
                 {saving ? 'Creando...' : 'Crear consultorio'}
               </button>
               <button onClick={() => setModalTenant(false)}
+                className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Editar consultorio existente */}
+      {modalEditTenant && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setModalEditTenant(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-1 text-gray-800">Editar consultorio</h3>
+            <p className="text-xs text-gray-400 font-mono mb-5">
+              {modalEditTenant._docId ?? modalEditTenant.id}
+            </p>
+            <div className="space-y-3">
+              {[
+                ['nombre','Nombre del consultorio *'],
+                ['especialidad','Especialidad'],
+                ['nombreDoctor','Nombre del doctor'],
+                ['cedula','Cédula profesional'],
+                ['cedulaEspecialidad','Cédula de especialidad'],
+                ['universidadEgreso','Institución educativa de egreso'],
+                ['cofeprisAviso','No. de autorización COFEPRIS'],
+                ['telefono','Teléfono'],
+                ['email','Email del doctor'],
+                ['direccion','Dirección completa'],
+              ].map(([f, l]) => (
+                <div key={f}>
+                  <label className="block text-xs text-gray-500 mb-1">{l}</label>
+                  <input type="text" value={formEditTenant[f] ?? ''}
+                    onChange={e => setFormEditTenant(fo => ({ ...fo, [f]: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                </div>
+              ))}
+
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-600 mb-2 mt-2">
+                  Redes sociales (se muestran en su página pública)
+                </p>
+                <div className="space-y-2">
+                  {CATALOGO_REDES.map(red => (
+                    <div key={red.id} className="flex items-center gap-2">
+                      <span className="text-base w-6 text-center flex-shrink-0">{red.icon}</span>
+                      <input type="url" value={formEditTenant.redesSociales?.[red.id] ?? ''}
+                        onChange={e => setFormEditTenant(fo => ({
+                          ...fo,
+                          redesSociales: { ...fo.redesSociales, [red.id]: e.target.value }
+                        }))}
+                        placeholder={red.placeholder}
+                        className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs
+                                   focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={guardarEdicionTenant} disabled={saving}
+                className="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-medium
+                           hover:bg-teal-700 disabled:opacity-50">
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+              <button onClick={() => setModalEditTenant(null)}
                 className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm">
                 Cancelar
               </button>
