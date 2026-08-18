@@ -4,7 +4,8 @@ import {
   collection, onSnapshot, addDoc, updateDoc, setDoc,
   doc, getDoc, Timestamp, query, where, getDocs
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, storage } from '../firebase'
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'
 import { getAuth, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
 import { useTenant } from '../hooks/useTenant'
@@ -979,6 +980,88 @@ const ToggleModulo = ({ label, icon, campo, valor, tenantId: tid, desc }) => {
   )
 }
 
+// ── Galería de imágenes para el carrusel del hero ───────────────────────
+// El SuperAdmin sube las fotos por consultorio — se guardan en Storage bajo
+// tenants/{tenantId}/imagenes/ y la lista de URLs queda en heroCarrusel.
+function GaleriaCarrusel({ tenantId, imagenes = [], onChange }) {
+  const [subiendo, setSubiendo] = useState(false)
+
+  const subir = async (archivos) => {
+    if (!archivos?.length) return
+    setSubiendo(true)
+    try {
+      const nuevas = []
+      for (const archivo of archivos) {
+        if (!archivo.type.startsWith('image/')) continue
+        if (archivo.size > 8 * 1024 * 1024) { toast.error(`${archivo.name}: máximo 8 MB`); continue }
+        const nombreLimpio = archivo.name.replace(/[^a-zA-Z0-9.]/g, '_')
+        const path = `tenants/${tenantId}/imagenes/hero-${Date.now()}-${nombreLimpio}`
+        const storageRef = ref(storage, path)
+        await new Promise((resolve, reject) => {
+          uploadBytesResumable(storageRef, archivo).on('state_changed', null, reject, resolve)
+        })
+        nuevas.push(await getDownloadURL(storageRef))
+      }
+      onChange([...imagenes, ...nuevas])
+      if (nuevas.length) toast.success(`${nuevas.length} imagen(es) agregadas`)
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al subir imágenes')
+    } finally { setSubiendo(false) }
+  }
+
+  const quitar = (idx) => {
+    onChange(imagenes.filter((_, i) => i !== idx))
+  }
+
+  const mover = (idx, dir) => {
+    const nueva = [...imagenes]
+    const destino = idx + dir
+    if (destino < 0 || destino >= nueva.length) return
+    ;[nueva[idx], nueva[destino]] = [nueva[destino], nueva[idx]]
+    onChange(nueva)
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+        {imagenes.map((url, i) => (
+          <div key={i} className="relative group">
+            <img src={url} alt="" className="w-full aspect-[4/3] object-cover rounded-lg border border-gray-200" />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100
+                             transition-opacity rounded-lg flex flex-col items-center justify-center gap-1">
+              <div className="flex gap-1">
+                <button onClick={() => mover(i, -1)} disabled={i === 0}
+                  className="text-white text-xs bg-white/20 rounded px-1.5 py-0.5 disabled:opacity-30">←</button>
+                <button onClick={() => mover(i, 1)} disabled={i === imagenes.length - 1}
+                  className="text-white text-xs bg-white/20 rounded px-1.5 py-0.5 disabled:opacity-30">→</button>
+              </div>
+              <button onClick={() => quitar(i)}
+                className="text-white text-xs bg-red-500/80 rounded px-2 py-0.5">Quitar</button>
+            </div>
+            {i === 0 && (
+              <span className="absolute top-1 left-1 text-[10px] bg-teal-600 text-white px-1.5 py-0.5 rounded">
+                Portada
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <label className="cursor-pointer inline-block">
+        <span className="text-xs px-3 py-2 bg-teal-50 text-teal-700 rounded-lg border
+                          border-teal-200 hover:bg-teal-100 inline-block">
+          {subiendo ? 'Subiendo...' : '+ Agregar fotos'}
+        </span>
+        <input type="file" accept="image/*" multiple className="hidden" disabled={subiendo}
+          onChange={e => subir(Array.from(e.target.files || []))} />
+      </label>
+      <p className="text-xs text-gray-400 mt-1.5">
+        Recomendado: fotos horizontales, buena luz, del consultorio o el equipo. La primera es la portada.
+      </p>
+    </div>
+  )
+}
+
 export default function Admin() {
   const { allOrgs, allTenants, isSuperAdmin } = useTenant()
   const [tab, setTab]         = useState('Organizaciones')
@@ -1078,6 +1161,7 @@ export default function Admin() {
         youtube:   t.redesSociales?.youtube   ?? '',
         linkedin:  t.redesSociales?.linkedin  ?? '',
       },
+      heroCarrusel: t.heroCarrusel ?? [],
     })
     setModalEditTenant(t)
   }
@@ -2185,6 +2269,17 @@ export default function Admin() {
                                focus:outline-none focus:ring-2 focus:ring-teal-400" />
                 </div>
               ))}
+
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-600 mb-2 mt-2">
+                  📸 Carrusel del hero (fotos de la portada pública)
+                </p>
+                <GaleriaCarrusel
+                  tenantId={modalEditTenant._docId ?? modalEditTenant.id}
+                  imagenes={formEditTenant.heroCarrusel ?? []}
+                  onChange={imgs => setFormEditTenant(fo => ({ ...fo, heroCarrusel: imgs }))}
+                />
+              </div>
 
               <div className="pt-2 border-t border-gray-100">
                 <p className="text-xs font-medium text-gray-600 mb-2 mt-2">

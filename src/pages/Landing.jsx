@@ -42,6 +42,9 @@ const buildCSS = (c) => `
     padding:9px 22px;border-radius:100px;font-weight:500!important;
     transition:background .2s,transform .2s!important }
   .ld .ncta:hover { background:var(--ld-teal-lt)!important;transform:translateY(-1px) }
+  .ld .lnav-social { display:flex!important;align-items:center;gap:14px;margin-right:4px }
+  .ld .lnav-social-link { color:rgba(255,255,255,.65)!important;display:flex;transition:color .2s }
+  .ld .lnav-social-link:hover { color:#fff!important }
   .ld .lnav-toggle { display:none;flex-direction:column;gap:5px;background:none;border:none;
     cursor:pointer;padding:8px;z-index:60 }
   .ld .lnav-toggle span { display:block;width:24px;height:2px;background:#fff;border-radius:2px;
@@ -66,6 +69,17 @@ const buildCSS = (c) => `
   /* HERO */
   .ld .hero { min-height:100vh;background:var(--ld-navy);display:flex;align-items:center;
     position:relative;overflow:hidden }
+  .ld .hero-carrusel { position:absolute;inset:0;z-index:0 }
+  .ld .hc-slide { position:absolute;inset:0;background-size:cover;background-position:center;
+    opacity:0;transition:opacity 1.2s ease }
+  .ld .hc-slide.active { opacity:1 }
+  .ld .hc-overlay { position:absolute;inset:0;
+    background:linear-gradient(115deg, rgba(13,31,53,.92) 0%, rgba(13,31,53,.72) 45%, rgba(13,31,53,.35) 100%) }
+  .ld .hc-dots { position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+    display:flex;gap:8px;z-index:2 }
+  .ld .hc-dots button { width:8px;height:8px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.35);cursor:pointer;padding:0;transition:background .2s,width .2s }
+  .ld .hc-dots button.active { background:#fff;width:22px;border-radius:5px }
   .ld .orb { position:absolute;right:-140px;top:-100px;width:700px;height:700px;
     background:radial-gradient(circle,rgba(10,128,118,.2) 0%,transparent 70%);
     border-radius:50% }
@@ -197,7 +211,8 @@ const buildCSS = (c) => `
     border-radius:20px;overflow:hidden }
   .ld .tf { background:rgba(13,31,53,.8);padding:28px 22px;transition:background .2s }
   .ld .tf:hover { background:rgba(10,128,118,.15) }
-  .ld .tf-ico { font-size:28px;margin-bottom:12px;display:block }
+  .ld .tf-num { font-family:var(--ld-font-d);font-size:26px;color:var(--ld-teal);
+    margin-bottom:10px;display:block;font-style:italic }
   .ld .tf h4 { font-family:var(--ld-font-d);font-size:18px;font-weight:400;
     color:#fff;margin-bottom:7px }
   .ld .tf p { font-size:13px;color:rgba(255,255,255,.4);line-height:1.6 }
@@ -304,7 +319,7 @@ const buildCSS = (c) => `
     font-size:16px;color:#6B7A8D;display:flex;align-items:center;justify-content:center }
   .ld .wa { position:fixed;bottom:26px;right:26px;z-index:90;width:54px;height:54px;
     background:#25D366;border-radius:50%;display:flex;align-items:center;
-    justify-content:center;font-size:24px;
+    justify-content:center;color:#fff;
     box-shadow:0 4px 20px rgba(37,211,102,.4);transition:transform .2s }
   .ld .wa:hover { transform:scale(1.1) }
 `
@@ -641,6 +656,7 @@ const DEFAULT_CONFIG = {
   descripcionDoctor2: 'Pionero en la adopción de tecnología médica en la región, su consultorio cuenta con expediente electrónico, citas en línea y comunicación directa con los pacientes.',
   cedulaProfesional: '1234567',
   redesSociales:     {},
+  heroCarrusel:      [],
   direccion:        'Av. Hidalgo 123, Col. Centro, Tampico, Tamps.',
   telefonoContacto: '833 123 4567',
   emailContacto:    'contacto@drchavetampico.com',
@@ -671,6 +687,64 @@ const DEFAULT_CONFIG = {
   ],
 }
 
+// ── Íconos SVG reales de redes sociales (sin emoji) ─────────────────────
+const ICONOS_REDES = [
+  { id: 'instagram', Svg: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/>
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  )},
+  { id: 'facebook', Svg: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+      <path d="M13.5 21v-8h2.7l.4-3.1h-3.1V8c0-.9.25-1.5 1.55-1.5H16.7V3.7c-.28-.04-1.25-.12-2.37-.12-2.35 0-3.96 1.43-3.96 4.07V9.9H8v3.1h2.37V21h3.13z"/>
+    </svg>
+  )},
+  { id: 'tiktok', Svg: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+      <path d="M16.5 3c.3 2 1.7 3.6 3.8 3.9v2.9c-1.4 0-2.7-.4-3.8-1.2v6.7c0 3-2.4 5.4-5.4 5.4S5.7 17.3 5.7 14.3c0-2.9 2.2-5.2 5-5.4v3c-1.1.2-1.9 1.1-1.9 2.3 0 1.3 1.1 2.4 2.4 2.4s2.4-1.1 2.4-2.4V3h3z"/>
+    </svg>
+  )},
+  { id: 'youtube', Svg: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+      <path d="M22 12s0-3-.4-4.5c-.2-.9-.9-1.5-1.7-1.7C18.3 5.4 12 5.4 12 5.4s-6.3 0-7.9.4c-.8.2-1.5.8-1.7 1.7C2 9 2 12 2 12s0 3 .4 4.5c.2.9.9 1.5 1.7 1.7 1.6.4 7.9.4 7.9.4s6.3 0 7.9-.4c.8-.2 1.5-.8 1.7-1.7.4-1.5.4-4.5.4-4.5zM10 15V9l5.2 3-5.2 3z"/>
+    </svg>
+  )},
+  { id: 'linkedin', Svg: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+      <path d="M6.94 8.5H3.56V20h3.38V8.5zM5.25 3.75a1.96 1.96 0 100 3.92 1.96 1.96 0 000-3.92zM20.44 20h-3.38v-5.6c0-1.34-.02-3.06-1.87-3.06-1.87 0-2.16 1.46-2.16 2.96V20H9.66V8.5h3.24v1.57h.05c.45-.85 1.56-1.75 3.21-1.75 3.43 0 4.06 2.26 4.06 5.2V20z"/>
+    </svg>
+  )},
+]
+
+// ── Íconos SVG utilitarios mínimos (sin emoji) ──────────────────────────
+const IconCheck = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+)
+const IconCalendar = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+)
+const IconPhone = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.5 2.1L8 9.7a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c.9.3 1.8.5 2.7.6a2 2 0 011.7 2z"/></svg>
+)
+const IconMail = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>
+)
+const IconPin = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+)
+const IconMessage = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+)
+const IconEye = ({ off }) => off ? (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+) : (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+)
+const IconX = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+)
+
 export default function Landing() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -693,6 +767,14 @@ export default function Landing() {
   const [cssReady, setCssReady] = useState(false)
   const [modalOpen, setModal]   = useState(false)
   const [menuMovil, setMenuMovil] = useState(false)
+  const [heroIdx, setHeroIdx] = useState(0)
+
+  useEffect(() => {
+    const total = cfg.heroCarrusel?.length ?? 0
+    if (total < 2) return
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % total), 5000)
+    return () => clearInterval(t)
+  }, [cfg.heroCarrusel])
   const [role, setRole]         = useState('doctor')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -737,6 +819,7 @@ export default function Landing() {
         universidadEgreso: t.universidadEgreso ?? sw.universidadEgreso ?? prev.universidadEgreso,
         cofeprisAviso:     t.cofeprisAviso     ?? sw.cofeprisAviso     ?? prev.cofeprisAviso,
         redesSociales:     t.redesSociales     ?? sw.redesSociales     ?? prev.redesSociales,
+        heroCarrusel:      t.heroCarrusel      ?? sw.heroCarrusel      ?? prev.heroCarrusel,
         direccion:         t.direccion       ?? sw.direccion         ?? prev.direccion,
         nombreConsultorio: t.nombre          ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
         horarios:          sw.horarios       ?? t.horarios           ?? prev.horarios,
@@ -916,6 +999,16 @@ export default function Landing() {
             <li><a href="#doctor">El doctor</a></li>
             <li><a href="#tecnologia">Tecnología</a></li>
             <li><a href="#ubicacion">Contacto</a></li>
+            {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
+              <li className="lnav-social">
+                {ICONOS_REDES.map(({ id, Svg }) => cfg.redesSociales[id] ? (
+                  <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
+                    aria-label={id} className="lnav-social-link">
+                    <Svg />
+                  </a>
+                ) : null)}
+              </li>
+            )}
             <li><a className="nbtn" style={{cursor:'pointer'}} onClick={() => setModal(true)}>
               Iniciar sesión
             </a></li>
@@ -947,13 +1040,30 @@ export default function Landing() {
 
       {/* HERO */}
       <section className="hero">
+        {cfg.heroCarrusel?.length > 0 && (
+          <div className="hero-carrusel">
+            {cfg.heroCarrusel.map((url, i) => (
+              <div key={i} className={`hc-slide ${i === heroIdx ? 'active' : ''}`}
+                style={{ backgroundImage: `url(${url})` }} />
+            ))}
+            <div className="hc-overlay" />
+            {cfg.heroCarrusel.length > 1 && (
+              <div className="hc-dots">
+                {cfg.heroCarrusel.map((_, i) => (
+                  <button key={i} className={i === heroIdx ? 'active' : ''}
+                    onClick={() => setHeroIdx(i)} aria-label={`Foto ${i+1}`} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="orb" />
         <div className="hero-in">
           <div>
             <div className="rev" style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,flexWrap:'wrap'}}>
               {cfg.colorPrimario === '#4AAECC' ? (
                 <span className="pill-badge">
-                  ✦ Ecosistema digital de salud
+                  Ecosistema digital de salud
                 </span>
               ) : (
                 <>
@@ -973,12 +1083,14 @@ export default function Landing() {
               {cfg.descripcionDoctor?.slice(0, 160) || 'Atención médica personalizada con expediente digital, citas en línea y seguimiento continuo de su salud.'}
             </p>
             <div className="hacts rev" style={{transitionDelay:'.25s'}}>
-              <button className="btnp" onClick={() => setModal(true)}>📅 Agendar cita en línea</button>
+              <button className="btnp" onClick={() => setModal(true)}>
+                <IconCalendar /> Agendar cita en línea
+              </button>
               <a href="#servicios" className="btng">Ver servicios →</a>
             </div>
             {cfg.colorPrimario === '#4AAECC' && (
               <div className="tampico-badge rev" style={{transitionDelay:'.35s'}}>
-                🦀 HECHO EN TAMPICO, TAMPS.
+                HECHO EN TAMPICO, TAMPS.
               </div>
             )}
           </div>
@@ -995,18 +1107,18 @@ export default function Landing() {
             </div>
             <h3>{cfg.nombreDoctor}</h3>
             <p className="sub">{cfg.especialidad?.split('·')[0]?.trim()} · Cédula {cfg.cedulaProfesional}</p>
-            <div className="cr"><div className="cr-ico">🎓</div><span>Cédula Prof. {cfg.cedulaProfesional} — SSA</span></div>
+            <div className="cr"><div className="cr-ico"><IconCheck /></div><span>Cédula Prof. {cfg.cedulaProfesional} — SSA</span></div>
             {cfg.cedulaEspecialidad && (
-              <div className="cr"><div className="cr-ico">📜</div><span>Cédula Especialidad {cfg.cedulaEspecialidad} — SSA</span></div>
+              <div className="cr"><div className="cr-ico"><IconCheck /></div><span>Cédula Especialidad {cfg.cedulaEspecialidad} — SSA</span></div>
             )}
             {cfg.universidadEgreso && (
-              <div className="cr"><div className="cr-ico">🏛️</div><span>{cfg.universidadEgreso}</span></div>
+              <div className="cr"><div className="cr-ico"><IconCheck /></div><span>{cfg.universidadEgreso}</span></div>
             )}
             {cfg.cofeprisAviso && (
-              <div className="cr"><div className="cr-ico">✅</div><span>Aviso de Publicidad COFEPRIS {cfg.cofeprisAviso}</span></div>
+              <div className="cr"><div className="cr-ico"><IconCheck /></div><span>Aviso de Publicidad COFEPRIS {cfg.cofeprisAviso}</span></div>
             )}
-            <div className="cr"><div className="cr-ico">🏥</div><span>Consultorio digital con Novaryk.Med</span></div>
-            <div className="cr"><div className="cr-ico">📋</div><span>Expediente clínico electrónico</span></div>
+            <div className="cr"><div className="cr-ico"><IconCheck /></div><span>Consultorio digital con Novaryk.Med</span></div>
+            <div className="cr"><div className="cr-ico"><IconCheck /></div><span>Expediente clínico electrónico</span></div>
             <div className="stats">
               <div className="st"><div className="st-n">15+</div><div className="st-l">Años</div></div>
               <div className="st"><div className="st-n">2k+</div><div className="st-l">Pacientes</div></div>
@@ -1048,7 +1160,9 @@ export default function Landing() {
               <div className="aphoto">
                 {cfg.fotoDoctorUrl
                   ? <img src={cfg.fotoDoctorUrl} alt={cfg.nombreDoctor} />
-                  : <span>👨‍⚕️</span>
+                  : <span style={{fontFamily:'var(--ld-font-d)',fontSize:40}}>
+                      {cfg.nombreDoctor?.split(' ').filter(w=>!w.startsWith('Dr')).map(w=>w[0]).slice(0,2).join('')}
+                    </span>
                 }
               </div>
               <div className="abadge"><strong>15+</strong><span>años de<br/>experiencia</span></div>
@@ -1067,7 +1181,7 @@ export default function Landing() {
               <div className="certs rev" style={{transitionDelay:'.25s'}}>
                 {certs.map((c, i) => (
                   <div key={i} className="cert">
-                    <div className="cok">✓</div><span>{c}</span>
+                    <div className="cok"><IconCheck /></div><span>{c}</span>
                   </div>
                 ))}
               </div>
@@ -1086,15 +1200,15 @@ export default function Landing() {
           </div>
           <div className="tgrid">
             {[
-              ['📅','Citas en Línea','Agenda 24/7 con confirmación y recordatorio automático por WhatsApp.'],
-              ['📋','Expediente Digital','Historial clínico, estudios y recetas accesibles desde cualquier dispositivo.'],
-              ['💊','Recetas Digitales','Descargue su receta directamente desde el portal del paciente.'],
-              ['🧾','Facturación CFDI','Solicite y descargue su factura electrónica sin llamar al consultorio.'],
-              ['🔔','Turno en Tiempo Real','Sepa cuándo será atendido. Actualización en vivo desde su celular.'],
-              ['🔒','Privacidad Total','Sus datos médicos protegidos con los más altos estándares de seguridad.'],
-            ].map(([ico,h,p],i) => (
+              ['Citas en Línea','Agenda 24/7 con confirmación y recordatorio automático por WhatsApp.'],
+              ['Expediente Digital','Historial clínico, estudios y recetas accesibles desde cualquier dispositivo.'],
+              ['Recetas Digitales','Descargue su receta directamente desde el portal del paciente.'],
+              ['Facturación CFDI','Solicite y descargue su factura electrónica sin llamar al consultorio.'],
+              ['Turno en Tiempo Real','Sepa cuándo será atendido. Actualización en vivo desde su celular.'],
+              ['Privacidad Total','Sus datos médicos protegidos con los más altos estándares de seguridad.'],
+            ].map(([h,p],i) => (
               <div key={i} className="tf rev" style={{transitionDelay:`${i*.04}s`}}>
-                <span className="tf-ico">{ico}</span><h4>{h}</h4><p>{p}</p>
+                <span className="tf-num">{String(i+1).padStart(2,'0')}</span><h4>{h}</h4><p>{p}</p>
               </div>
             ))}
           </div>
@@ -1141,7 +1255,7 @@ export default function Landing() {
                   />
                 ) : (
                   <>
-                    <span>📍</span>
+                    <span style={{color:'var(--ld-teal)'}}><IconPin /></span>
                     <p>Agrega tu dirección para mostrar el mapa</p>
                   </>
                 )}
@@ -1149,12 +1263,16 @@ export default function Landing() {
               <div className="addr">
                 <strong>{cfg.nombreConsultorio}</strong><br/>
                 {cfg.direccion}<br/><br/>
-                📱 <a href={`tel:${tel}`} style={{color:'var(--ld-teal)'}}>
-                  {cfg.telefonoContacto}
-                </a><br/>
-                ✉️ <a href={`mailto:${cfg.emailContacto}`} style={{color:'var(--ld-teal)'}}>
-                  {cfg.emailContacto}
-                </a>
+                <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                  <IconPhone /> <a href={`tel:${tel}`} style={{color:'var(--ld-teal)'}}>
+                    {cfg.telefonoContacto}
+                  </a>
+                </span><br/>
+                <span style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:4}}>
+                  <IconMail /> <a href={`mailto:${cfg.emailContacto}`} style={{color:'var(--ld-teal)'}}>
+                    {cfg.emailContacto}
+                  </a>
+                </span>
               </div>
             </div>
           </div>
@@ -1199,7 +1317,7 @@ export default function Landing() {
           </p>
           <button className="btn-w rev" style={{transitionDelay:'.2s'}}
             onClick={() => setModal(true)}>
-            📅 Agendar mi cita
+            <IconCalendar /> Agendar mi cita
           </button>
         </div>
       </section>
@@ -1211,17 +1329,6 @@ export default function Landing() {
             <div className="fb">
               <div className="logo">Consultorio <span>{cfg.nombreConsultorio?.split(' ').pop()}</span></div>
               <p>Atención médica personalizada con tecnología de vanguardia en Tampico, Tamaulipas.</p>
-              {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
-                <div style={{display:'flex',gap:10,marginTop:14}}>
-                  {[
-                    ['instagram','📸'],['facebook','👍'],['tiktok','🎵'],['youtube','▶️'],['linkedin','💼'],
-                  ].map(([id, icon]) => cfg.redesSociales[id] ? (
-                    <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
-                      style={{fontSize:18,opacity:0.85,textDecoration:'none'}}
-                      title={id}>{icon}</a>
-                  ) : null)}
-                </div>
-              )}
             </div>
             <div className="fc">
               <h4>Servicios</h4>
@@ -1244,13 +1351,13 @@ export default function Landing() {
 
       {/* WhatsApp */}
       <a href={`https://wa.me/52${tel}?text=Hola,%20quisiera%20información`}
-         target="_blank" rel="noreferrer" className="wa">💬</a>
+         target="_blank" rel="noreferrer" className="wa"><IconMessage /></a>
 
       {/* MODAL LOGIN */}
       <div className={`mover ${modalOpen ? 'open' : ''}`}
         onClick={e => e.target === e.currentTarget && closeModal()}>
         <div className="modal">
-          <button className="mclose" onClick={closeModal}>✕</button>
+          <button className="mclose" onClick={closeModal}><IconX /></button>
           <h3>Bienvenido</h3>
           <p className="msub">Ingresa con tu correo y contraseña</p>
           <p style={{fontSize:12,color:'#9ca3af',marginBottom:8,textAlign:'center'}}>
@@ -1271,8 +1378,8 @@ export default function Landing() {
                   onClick={() => setShowPass(v => !v)}
                   style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
                           background:'none',border:'none',cursor:'pointer',padding:0,
-                          fontSize:18,color:'#9ca3af',lineHeight:1}}>
-                  {showPass ? '🙈' : '👁️'}
+                          display:'flex',color:'#9ca3af',lineHeight:1}}>
+                  <IconEye off={showPass} />
                 </button>
               </div>
             </div>
