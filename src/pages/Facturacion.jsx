@@ -232,7 +232,7 @@ export default function Facturacion() {
       </div>
 
       {/* Aviso de configuración Facturapi */}
-      {!tenant?.facturapiApiKey && (
+      {!tenant?.facturapiConfigurado && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
           <p className="text-sm font-medium text-blue-800">ℹ️ Este consultorio timbra con la cuenta maestra de Novaryk</p>
           <p className="text-xs text-blue-700 mt-1">
@@ -241,7 +241,7 @@ export default function Facturacion() {
           </p>
         </div>
       )}
-      {tenant?.facturapiApiKey && (
+      {tenant?.facturapiConfigurado && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5 flex items-center gap-2">
           <span className="text-green-600 text-sm">✅</span>
           <p className="text-xs text-green-700 font-medium">

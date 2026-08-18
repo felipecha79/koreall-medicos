@@ -1158,18 +1158,26 @@ export default function Admin() {
         if (!apiKey) throw new Error('Facturapi no devolvió una API key. Revisa el dashboard de Facturapi.')
 
         // Guardar también el ID de la org en Facturapi para referencia
+        // La API key va en una subcolección protegida — el documento del
+        // tenant es de lectura pública (landing page) y NUNCA debe traer secretos.
         await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
-          facturapiOrgId:  org.id,
+          facturapiOrgId:       org.id,
+          facturapiConfigurado: true,
+          rfc:                  fpForm.rfc.toUpperCase().trim(),
+          actualizadoEn:        Timestamp.now(),
+        }, { merge: true })
+        await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id), 'config', 'secretos'), {
           facturapiApiKey: apiKey,
-          rfc:             fpForm.rfc.toUpperCase().trim(),
-          actualizadoEn:   Timestamp.now(),
         }, { merge: true })
         toast.success(`✅ Organización creada en Facturapi y API key guardada para ${tenant.nombre}`)
       } else {
         // Modo manual: solo guardar la key que pegó el SuperAdmin
         await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
+          facturapiConfigurado: true,
+          actualizadoEn:        Timestamp.now(),
+        }, { merge: true })
+        await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id), 'config', 'secretos'), {
           facturapiApiKey: apiKey,
-          actualizadoEn:   Timestamp.now(),
         }, { merge: true })
         toast.success(`✅ API key guardada para ${tenant.nombre}`)
       }
@@ -1187,9 +1195,12 @@ export default function Admin() {
   const limpiarFacturapi = async (tenant) => {
     if (!window.confirm(`¿Quitar la configuración de Facturapi de "${tenant.nombre}"? El consultorio dejará de poder timbrar con su propio RFC.`)) return
     await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id)), {
-      facturapiApiKey: null,
+      facturapiConfigurado: false,
       facturapiOrgId:  null,
       actualizadoEn:   Timestamp.now(),
+    }, { merge: true })
+    await setDoc(doc(db, 'tenants', String(tenant._docId ?? tenant.id), 'config', 'secretos'), {
+      facturapiApiKey: null,
     }, { merge: true })
     toast.success('Configuración de Facturapi eliminada')
   }
@@ -1661,7 +1672,7 @@ export default function Admin() {
             </div>
             <div className="space-y-3">
               {tenants.filter(t => !selectedTid || t.id === selectedTid).map(t => {
-                const tieneKey = !!t.facturapiApiKey
+                const tieneKey = !!t.facturapiConfigurado
                 const estado   = fpStatus[t.id]
                 return (
                   <div key={t.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">

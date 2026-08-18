@@ -43,9 +43,12 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       // Solo superAdmin puede crear/borrar tenants
       allow create, delete: if isSuperAdmin();
-      // Staff del tenant puede leer su propio tenant
-      allow read: if isStaff(tenantId) || isSuperAdmin()
-                  || isPaciente(tenantId); // pacientes leen nombre/config
+      // Lectura pública: la landing page de cada doctor se ve sin login.
+      // El documento del tenant SOLO debe contener datos públicos —
+      // cualquier secreto (ej. facturapiApiKey) vive en la subcolección
+      // protegida tenants/{tenantId}/config/secretos, que nunca se abre
+      // aquí y por lo tanto queda denegada por default (catch-all al final).
+      allow read: if true;
       // Solo admin puede actualizar la config del tenant
       allow update: if isAdmin(tenantId);
 

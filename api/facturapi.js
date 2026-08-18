@@ -27,6 +27,13 @@ async function resolverApiKey(tenantId) {
   if (!tenantId) return MASTER_KEY
   try {
     const db = getDb()
+    // Ubicación nueva y segura (subcolección nunca legible por el cliente)
+    const secreto = await db.doc(`tenants/${tenantId}/config/secretos`).get()
+    if (secreto.exists && secreto.data()?.facturapiApiKey) {
+      return secreto.data().facturapiApiKey
+    }
+    // Respaldo temporal: tenants aún no migrados que guardaron la key
+    // directo en el documento público (ya no debería pasar para nuevos)
     const snap = await db.doc(`tenants/${tenantId}`).get()
     return snap.exists && snap.data()?.facturapiApiKey
       ? snap.data().facturapiApiKey
