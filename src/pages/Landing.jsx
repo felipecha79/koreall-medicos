@@ -29,8 +29,17 @@ const buildCSS = (c) => `
     border-bottom:1px solid rgba(255,255,255,.07) }
   .ld .lnav-in { max-width:1160px;margin:0 auto;padding:0 24px;
     display:flex;align-items:center;justify-content:space-between;height:66px }
+  .ld .lnav-left { display:flex;align-items:center;gap:18px;min-width:0 }
   .ld .logo { font-family:var(--ld-font-d);font-size:21px;font-weight:300;
-    color:#fff;letter-spacing:.02em }
+    color:#fff;letter-spacing:.02em;flex-shrink:0 }
+  .ld .nav-social { display:flex!important;align-items:center;gap:10px;flex-shrink:0 }
+  .ld .nav-social-link { width:34px;height:34px;border-radius:50%;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+    display:flex!important;align-items:center;justify-content:center;
+    color:rgba(255,255,255,.85);transition:all .2s;flex-shrink:0 }
+  .ld .nav-social-link svg { width:17px;height:17px }
+  .ld .nav-social-link:hover { background:var(--ld-teal);border-color:var(--ld-teal);
+    color:#fff;transform:translateY(-2px) }
   .ld .logo span { color:var(--ld-teal);font-style:normal;font-weight:600;letter-spacing:-0.3px }
   .ld .logo .med-tag { font-size:9px;font-weight:700;letter-spacing:2.5px;color:#0D9488;display:block;margin-top:-2px }
   .ld .lnav-links { display:flex;align-items:center;gap:28px;list-style:none }
@@ -42,14 +51,6 @@ const buildCSS = (c) => `
     padding:9px 22px;border-radius:100px;font-weight:500!important;
     transition:background .2s,transform .2s!important }
   .ld .ncta:hover { background:var(--ld-teal-lt)!important;transform:translateY(-1px) }
-  .ld .hero-social { display:flex;align-items:center;gap:12px;margin-bottom:20px }
-  .ld .hero-social-link { width:38px;height:38px;border-radius:50%;
-    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
-    display:flex;align-items:center;justify-content:center;
-    color:rgba(255,255,255,.85);transition:all .2s }
-  .ld .hero-social-link svg { width:19px;height:19px }
-  .ld .hero-social-link:hover { background:var(--ld-teal);border-color:var(--ld-teal);
-    color:#fff;transform:translateY(-2px) }
   .ld .lnav-toggle { display:none;flex-direction:column;gap:5px;background:none;border:none;
     cursor:pointer;padding:8px;z-index:60 }
   .ld .lnav-toggle span { display:block;width:24px;height:2px;background:#fff;border-radius:2px;
@@ -69,6 +70,13 @@ const buildCSS = (c) => `
   @media(max-width:800px){
     .ld .lnav-links { display:none }
     .ld .lnav-toggle { display:flex }
+    .ld .lnav-left { gap:10px }
+    .ld .nav-social { gap:6px }
+    .ld .nav-social-link { width:30px;height:30px }
+    .ld .nav-social-link svg { width:15px;height:15px }
+  }
+  @media(max-width:380px){
+    .ld .nav-social-link:nth-child(n+4) { display:none!important }
   }
 
   /* HERO */
@@ -995,11 +1003,23 @@ export default function Landing() {
       {/* NAV */}
       <nav className="lnav">
         <div className="lnav-in">
-          <div className="logo">
-            {cfg.logoUrl
-              ? <img src={cfg.logoUrl} alt="Logo" style={{height:36,objectFit:'contain'}} />
-              : <span>Consultorio <span>{cfg.nombreConsultorio?.split(' ').pop()}</span></span>
-            }
+          <div className="lnav-left">
+            <div className="logo">
+              {cfg.logoUrl
+                ? <img src={cfg.logoUrl} alt="Logo" style={{height:36,objectFit:'contain'}} />
+                : <span>Consultorio <span>{cfg.nombreConsultorio?.split(' ').pop()}</span></span>
+              }
+            </div>
+            {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
+              <div className="nav-social">
+                {ICONOS_REDES.map(({ id, Svg }) => cfg.redesSociales[id] ? (
+                  <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
+                    aria-label={id} className="nav-social-link">
+                    <Svg />
+                  </a>
+                ) : null)}
+              </div>
+            )}
           </div>
           <ul className="lnav-links">
             <li><a href="#servicios">Servicios</a></li>
@@ -1057,16 +1077,6 @@ export default function Landing() {
         <div className="orb" />
         <div className="hero-in">
           <div>
-            {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
-              <div className="hero-social rev">
-                {ICONOS_REDES.map(({ id, Svg }) => cfg.redesSociales[id] ? (
-                  <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
-                    aria-label={id} className="hero-social-link">
-                    <Svg />
-                  </a>
-                ) : null)}
-              </div>
-            )}
             <div className="rev" style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,flexWrap:'wrap'}}>
               {cfg.colorPrimario === '#4AAECC' ? (
                 <span className="pill-badge">
