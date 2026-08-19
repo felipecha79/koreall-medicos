@@ -820,6 +820,8 @@ export default function Landing() {
         cofeprisAviso:     t.cofeprisAviso     ?? sw.cofeprisAviso     ?? prev.cofeprisAviso,
         redesSociales:     t.redesSociales     ?? sw.redesSociales     ?? prev.redesSociales,
         heroCarrusel:      t.heroCarrusel      ?? sw.heroCarrusel      ?? prev.heroCarrusel,
+        logoUrl:           t.logoUrl           ?? sw.logoUrl           ?? prev.logoUrl,
+        fotoDoctorUrl:     t.fotoDoctorUrl     ?? sw.fotoDoctorUrl     ?? prev.fotoDoctorUrl,
         direccion:         t.direccion       ?? sw.direccion         ?? prev.direccion,
         nombreConsultorio: t.nombre          ?? sw.nombreConsultorio ?? prev.nombreConsultorio,
         horarios:          sw.horarios       ?? t.horarios           ?? prev.horarios,

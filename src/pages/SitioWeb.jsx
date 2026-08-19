@@ -649,6 +649,20 @@ export default function SitioWeb() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-700 mb-4">Foto del doctor</p>
+            <SubidorImagen
+              tenantId={tenantId}
+              valorActual={config.fotoDoctorUrl}
+              onSubido={url => setConfig(c => ({ ...c, fotoDoctorUrl: url }))}
+              alto={96}
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              Se muestra en la tarjeta del hero y en la sección "Conoce al doctor" de tu página pública.
+              Recomendado: foto vertical o de rostro, buena luz.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-sm font-medium text-gray-700 mb-4">Datos del consultorio</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
