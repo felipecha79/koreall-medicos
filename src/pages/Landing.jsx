@@ -42,9 +42,14 @@ const buildCSS = (c) => `
     padding:9px 22px;border-radius:100px;font-weight:500!important;
     transition:background .2s,transform .2s!important }
   .ld .ncta:hover { background:var(--ld-teal-lt)!important;transform:translateY(-1px) }
-  .ld .lnav-social { display:flex!important;align-items:center;gap:14px;margin-right:4px }
-  .ld .lnav-social-link { color:rgba(255,255,255,.65)!important;display:flex;transition:color .2s }
-  .ld .lnav-social-link:hover { color:#fff!important }
+  .ld .hero-social { display:flex;align-items:center;gap:12px;margin-bottom:20px }
+  .ld .hero-social-link { width:38px;height:38px;border-radius:50%;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;
+    color:rgba(255,255,255,.85);transition:all .2s }
+  .ld .hero-social-link svg { width:19px;height:19px }
+  .ld .hero-social-link:hover { background:var(--ld-teal);border-color:var(--ld-teal);
+    color:#fff;transform:translateY(-2px) }
   .ld .lnav-toggle { display:none;flex-direction:column;gap:5px;background:none;border:none;
     cursor:pointer;padding:8px;z-index:60 }
   .ld .lnav-toggle span { display:block;width:24px;height:2px;background:#fff;border-radius:2px;
@@ -1001,16 +1006,6 @@ export default function Landing() {
             <li><a href="#doctor">El doctor</a></li>
             <li><a href="#tecnologia">Tecnología</a></li>
             <li><a href="#ubicacion">Contacto</a></li>
-            {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
-              <li className="lnav-social">
-                {ICONOS_REDES.map(({ id, Svg }) => cfg.redesSociales[id] ? (
-                  <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
-                    aria-label={id} className="lnav-social-link">
-                    <Svg />
-                  </a>
-                ) : null)}
-              </li>
-            )}
             <li><a className="nbtn" style={{cursor:'pointer'}} onClick={() => setModal(true)}>
               Iniciar sesión
             </a></li>
@@ -1062,6 +1057,16 @@ export default function Landing() {
         <div className="orb" />
         <div className="hero-in">
           <div>
+            {cfg.redesSociales && Object.values(cfg.redesSociales).some(Boolean) && (
+              <div className="hero-social rev">
+                {ICONOS_REDES.map(({ id, Svg }) => cfg.redesSociales[id] ? (
+                  <a key={id} href={cfg.redesSociales[id]} target="_blank" rel="noreferrer"
+                    aria-label={id} className="hero-social-link">
+                    <Svg />
+                  </a>
+                ) : null)}
+              </div>
+            )}
             <div className="rev" style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,flexWrap:'wrap'}}>
               {cfg.colorPrimario === '#4AAECC' ? (
                 <span className="pill-badge">
